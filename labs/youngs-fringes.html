@@ -1,0 +1,1983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Two-Source Interference — Optics Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #0a0e1a;
+    --bg-panel: #121826;
+    --bg-panel-light: #1a2235;
+    --ink: #e8ecf4;
+    --ink-dim: #8a96b0;
+    --ink-faint: #4a566e;
+    --rule: #243049;
+    --accent: #ffd166;
+    --constructive: #4ade80;
+    --destructive: #f87171;
+    --serif: 'Fraunces', Georgia, serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  /* iPad/Pencil compatibility: ensure form controls receive pointer input
+     from Pencil as well as finger. touch-action: manipulation removes the
+     300ms tap delay and lets the browser route Pencil input as a pointer
+     without trying to interpret it as scribble or selection. */
+  input, button, label, select,
+  .view-btn, .play-btn, .snap-toggle {
+    touch-action: manipulation;
+  }
+
+  /* Range sliders need touch-action: none, NOT manipulation. With
+     "manipulation" the browser still claims pan/scroll gestures for itself,
+     so Apple Pencil drag on a slider thumb scrolls the surrounding panel
+     instead of moving the thumb. "none" gives the slider full control of
+     the gesture. This rule must come after the block above to win the cascade. */
+  input[type="range"] {
+    touch-action: none;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background:
+      radial-gradient(ellipse 1200px 600px at 50% -200px, #1a2440 0%, transparent 60%),
+      radial-gradient(ellipse 800px 400px at 80% 100%, #1f1830 0%, transparent 50%),
+      var(--bg-deep);
+    color: var(--ink);
+    font-family: var(--serif);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.06 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    pointer-events: none;
+    z-index: 1;
+    mix-blend-mode: overlay;
+  }
+
+  #app {
+    position: relative;
+    z-index: 2;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 20px 60px;
+  }
+
+  /* ------- Header ------- */
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 24px;
+  }
+  .title-block .eyebrow {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin-bottom: 6px;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 300;
+    font-style: italic;
+    font-size: clamp(28px, 4.4vw, 40px);
+    line-height: 1;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--accent);
+    font-weight: 400;
+  }
+  .header-meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    text-align: right;
+    line-height: 1.6;
+  }
+
+  /* ------- Controls panel ------- */
+  #controls {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    background: var(--bg-panel);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+  .ctrl {
+    padding: 14px 18px;
+    border-right: 1px solid var(--rule);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .ctrl:last-child { border-right: none; }
+  .ctrl-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .ctrl-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .ctrl-label .sym {
+    color: var(--accent);
+    font-style: italic;
+    font-family: var(--serif);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 14px;
+    margin-right: 4px;
+  }
+  .ctrl-value {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .ctrl-value .unit {
+    color: var(--ink-faint);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    margin-left: 2px;
+  }
+
+  /* Custom range slider */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 18px;
+    background: transparent;
+    cursor: pointer;
+    margin: 0;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 2px;
+    background: var(--ink-faint);
+    border-radius: 1px;
+  }
+  input[type="range"]::-moz-range-track {
+    height: 2px;
+    background: var(--ink-faint);
+    border-radius: 1px;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--ink);
+    border: 2px solid var(--bg-panel);
+    border-radius: 50%;
+    margin-top: -6px;
+    box-shadow: 0 0 0 1px var(--accent);
+    transition: box-shadow 0.15s;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: var(--ink);
+    border: 2px solid var(--bg-panel);
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  input[type="range"]:hover::-webkit-slider-thumb {
+    box-shadow: 0 0 0 1px var(--accent), 0 0 0 5px rgba(255, 209, 102, 0.15);
+  }
+
+  /* ------- Stage (canvases) ------- */
+  .stage {
+    background: var(--bg-panel);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 0;
+    overflow: hidden;
+    margin-bottom: 14px;
+    position: relative;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .stage-tag {
+    position: absolute;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    pointer-events: none;
+  }
+  .stage-tag.tl { top: 10px; left: 14px; }
+  .stage-tag.tr { top: 10px; right: 14px; }
+
+  .view-toggle {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 0;
+    background: rgba(10,14,26,0.85);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    overflow: hidden;
+    z-index: 5;
+  }
+  .view-btn {
+    background: transparent;
+    border: none;
+    color: var(--ink-dim);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border-right: 1px solid var(--rule);
+  }
+  .view-btn:last-child { border-right: none; }
+  .view-btn:hover { color: var(--ink); background: rgba(255,255,255,0.04); }
+  .view-btn.active {
+    color: var(--bg-deep);
+    background: var(--accent);
+    font-weight: 700;
+  }
+
+  .stage-toggles {
+    position: absolute;
+    top: 8px;
+    right: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 5;
+    align-items: flex-end;
+  }
+  .snap-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(10,14,26,0.85);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    user-select: none;
+    transition: color 0.15s, opacity 0.2s;
+  }
+  .snap-toggle:hover { color: var(--ink); }
+  .snap-toggle input { margin: 0; cursor: pointer; accent-color: var(--accent); }
+  .snap-toggle:has(input:checked) { color: var(--accent); border-color: rgba(255,209,102,0.4); }
+  /* Free probe toggle uses cyan to match its on-canvas probe colour. */
+  #freeProbeToggleLabel.snap-toggle:has(input:checked),
+  label.snap-toggle:has(#freeProbeCheckbox:checked) {
+    color: #5ec5e5;
+    border-color: rgba(94, 197, 229, 0.45);
+  }
+  label.snap-toggle:has(#freeProbeCheckbox) input { accent-color: #5ec5e5; }
+  /* Antinodal toggle is only relevant in wavefronts mode — hidden otherwise. */
+  #antinodalToggleLabel.hidden { display: none; }
+
+  .play-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(10,14,26,0.85);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 5px 12px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    user-select: none;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+  }
+  .play-btn:hover { color: var(--accent); border-color: rgba(255,209,102,0.4); }
+  .play-btn:active { background: rgba(255,209,102,0.08); }
+  .play-btn.hidden { display: none; }
+  .play-btn:disabled { opacity: 0.4; cursor: default; }
+  .play-btn:disabled:hover { color: var(--ink-dim); border-color: var(--rule); }
+  .play-btn svg { display: block; transition: transform 0.15s; }
+  .play-btn:hover svg { transform: translateX(1px); }
+  /* Hide the duplicated stage-tag.tr when toggles are present */
+  .stage:has(.stage-toggles) .stage-tag.tr { display: none; }
+
+  /* ------- Readout strip between canvases ------- */
+  #readouts {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    gap: 0;
+    background: var(--bg-panel-light);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .readout {
+    padding: 10px 18px;
+    border-right: 1px solid var(--rule);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .readout:last-child { border-right: none; }
+  .readout-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .readout-value {
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .readout-value .num { font-family: var(--mono); font-weight: 500; font-size: 18px; }
+  .readout-value .unit {
+    color: var(--ink);
+    margin-left: 5px;
+    font-size: 17px;
+    font-family: var(--serif);
+    font-style: italic;
+  }
+  /* The degree symbol doesn't belong in a serif italic — it ends up looking
+     like a tiny lowercase 'o'. Use a sans-serif upright glyph for it instead. */
+  .readout-value .unit-deg {
+    color: var(--ink);
+    margin-left: 3px;
+    font-size: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-style: normal;
+    font-weight: 400;
+  }
+
+  #status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--rule);
+    color: var(--ink-dim);
+    width: fit-content;
+    margin-top: 4px;
+  }
+  #status-pill::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--ink-faint);
+    flex: none;
+  }
+  /* The equation portion inside the pill (e.g. "ΔL = nλ") uses serif italic
+     to distinguish it from the all-caps status word. */
+  #status-pill .eq {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 13px;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  /* Inline fraction built from sup/sub instead of the ½ Unicode glyph, which
+     renders awkwardly inside serif italic. */
+  #status-pill .frac {
+    display: inline-block;
+    font-style: normal;
+    margin: 0 1px;
+    letter-spacing: -0.02em;
+  }
+  #status-pill .frac sup,
+  #status-pill .frac sub {
+    font-size: 0.7em;
+    line-height: 1;
+  }
+  #status-pill .frac sup { vertical-align: 0.3em; }
+  #status-pill .frac sub { vertical-align: -0.2em; }
+  #status-pill.constructive { color: var(--constructive); border-color: rgba(74,222,128,0.35); }
+  #status-pill.constructive::before { background: var(--constructive); box-shadow: 0 0 6px var(--constructive); }
+  #status-pill.destructive { color: var(--destructive); border-color: rgba(248,113,113,0.35); }
+  #status-pill.destructive::before { background: var(--destructive); box-shadow: 0 0 6px var(--destructive); }
+
+  /* ------- Footer note ------- */
+  .footnote {
+    font-family: var(--serif);
+    font-size: 13px;
+    color: var(--ink-dim);
+    font-style: italic;
+    text-align: center;
+    margin-top: 18px;
+    line-height: 1.6;
+  }
+  .footnote kbd {
+    font-family: var(--mono);
+    font-style: normal;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    background: var(--bg-panel);
+    border: 1px solid var(--rule);
+    padding: 1px 6px;
+    border-radius: 2px;
+    color: var(--ink);
+  }
+
+  @media (max-width: 640px) {
+    #controls { grid-template-columns: 1fr; }
+    .ctrl { border-right: none; border-bottom: 1px solid var(--rule); }
+    .ctrl:last-child { border-bottom: none; }
+    #readouts { grid-template-columns: 1fr; }
+    .readout { border-right: none; border-bottom: 1px solid var(--rule); }
+    .readout:last-child { border-bottom: none; }
+    header { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .header-meta { text-align: left; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <div class="title-block">
+      <div class="eyebrow">Wave Optics · Interactive</div>
+      <h1>Two-Source <em>Interference</em></h1>
+    </div>
+    <div class="header-meta">
+      Young's Experiment<br>
+      Path-Difference Method
+    </div>
+  </header>
+
+  <div id="controls">
+    <div class="ctrl">
+      <div class="ctrl-head">
+        <span class="ctrl-label"><span class="sym">λ</span>Wavelength</span>
+      </div>
+      <input type="range" id="lambdaSlider" min="38" max="75" value="50" step="1">
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-head">
+        <span class="ctrl-label"><span class="sym">a</span>Source Separation</span>
+      </div>
+      <input type="range" id="separationSlider" min="20" max="280" value="140" step="1">
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-head">
+        <span class="ctrl-label"><span class="sym">D</span>Screen Distance</span>
+      </div>
+      <input type="range" id="screenDistSlider" min="150" max="750" value="450" step="1">
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-head">
+        <span class="ctrl-label"><span class="sym">Δφ</span>Source Phase</span>
+        <span class="ctrl-value" id="sourcePhaseValue">0°</span>
+      </div>
+      <input type="range" id="sourcePhaseSlider" min="0" max="360" value="0" step="1">
+    </div>
+  </div>
+
+  <div class="stage">
+    <span class="stage-tag tl">Apparatus · drag the green probe</span>
+    <span class="stage-tag tr">Screen →</span>
+    <div class="view-toggle">
+      <button class="view-btn active" data-mode="waves">Waves</button>
+      <button class="view-btn" data-mode="rays">Rays</button>
+      <button class="view-btn" data-mode="wavefronts">Wavefronts</button>
+    </div>
+    <div class="stage-toggles">
+      <button id="playWavefrontsBtn" class="play-btn" title="Animate wavefronts radiating from the sources">
+        <svg width="10" height="11" viewBox="0 0 10 11" aria-hidden="true"><polygon points="0,0 0,11 10,5.5" fill="currentColor"/></svg>
+        <span>Play</span>
+      </button>
+      <label class="snap-toggle" id="antinodalToggleLabel" title="Show antinodal interference lines">
+        <input type="checkbox" id="antinodalCheckbox">
+        <span>Antinodal lines</span>
+      </label>
+      <label class="snap-toggle" title="Show a free-floating probe that displays path difference at any point">
+        <input type="checkbox" id="freeProbeCheckbox">
+        <span>Free probe</span>
+      </label>
+    </div>
+    <canvas id="mainCanvas" width="1000" height="520"></canvas>
+  </div>
+
+  <div id="readouts">
+    <div class="readout">
+      <span class="readout-label">At Screen Probe</span>
+      <span id="status-pill">— neutral —</span>
+    </div>
+    <div class="readout">
+      <span class="readout-label">Path Difference  ΔL</span>
+      <span class="readout-value"><span class="num" id="pathDiffValue">0.00</span><span class="unit">λ</span></span>
+    </div>
+    <div class="readout">
+      <span class="readout-label">Phase Difference  Δφ</span>
+      <span class="readout-value"><span class="num" id="phaseDiffValue">0.0</span><span class="unit-deg">°</span></span>
+    </div>
+  </div>
+
+  <div class="stage">
+    <span class="stage-tag tl">Superposition at P · continuous</span>
+    <canvas id="waveGraphCanvas" width="880" height="200"></canvas>
+  </div>
+
+  <div class="footnote">
+    Click or drag anywhere on the screen line to move the probe. Bright fringes: <em>ΔL = nλ</em>. Dark fringes: <em>ΔL = (n + ½)λ</em>.
+  </div>
+</div>
+
+<script>
+  // ------- Element refs -------
+  const lambdaSlider = document.getElementById('lambdaSlider');
+  const separationSlider = document.getElementById('separationSlider');
+  const screenDistSlider = document.getElementById('screenDistSlider');
+  const sourcePhaseSlider = document.getElementById('sourcePhaseSlider');
+  const sourcePhaseValueEl = document.getElementById('sourcePhaseValue');
+  const pathDiffValueEl = document.getElementById('pathDiffValue');
+  const phaseDiffValueEl = document.getElementById('phaseDiffValue');
+  const statusPill = document.getElementById('status-pill');
+
+  const mainCanvas = document.getElementById('mainCanvas');
+  const mainCtx = mainCanvas.getContext('2d');
+  const waveGraphCanvas = document.getElementById('waveGraphCanvas');
+  const waveGraphCtx = waveGraphCanvas.getContext('2d');
+
+  // ------- State -------
+  let lambda = parseFloat(lambdaSlider.value);
+  let sourceSep = parseFloat(separationSlider.value);
+  let screenDist = parseFloat(screenDistSlider.value);
+  // Phase offset of S₂ relative to S₁, in degrees [0, 360).
+  // 0 = sources in phase (standard Young's pattern with central maximum).
+  // 180 = anti-phase: central position becomes a minimum, fringe orders swap.
+  // Intermediate values shift the entire fringe pattern.
+  // The "total phase difference at point P" is therefore:
+  //   Δφ_total = (ΔL / λ) · 360° + Δφ_source
+  // and constructive/destructive conditions are tested against Δφ_total mod 360°.
+  let sourcePhaseDeg = parseFloat(sourcePhaseSlider.value);
+  let pointPyOnScreen = mainCanvas.height / 2 - 60;
+  let viewMode = 'waves'; // 'waves', 'rays', or 'wavefronts'
+  let snapEnabled = false; // snap-to-fringes UI removed; the displayed-value rounding now does the job
+  let showAntinodal = false;
+  // Free probe — draggable anywhere on the canvas, displays path difference at its location.
+  let freeProbeEnabled = false;
+  let freeProbe = { x: mainCanvas.width * 0.25, y: mainCanvas.height * 0.30 };
+
+  // ----- Wavefront animation state -----
+  // null         → static steady-state rendering (all wavefronts always shown)
+  // number > 0   → animation in progress, value is the current max visible radius
+  //                in pixels. Wavefronts only render up to this radius from each source.
+  //                When the value reaches `animFreezeRadius` the animation ends and
+  //                state returns to null (back to static steady-state).
+  let animMaxRadius = null;
+  let animFreezeRadius = 0;
+  let animStartTime = 0;
+  // Visual pacing: ~3 second total animation. We compute the freeze radius dynamically
+  // when Play is pressed (depends on canvas size and source positions).
+  const ANIM_DURATION_MS = 6000;
+
+  // (snap state retained internally but inert — applySnap returns early when disabled)
+  let lockedFringe = null;
+
+  function updateAntinodalToggleVisibility() {
+    const label = document.getElementById('antinodalToggleLabel');
+    const playBtn = document.getElementById('playWavefrontsBtn');
+    if (viewMode === 'wavefronts') {
+      label.classList.remove('hidden');
+      playBtn.classList.remove('hidden');
+    } else {
+      label.classList.add('hidden');
+      playBtn.classList.add('hidden');
+      // If user switches away from wavefronts mid-animation, abort it cleanly
+      animMaxRadius = null;
+    }
+  }
+
+  // Toggle listeners
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      viewMode = btn.dataset.mode;
+      updateAntinodalToggleVisibility();
+      update();
+    });
+  });
+  document.getElementById('antinodalCheckbox').addEventListener('change', (e) => {
+    showAntinodal = e.target.checked;
+    update();
+  });
+  document.getElementById('freeProbeCheckbox').addEventListener('change', (e) => {
+    freeProbeEnabled = e.target.checked;
+    update();
+  });
+  document.getElementById('playWavefrontsBtn').addEventListener('click', () => {
+    startWavefrontAnimation();
+  });
+
+  function startWavefrontAnimation() {
+    // Disable the play button while animating to prevent restart-mid-flight
+    document.getElementById('playWavefrontsBtn').disabled = true;
+    // Compute the radius at which the wavefronts have reached the screen.
+    // Use the farthest visible corner of the apparatus as the freeze target so
+    // wavefronts visibly fill the canvas before the animation completes.
+    const sourcesMidX = mainCanvas.width * 0.92 - screenDist; // matches drawMain's calculation
+    const s1 = { x: sourcesMidX, y: mainCanvas.height / 2 - sourceSep / 2 };
+    const s2 = { x: sourcesMidX, y: mainCanvas.height / 2 + sourceSep / 2 };
+    const W = mainCanvas.width, H = mainCanvas.height;
+    animFreezeRadius = Math.max(
+      Math.hypot(s1.x, s1.y), Math.hypot(W - s1.x, s1.y),
+      Math.hypot(s1.x, H - s1.y), Math.hypot(W - s1.x, H - s1.y),
+      Math.hypot(s2.x, s2.y), Math.hypot(W - s2.x, s2.y),
+      Math.hypot(s2.x, H - s2.y), Math.hypot(W - s2.x, H - s2.y)
+    );
+    animMaxRadius = 0;
+    animStartTime = performance.now();
+    animateFrame();
+  }
+
+  function animateFrame() {
+    if (animMaxRadius === null) {
+      // animation cancelled (e.g. mode switched)
+      document.getElementById('playWavefrontsBtn').disabled = false;
+      return;
+    }
+    const elapsed = performance.now() - animStartTime;
+    const t = Math.min(1, elapsed / ANIM_DURATION_MS);
+    animMaxRadius = t * animFreezeRadius;
+    update();
+    if (t < 1) {
+      requestAnimationFrame(animateFrame);
+    } else {
+      animMaxRadius = null;
+      document.getElementById('playWavefrontsBtn').disabled = false;
+      update();
+    }
+  }
+
+  // ------- Constants -------
+  const screenX = mainCanvas.width * 0.92;
+  const fringeStripWidth = 36;
+  const COLORS = {
+    bg: '#121826',
+    axis: '#2a3651',
+    axisStrong: '#3d4d70',
+    label: '#e8ecf4',
+    labelDim: '#8a96b0',
+    labelFaint: '#4a566e',
+    accent: '#ffd166',
+    constructive: '#4ade80',
+    destructive: '#f87171',
+    resultant: '#ffd166'
+  };
+
+  // ------- Listeners -------
+  lambdaSlider.addEventListener('input', (e) => {
+    lambda = parseFloat(e.target.value);
+    followLockedFringe();
+    update();
+  });
+  separationSlider.addEventListener('input', (e) => {
+    sourceSep = parseFloat(e.target.value);
+    followLockedFringe();
+    update();
+  });
+  screenDistSlider.addEventListener('input', (e) => {
+    screenDist = parseFloat(e.target.value);
+    followLockedFringe();
+    update();
+  });
+  sourcePhaseSlider.addEventListener('input', (e) => {
+    sourcePhaseDeg = parseFloat(e.target.value);
+    sourcePhaseValueEl.textContent = `${sourcePhaseDeg.toFixed(0)}°`;
+    update();
+  });
+
+  function applySnap(yCanvas) {
+    if (!snapEnabled || sourceSep <= 0) { lockedFringe = null; return yCanvas; }
+    const bright = getFringeCenters('bright', lambda, sourceSep, screenDist, mainCanvas.height)
+      .map(f => ({ ...f, kind: 'bright' }));
+    const dark = getFringeCenters('dark', lambda, sourceSep, screenDist, mainCanvas.height)
+      .map(f => ({ ...f, kind: 'dark' }));
+    const all = bright.concat(dark);
+    const tol = 14;
+    let best = null, bestDist = Infinity;
+    for (const f of all) {
+      const d = Math.abs(f.yCanvas - yCanvas);
+      if (d < bestDist) { bestDist = d; best = f; }
+    }
+    if (best && bestDist <= tol) {
+      lockedFringe = { kind: best.kind, n: best.n, side: best.side };
+      return best.yCanvas;
+    }
+    lockedFringe = null;
+    return yCanvas;
+  }
+
+  // After sliders change, if the probe was locked to a fringe, follow that fringe to its new y.
+  function followLockedFringe() {
+    if (!lockedFringe || !snapEnabled || sourceSep <= 0) return;
+    const fringes = getFringeCenters(lockedFringe.kind, lambda, sourceSep, screenDist, mainCanvas.height);
+    // Find the entry matching n and side
+    const match = fringes.find(f => f.n === lockedFringe.n && f.side === lockedFringe.side);
+    if (match) {
+      pointPyOnScreen = Math.max(8, Math.min(mainCanvas.height - 8, match.yCanvas));
+    } else {
+      // The locked fringe no longer exists at these settings — release the lock
+      lockedFringe = null;
+    }
+  }
+
+  // Convert a pointer event to canvas-space (cx, cy). Canvas may be scaled by CSS.
+  function eventToCanvas(e) {
+    const rect = mainCanvas.getBoundingClientRect();
+    const scaleX = mainCanvas.width / rect.width;
+    const scaleY = mainCanvas.height / rect.height;
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY
+    };
+  }
+
+  function setScreenProbeY(y) {
+    let py = Math.max(8, Math.min(mainCanvas.height - 8, y));
+    py = applySnap(py);
+    pointPyOnScreen = py;
+  }
+
+  function setFreeProbe(cx, cy) {
+    freeProbe.x = Math.max(8, Math.min(mainCanvas.width - 8, cx));
+    freeProbe.y = Math.max(8, Math.min(mainCanvas.height - 8, cy));
+  }
+
+  // Drag state: which probe (if any) is currently being dragged.
+  // 'screen' = the green screen probe (existing behaviour),
+  // 'free'   = the cyan free probe,
+  // null     = no drag in progress.
+  let activeDrag = null;
+  const FREE_PROBE_PICKUP_RADIUS = 22; // generous hit area for easy grabbing
+
+  function pickProbeAt(cx, cy) {
+    if (freeProbeEnabled) {
+      const dx = cx - freeProbe.x, dy = cy - freeProbe.y;
+      if (dx * dx + dy * dy <= FREE_PROBE_PICKUP_RADIUS * FREE_PROBE_PICKUP_RADIUS) {
+        return 'free';
+      }
+    }
+    return 'screen';
+  }
+
+  function handlePointerDown(e) {
+    const { x, y } = eventToCanvas(e);
+    activeDrag = pickProbeAt(x, y);
+    if (activeDrag === 'free') setFreeProbe(x, y);
+    else setScreenProbeY(y);
+    update();
+  }
+  function handlePointerMove(e) {
+    if (!activeDrag) return;
+    const { x, y } = eventToCanvas(e);
+    if (activeDrag === 'free') setFreeProbe(x, y);
+    else setScreenProbeY(y);
+    update();
+  }
+  function handlePointerUp() {
+    activeDrag = null;
+  }
+
+  mainCanvas.addEventListener('mousedown', (e) => { handlePointerDown(e); });
+  mainCanvas.addEventListener('mousemove', (e) => { if (e.buttons === 1) handlePointerMove(e); });
+  window.addEventListener('mouseup', handlePointerUp);
+  // Touch support. passive:false on all so we can preventDefault and stop
+  // Safari from scrolling/zooming the page while a probe is being dragged.
+  // Multi-touch is rejected (e.touches.length !== 1) so a second finger
+  // landing on the canvas during a drag doesn't hijack the gesture or
+  // produce a sudden coordinate jump. touchcancel mirrors touchend so a
+  // system interruption (incoming notification, palm rejection) cleans up
+  // the drag state instead of leaving activeDrag stuck.
+  mainCanvas.addEventListener('touchstart', function (e) {
+    e.preventDefault();
+    if (e.touches.length !== 1) return;
+    handlePointerDown(e.touches[0]);
+  }, { passive: false });
+  mainCanvas.addEventListener('touchmove', function (e) {
+    e.preventDefault();
+    if (e.touches.length !== 1) return;
+    handlePointerMove(e.touches[0]);
+  }, { passive: false });
+  mainCanvas.addEventListener('touchend', function (e) {
+    e.preventDefault();
+    handlePointerUp();
+  }, { passive: false });
+  mainCanvas.addEventListener('touchcancel', function (e) {
+    e.preventDefault();
+    handlePointerUp();
+  }, { passive: false });
+
+  // ---- iPad / Apple Pencil polyfill for <input type="range"> ----
+  // Mobile Safari has a long-standing bug where dragging a range slider
+  // thumb to the LEFT and releasing causes the slider to snap to its
+  // minimum value, regardless of where the touch actually ended. The
+  // fix is to recompute the slider value from the actual touch position
+  // and dispatch corrected input/change events. Delegated at document
+  // level so it covers all four sliders without per-element rebinding.
+  function _ipadSliderTouchEnd(e) {
+    var el = e.target;
+    if (!el || el.tagName !== 'INPUT' || el.type !== 'range') return;
+    if (el.disabled) return;
+    if (!e.changedTouches || e.changedTouches.length === 0) return;
+    var t = e.changedTouches[0];
+    var rect = el.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    var min = parseFloat(el.min);
+    var max = parseFloat(el.max);
+    if (isNaN(min)) min = 0;
+    if (isNaN(max)) max = 100;
+    var step = parseFloat(el.step);
+    if (isNaN(step) || step <= 0) step = 1;
+    var frac = (t.clientX - rect.left) / rect.width;
+    if (frac < 0) frac = 0;
+    if (frac > 1) frac = 1;
+    var raw = min + frac * (max - min);
+    var stepped = min + Math.round((raw - min) / step) * step;
+    if (stepped < min) stepped = min;
+    if (stepped > max) stepped = max;
+    var stepStr = String(step);
+    var dotIdx = stepStr.indexOf('.');
+    var decimals = (dotIdx >= 0) ? (stepStr.length - dotIdx - 1) : 0;
+    var newVal = decimals > 0 ? parseFloat(stepped.toFixed(decimals)) : stepped;
+    var current = parseFloat(el.value);
+    if (newVal === current) return;
+    el.value = String(newVal);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  document.addEventListener('touchend', _ipadSliderTouchEnd, { passive: true });
+  document.addEventListener('touchcancel', _ipadSliderTouchEnd, { passive: true });
+
+  // ------- Helpers -------
+  function dist(x1, y1, x2, y2) { return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2); }
+
+  function wavelengthToColor(wavelength, minLambda, maxLambda) {
+    let r, g, b;
+    const n = (wavelength - minLambda) / (maxLambda - minLambda);
+    if (n < 0.2)      { const t = n / 0.2;          r = Math.round(128 * (1 - t)); g = 0;                            b = 255; }
+    else if (n < 0.4) { const t = (n - 0.2) / 0.2;  r = 0;                          g = Math.round(255 * t);          b = 255; }
+    else if (n < 0.5) { const t = (n - 0.4) / 0.1;  r = 0;                          g = 255;                          b = Math.round(255 * (1 - t)); }
+    else if (n < 0.6) { const t = (n - 0.5) / 0.1;  r = Math.round(255 * t);        g = 255;                          b = 0; }
+    else if (n < 0.8) { const t = (n - 0.6) / 0.2;  r = 255;                        g = Math.round(255 * (1 - t) + 165 * t); b = 0; }
+    else              { const t = (n - 0.8) / 0.2;  r = 255;                        g = Math.round(165 * (1 - t));    b = 0; }
+    return { r, g, b, css: `rgb(${r},${g},${b})` };
+  }
+
+  function rgba(c, a) { return `rgba(${c.r},${c.g},${c.b},${a})`; }
+
+  // Exact path difference at vertical offset y from screen centre.
+  // Sources at (-D, ±d/2), screen point at (0, y) (relative coords).
+  // ΔL(y) = √(D² + (y + d/2)²) − √(D² + (y − d/2)²)  is the SIGNED path difference
+  // l₁ − l₂. Positive y (probe below midline, closer to S₂) gives positive ΔL.
+  // ΔL is bounded: |ΔL(y)| < d for all y, with ΔL → ±d as y → ±∞.
+  function pathDiffAt(y, d, D) {
+    return Math.sqrt(D * D + (y + d / 2) ** 2) - Math.sqrt(D * D + (y - d / 2) ** 2);
+  }
+
+  // Inverse: find y such that pathDiffAt(y) = target (signed). ΔL is monotonic in y.
+  // Returns null if target is outside (-d, d).
+  function findFringeYSigned(target, d, D) {
+    if (Math.abs(target) >= d - 1e-9) return null;
+    if (target === 0) return 0;
+    const sign = target > 0 ? 1 : -1;
+    const absTarget = Math.abs(target);
+    let lo = 0, hi = 10;
+    while (pathDiffAt(hi, d, D) < absTarget && hi < 1e7) hi *= 2;
+    if (pathDiffAt(hi, d, D) < absTarget) return null;
+    for (let i = 0; i < 60; i++) {
+      const mid = (lo + hi) / 2;
+      if (pathDiffAt(mid, d, D) < absTarget) lo = mid; else hi = mid;
+    }
+    return sign * (lo + hi) / 2;
+  }
+
+  // Build list of fringe centre y-coordinates (in canvas pixels).
+  // kind: 'bright' or 'dark'.
+  // Bright fringes occur at signed path difference (n − Δφ_source/360)·λ.
+  // Dark fringes occur at signed path difference (n + ½ − Δφ_source/360)·λ.
+  // With Δφ_source = 0 this reduces to the standard pattern (bright at integer
+  // multiples of λ symmetric about y=0). With non-zero source phase the entire
+  // pattern shifts; in particular at 180° the central position becomes a dark
+  // fringe and the bright/dark orders swap.
+  function getFringeCenters(kind, lambda, d, D, canvasHeight) {
+    const yCenter = canvasHeight / 2;
+    const out = [];
+    if (d <= 0) return out;
+    const maxYDisplay = canvasHeight / 2;
+    const phaseShiftLambda = sourcePhaseDeg / 360; // in units of λ
+    // Enumerate orders both positive and negative since the pattern may not be
+    // symmetric about y=0 once Δφ_source ≠ 0.
+    // Bright fringes: ΔL_signed = (n − phaseShiftLambda)·λ
+    // Dark fringes:   ΔL_signed = (n + ½ − phaseShiftLambda)·λ
+    const nList = [];
+    for (let n = -200; n <= 200; n++) nList.push(n);
+    for (const n of nList) {
+      const offset = (kind === 'bright') ? n - phaseShiftLambda
+                                         : n + 0.5 - phaseShiftLambda;
+      const target = offset * lambda;
+      const y = findFringeYSigned(target, d, D);
+      if (y === null) continue;
+      const yCanvas = yCenter + y;
+      if (yCanvas < -50 || yCanvas > canvasHeight + 50) continue;
+      // We label all bright fringes by the displayed-label index. The "centre"
+      // of the pattern is wherever the n=0 fringe lands (which might no longer
+      // be at y=0 when Δφ_source ≠ 0). Side: +1 below, -1 above, 0 on midline.
+      const side = (Math.abs(y) < 0.5) ? 0 : (y > 0 ? 1 : -1);
+      out.push({ n, yCanvas, yOffset: y, side });
+    }
+    return out;
+  }
+
+  // ------- Main render -------
+  function update() {
+    const minL = parseFloat(lambdaSlider.min);
+    const maxL = parseFloat(lambdaSlider.max);
+    const color = wavelengthToColor(lambda, minL, maxL);
+
+    const sourcesMidX = screenX - screenDist;
+    const s1 = { x: sourcesMidX, y: mainCanvas.height / 2 - sourceSep / 2 };
+    const s2 = { x: sourcesMidX, y: mainCanvas.height / 2 + sourceSep / 2 };
+    const p  = { x: screenX,     y: pointPyOnScreen };
+
+    const l1 = dist(s1.x, s1.y, p.x, p.y);
+    const l2 = dist(s2.x, s2.y, p.x, p.y);
+    // Round each ray length to 1dp first, then derive ΔL from the rounded values.
+    // ΔL is the magnitude of path difference — independent of source phase.
+    const l1Display = parseFloat((l1 / lambda).toFixed(1));
+    const l2Display = parseFloat((l2 / lambda).toFixed(1));
+    const pathDiffInLambda = Math.abs(l2Display - l1Display);
+    pathDiffValueEl.textContent = pathDiffInLambda.toFixed(1);
+
+    // Total phase difference at P:  Δφ_total = (|ΔL|/λ)·360° + Δφ_source, mod 360°.
+    // We use the *unsigned* path difference because phase difference between two
+    // arriving waves doesn't care which path is longer — only by how much. With
+    // signed pathDiff, moving the probe slightly below centre would give Δφ ≈ 252°
+    // instead of the more natural 108° (since the angle wrapped through −108°).
+    // The student-intuitive convention: at the central bright fringe Δφ = 0°,
+    // grows monotonically to 180° at the first dark fringe, to 360° (=0°) at the
+    // next bright fringe, regardless of which way you're moving.
+    const phaseDiffDeg = ((pathDiffInLambda * 360 + sourcePhaseDeg) % 360 + 360) % 360;
+    phaseDiffValueEl.textContent = phaseDiffDeg.toFixed(1);
+
+    // Constructive when total phase ≡ 0 (mod 360°), destructive when ≡ 180°.
+    // We classify against the displayed phase value so the pill agrees with what
+    // the student reads.
+    const distFromConstructive = Math.min(phaseDiffDeg, 360 - phaseDiffDeg);
+    const distFromDestructive = Math.abs(phaseDiffDeg - 180);
+    statusPill.classList.remove('constructive', 'destructive');
+    const half = `<span class="frac"><sup>1</sup>&frasl;<sub>2</sub></span>`;
+    if (distFromConstructive < 18) {
+      statusPill.classList.add('constructive');
+      // With source phase ≠ 0 the bright fringes no longer sit at integer ΔL,
+      // so the equation "ΔL = nλ" is only meaningful when sources are in phase.
+      // Show that equation only in the in-phase case; otherwise show the
+      // total-phase condition.
+      if (sourcePhaseDeg < 0.5) {
+        const orderN = Math.round(pathDiffInLambda);
+        statusPill.innerHTML = `Constructive <span class="eq">ΔL = ${orderN}λ</span>`;
+      } else {
+        statusPill.innerHTML = `Constructive <span class="eq">Δφ = 0°</span>`;
+      }
+    } else if (distFromDestructive < 18) {
+      statusPill.classList.add('destructive');
+      if (sourcePhaseDeg < 0.5) {
+        const halfN = Math.floor(pathDiffInLambda);
+        const expr = halfN === 0 ? `${half}λ` : `(${halfN} + ${half})λ`;
+        statusPill.innerHTML = `Destructive <span class="eq">ΔL = ${expr}</span>`;
+      } else {
+        statusPill.innerHTML = `Destructive <span class="eq">Δφ = 180°</span>`;
+      }
+    } else {
+      statusPill.textContent = '— intermediate —';
+    }
+
+    drawMain(color, s1, s2, p, l1Display, l2Display, pathDiffInLambda, phaseDiffDeg);
+    // Lower graph uses the RAW (unrounded) total phase so the waves slide smoothly.
+    const phaseDiffDegRaw = ((Math.abs(l1 - l2) / lambda) * 360 + sourcePhaseDeg) % 360;
+    drawWaves(color, phaseDiffDegRaw);
+  }
+
+  // ------- Wavefront renderer -------
+  // Draws concentric crest circles at radii r = λ, 2λ, 3λ, ... from each source.
+  // This is the textbook Huygens picture: each circle is a surface of constant phase
+  // (a "wavefront"). Adjacent circles from the same source are exactly λ apart by
+  // construction, so counting circles along any line out from a source gives the
+  // path length directly in units of λ.
+  //
+  // Where two crest circles cross → constructive interference (crest meets crest).
+  // Halfway between adjacent crests is a trough; where one source's crest crosses
+  // another source's trough → destructive interference. We render trough circles
+  // too (in a muted tint) at radii (n + ½)λ, so destructive interference is
+  // visible as crest-meets-trough crossings.
+  function drawWavefronts(s1x, s1y, s2x, s2y, lam, color) {
+    const W = mainCanvas.width, H = mainCanvas.height;
+    // Maximum radius we need: distance from each source to the farthest visible corner.
+    const maxR = Math.max(
+      Math.hypot(s1x, s1y), Math.hypot(W - s1x, s1y),
+      Math.hypot(s1x, H - s1y), Math.hypot(W - s1x, H - s1y),
+      Math.hypot(s2x, s2y), Math.hypot(W - s2x, s2y),
+      Math.hypot(s2x, H - s2y), Math.hypot(W - s2x, H - s2y)
+    );
+    const maxN = Math.ceil(maxR / lam);
+
+    const crestColor = `rgba(${color.r},${color.g},${color.b},0.55)`;
+    const troughColor = `rgba(${Math.round(color.r * 0.3)},${Math.round(color.g * 0.4)},${Math.min(255, Math.round(color.b * 0.85 + 30))},0.32)`;
+
+    mainCtx.save();
+    mainCtx.lineCap = 'round';
+
+    // During animation, only render circles whose radius is within the current
+    // expanding wavefront. animMaxRadius is null when not animating (steady state).
+    const radiusLimit = (animMaxRadius === null) ? Infinity : animMaxRadius;
+    // During animation, each wavefront ring moves outward continuously. We model
+    // this by saying the rings sit at radii: phaseOffset, phaseOffset + λ,
+    // phaseOffset + 2λ, …  where phaseOffset = animMaxRadius mod λ grows from 0
+    // to λ over one period and then wraps. This means every visible ring is
+    // moving outward smoothly each frame, rather than rings popping into existence
+    // at discrete λ-boundaries.
+    // In steady state (no animation), phaseOffset = 0, recovering the static
+    // pattern of crests at λ, 2λ, 3λ, …
+    const phaseOffset = (animMaxRadius === null) ? 0 : (animMaxRadius % lam);
+
+    // S₂'s rings are shifted by the source-phase offset: if S₂ leads S₁ by
+    // Δφ_source degrees, its waves have already travelled (Δφ_source/360)·λ further
+    // at any given moment. This shift propagates into all the geometry that depends
+    // on the relative phasing — antinodal positions, screen fringes, etc.
+    const s2RadiusShift = (sourcePhaseDeg / 360) * lam;
+
+    // Trough circles first (at half-wavelength offsets from the crests) — drawn underneath.
+    mainCtx.strokeStyle = troughColor;
+    mainCtx.lineWidth = 1;
+    for (let n = 0; n < maxN; n++) {
+      // Trough sits half a wavelength behind the n-th crest (going outward).
+      // Steady state: phaseOffset=0, so r = (n + 0.5)λ — same as before.
+      const r1 = phaseOffset + n * lam - lam / 2;
+      const r2 = r1 + s2RadiusShift; // S₂ ring shifted by source-phase
+      if (r1 > 0 && r1 <= radiusLimit) {
+        mainCtx.beginPath();
+        mainCtx.arc(s1x, s1y, r1, 0, Math.PI * 2);
+        mainCtx.stroke();
+      }
+      if (r2 > 0 && r2 <= radiusLimit) {
+        mainCtx.beginPath();
+        mainCtx.arc(s2x, s2y, r2, 0, Math.PI * 2);
+        mainCtx.stroke();
+      }
+      if (r1 > radiusLimit && r2 > radiusLimit) break;
+    }
+
+    // Crest circles on top — these are the ones the user counts.
+    mainCtx.strokeStyle = crestColor;
+    mainCtx.lineWidth = 1.4;
+    for (let n = 0; n < maxN; n++) {
+      const r1 = phaseOffset + n * lam;
+      const r2 = r1 + s2RadiusShift;
+      if (r1 > 0 && r1 <= radiusLimit) {
+        mainCtx.beginPath();
+        mainCtx.arc(s1x, s1y, r1, 0, Math.PI * 2);
+        mainCtx.stroke();
+      }
+      if (r2 > 0 && r2 <= radiusLimit) {
+        mainCtx.beginPath();
+        mainCtx.arc(s2x, s2y, r2, 0, Math.PI * 2);
+        mainCtx.stroke();
+      }
+      if (r1 > radiusLimit && r2 > radiusLimit) break;
+    }
+
+    // ------- Constructive interference points -------
+    // Where two crest circles cross, the path difference equals an integer number of
+    // wavelengths (offset by the source-phase shift) → constructive interference.
+    drawConstructivePoints(s1x, s1y, s2x, s2y, lam, maxN, radiusLimit, phaseOffset, s2RadiusShift);
+
+    mainCtx.restore();
+  }
+
+  // Compute circle–circle intersection points. Returns 0, 1, or 2 points.
+  function intersectCircles(x1, y1, r1, x2, y2, r2) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d > r1 + r2 || d < Math.abs(r1 - r2) || d === 0) return [];
+    const a = (d * d + r1 * r1 - r2 * r2) / (2 * d);
+    const h2 = r1 * r1 - a * a;
+    if (h2 < 0) return [];
+    const h = Math.sqrt(h2);
+    const px = x1 + (a * dx) / d;
+    const py = y1 + (a * dy) / d;
+    const ox = -dy / d, oy = dx / d;
+    return [
+      { x: px + h * ox, y: py + h * oy },
+      { x: px - h * ox, y: py - h * oy }
+    ];
+  }
+
+  function drawConstructivePoints(s1x, s1y, s2x, s2y, lam, maxN, radiusLimit, phaseOffset, s2RadiusShift) {
+    // For each pair of *currently visible* rings (one from each source), find
+    // the crest-meets-crest intersections.
+    //
+    // S₁ rings sit at radii: phaseOffset, phaseOffset + λ, phaseOffset + 2λ, …
+    // S₂ rings sit at radii: phaseOffset + s2RadiusShift, phaseOffset + s2RadiusShift + λ, …
+    // where s2RadiusShift = (Δφ_source / 360°)·λ encodes any phase offset between
+    // the sources. With Δφ_source = 0, both sets coincide and we recover the
+    // standard symmetric Young's pattern.
+
+    const midX = (s1x + s2x) / 2;
+    const midY = (s1y + s2y) / 2;
+    const W = mainCanvas.width;
+    const animating = (radiusLimit !== Infinity);
+
+    const sourceDist = Math.abs(s2y - s1y);
+    const maxOrder = Math.floor(sourceDist / lam) + 1;
+    const halfD = sourceDist / 2;
+
+    const bucket = {};
+    for (let n = -maxOrder; n <= maxOrder; n++) {
+      bucket[n] = { left: [], right: [] };
+    }
+
+    // Build separate ring lists for each source.
+    const ringsS1 = [];
+    const ringsS2 = [];
+    for (let k = 1; k <= maxN + 1; k++) {
+      const r1 = phaseOffset + (k - 1) * lam;
+      const r2 = phaseOffset + (k - 1) * lam + s2RadiusShift;
+      if (r1 > 0 && r1 <= radiusLimit) ringsS1.push({ k, r: r1 });
+      if (r2 > 0 && r2 <= radiusLimit) ringsS2.push({ k, r: r2 });
+    }
+
+    // For every pair of visible rings, find crossings.
+    for (const a of ringsS1) {
+      for (const b of ringsS2) {
+        const n = a.k - b.k; // antinodal order through this crossing
+        if (n < -maxOrder || n > maxOrder) continue;
+        const pts = intersectCircles(s1x, s1y, a.r, s2x, s2y, b.r);
+        for (const pt of pts) {
+          if (pt.x < midX - 0.5) bucket[n].left.push(pt);
+          else bucket[n].right.push(pt);
+        }
+      }
+    }
+
+    // Sort each branch by y so spline traces the hyperbola smoothly
+    for (const key in bucket) {
+      bucket[key].left.sort((a, b) => a.y - b.y);
+      bucket[key].right.sort((a, b) => a.y - b.y);
+    }
+
+    // ----- Draw antinodal lines (only if toggle is on AND we're in steady state) -----
+    // During animation the lines wouldn't be meaningful — they need the full
+    // pattern of dots to make sense, and showing partial lines that grow
+    // alongside the dots was previously shown to be visually chaotic.
+    if (showAntinodal && !animating) {
+      // Smooth curves through dots for every order, including n=0. With Δφ_source = 0
+      // the n=0 locus is the perpendicular bisector (a straight line) and the curve
+      // through its dots will lay along that bisector. With non-zero source phase
+      // it becomes a hyperbola like any other order, and the same Bezier treatment
+      // works without special-casing.
+      mainCtx.lineCap = 'round';
+      for (let n = -maxOrder; n <= maxOrder; n++) {
+        drawSmoothBranch(bucket[n].left);
+        drawSmoothBranch(bucket[n].right);
+      }
+    }
+
+    // ----- Dots: shown whenever antinodal toggle is on, including during
+    // animation (radiusLimit gating in the bucket loop above already culled
+    // dots whose parent circles haven't grown to reach them yet). -----
+    if (showAntinodal) {
+      mainCtx.fillStyle = '#ffd166';
+      for (let n = -maxOrder; n <= maxOrder; n++) {
+        const allPts = bucket[n].left.concat(bucket[n].right);
+        for (const pt of allPts) {
+          mainCtx.beginPath();
+          mainCtx.arc(pt.x, pt.y, 2.5, 0, Math.PI * 2);
+          mainCtx.fill();
+        }
+      }
+    }
+  }
+
+  // Draw a smooth Catmull-Rom spline through the given points, with a soft
+  // three-layer beam effect — translucent, raybox-style glow rather than a
+  // hard laser line. The dots stay visible through the beam.
+  function drawSmoothBranch(points) {
+    if (points.length < 2) return;
+    if (points.length === 2) {
+      strokePolyline(points, 'rgba(255, 200, 90, 0.07)', 18);
+      strokePolyline(points, 'rgba(255, 209, 102, 0.14)', 8);
+      strokePolyline(points, 'rgba(255, 220, 140, 0.32)', 2.4);
+      return;
+    }
+    // Outer halo
+    catmullRomPath(points);
+    mainCtx.strokeStyle = 'rgba(255, 200, 90, 0.07)';
+    mainCtx.lineWidth = 18;
+    mainCtx.lineCap = 'round';
+    mainCtx.stroke();
+    // Middle glow
+    catmullRomPath(points);
+    mainCtx.strokeStyle = 'rgba(255, 209, 102, 0.14)';
+    mainCtx.lineWidth = 8;
+    mainCtx.stroke();
+    // Soft core
+    catmullRomPath(points);
+    mainCtx.strokeStyle = 'rgba(255, 220, 140, 0.32)';
+    mainCtx.lineWidth = 2.4;
+    mainCtx.stroke();
+  }
+
+  function strokePolyline(points, color, width) {
+    mainCtx.strokeStyle = color;
+    mainCtx.lineWidth = width;
+    mainCtx.lineCap = 'round';
+    mainCtx.beginPath();
+    for (let i = 0; i < points.length; i++) {
+      if (i === 0) mainCtx.moveTo(points[i].x, points[i].y);
+      else mainCtx.lineTo(points[i].x, points[i].y);
+    }
+    mainCtx.stroke();
+  }
+
+  // Build a path of cubic Bezier segments approximating a Catmull-Rom spline
+  // through `points`. The path is left "open" — caller invokes ctx.stroke().
+  function catmullRomPath(points) {
+    const n = points.length;
+    mainCtx.beginPath();
+    mainCtx.moveTo(points[0].x, points[0].y);
+    // Catmull-Rom tension factor: 1/6 gives the standard uniform Catmull-Rom
+    // when converted to cubic Beziers via the formula:
+    //   B1 = P_i + (P_{i+1} - P_{i-1}) / 6
+    //   B2 = P_{i+1} - (P_{i+2} - P_i) / 6
+    // For the endpoints we duplicate the boundary points so the curve doesn't
+    // overshoot wildly at the ends.
+    for (let i = 0; i < n - 1; i++) {
+      const p0 = points[i - 1] || points[i];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[i + 2] || points[i + 1];
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+      mainCtx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+    }
+  }
+
+  // ------- Main canvas -------
+  function drawMain(color, s1, s2, p, l1Display, l2Display, pathDiffInLambda, phaseDiffDeg) {
+    const W = mainCanvas.width, H = mainCanvas.height;
+    const sourcesMidX = s1.x; // s1 and s2 share the same x
+    mainCtx.clearRect(0, 0, W, H);
+
+    // Background gradient (very subtle vignette)
+    const bgGrad = mainCtx.createRadialGradient(W * 0.4, H * 0.5, 50, W * 0.4, H * 0.5, W * 0.7);
+    bgGrad.addColorStop(0, '#161e30');
+    bgGrad.addColorStop(1, '#0f1422');
+    mainCtx.fillStyle = bgGrad;
+    mainCtx.fillRect(0, 0, W, H);
+
+    // ------- Wavefronts (only in wavefronts mode) -------
+    // Drawn early so everything else (rays, sources, probe, labels) sits on top.
+    if (viewMode === 'wavefronts') {
+      drawWavefronts(s1.x, s1.y, s2.x, s2.y, lambda, color);
+    }
+
+    // Optical axis (faint horizontal centreline)
+    mainCtx.strokeStyle = COLORS.axis;
+    mainCtx.lineWidth = 1;
+    mainCtx.setLineDash([2, 6]);
+    mainCtx.beginPath();
+    mainCtx.moveTo(0, H / 2);
+    mainCtx.lineTo(W, H / 2);
+    mainCtx.stroke();
+    mainCtx.setLineDash([]);
+
+    // Source-to-screen baseline (light grid every 50px on the optical axis)
+    mainCtx.fillStyle = COLORS.labelFaint;
+    mainCtx.font = '9px JetBrains Mono, monospace';
+    mainCtx.textAlign = 'center';
+    for (let x = s1.x; x < screenX; x += 50) {
+      mainCtx.fillRect(x, H / 2 - 1, 1, 3);
+    }
+
+    // ------- Fringe pattern strip on screen -------
+    const fringeLeft = screenX - fringeStripWidth;
+    // Faint backdrop for the strip
+    mainCtx.fillStyle = '#080b14';
+    mainCtx.fillRect(fringeLeft, 0, fringeStripWidth, H);
+
+    // During animation, the fringe pattern at vertical position y only forms
+    // once BOTH wavefronts have reached that screen point (the slower of the two
+    // is the gating one). We ramp visibility in smoothly over a short transition
+    // distance so the pattern fades up rather than pops.
+    const animatingFringe = (animMaxRadius !== null);
+    const fringeFadeDistance = lambda * 1.5; // smooth ramp width
+
+    // Render intensity row by row. Total phase difference at screen point P is:
+    //   Δφ_total = (l₁ − l₂)·2π/λ + Δφ_source
+    // and intensity ∝ cos²(Δφ_total / 2).
+    const sourcePhaseRad = sourcePhaseDeg * Math.PI / 180;
+    const imgData = mainCtx.createImageData(fringeStripWidth, H);
+    for (let y = 0; y < H; y++) {
+      const l1s = dist(s1.x, s1.y, screenX, y);
+      const l2s = dist(s2.x, s2.y, screenX, y);
+      const totalPhase = ((l1s - l2s) / lambda) * 2 * Math.PI + sourcePhaseRad;
+      const I = Math.cos(totalPhase / 2) ** 2;
+
+      // Visibility factor: 0 if no wavefront has reached here, ramps to 1 once
+      // both waves have travelled past the screen point by `fringeFadeDistance`.
+      let visibility = 1;
+      if (animatingFringe) {
+        const slowerWaveDistance = Math.max(l1s, l2s);
+        const overshoot = animMaxRadius - slowerWaveDistance;
+        visibility = Math.max(0, Math.min(1, overshoot / fringeFadeDistance));
+      }
+
+      // Soft falloff at the strip edges so it looks like glowing illumination
+      for (let x = 0; x < fringeStripWidth; x++) {
+        const edgeFalloff = Math.sin((x / fringeStripWidth) * Math.PI); // 0..1..0
+        const a = I * edgeFalloff * visibility;
+        const idx = (y * fringeStripWidth + x) * 4;
+        imgData.data[idx]     = color.r;
+        imgData.data[idx + 1] = color.g;
+        imgData.data[idx + 2] = color.b;
+        imgData.data[idx + 3] = Math.round(a * 255);
+      }
+    }
+    mainCtx.putImageData(imgData, fringeLeft, 0);
+
+    // Subtle frame around the screen
+    mainCtx.strokeStyle = COLORS.axisStrong;
+    mainCtx.lineWidth = 1;
+    mainCtx.strokeRect(fringeLeft - 0.5, 0, fringeStripWidth + 1, H);
+
+    // Tick marks for bright fringes. With sources in phase, n labels
+    // (n=0 central, n=1, n=2 outward) are pedagogically meaningful and shown
+    // alongside the ticks. With non-zero source phase, the integer-order labelling
+    // implicitly suggests the path-difference equation ΔL = nλ — but that
+    // equation no longer holds, so we hide the labels and just keep the ticks
+    // as a visual indication of where bright fringes now sit.
+    if (sourceSep > 0) {
+      const brightFringes = getFringeCenters('bright', lambda, sourceSep, screenDist, H);
+      const showLabels = (sourcePhaseDeg < 0.5);
+      mainCtx.font = '600 10px JetBrains Mono, monospace';
+      mainCtx.textAlign = 'left';
+      mainCtx.textBaseline = 'middle';
+      // Identify which n is the "central" (smallest |yOffset|)
+      let centralN = null;
+      let smallestOffset = Infinity;
+      for (const f of brightFringes) {
+        if (Math.abs(f.yOffset) < smallestOffset) {
+          smallestOffset = Math.abs(f.yOffset);
+          centralN = f.n;
+        }
+      }
+      for (const f of brightFringes) {
+        if (f.yCanvas < 6 || f.yCanvas > H - 6) continue;
+        const isCentral = (f.n === centralN);
+        mainCtx.strokeStyle = isCentral ? COLORS.accent : COLORS.labelDim;
+        mainCtx.lineWidth = 1;
+        mainCtx.beginPath();
+        mainCtx.moveTo(screenX + 1, f.yCanvas);
+        mainCtx.lineTo(screenX + 7, f.yCanvas);
+        mainCtx.stroke();
+        if (showLabels) {
+          const label = `n=${Math.abs(f.n - centralN)}`;
+          mainCtx.fillStyle = isCentral ? COLORS.accent : '#c8d2e6';
+          mainCtx.fillText(label, screenX + 11, f.yCanvas);
+        }
+      }
+    }
+
+    // ------- Path lines from sources to P -------
+    if (viewMode === 'rays') {
+      // Glow underneath
+      mainCtx.strokeStyle = rgba(color, 0.18);
+      mainCtx.lineWidth = 6;
+      mainCtx.lineCap = 'round';
+      mainCtx.beginPath(); mainCtx.moveTo(s1.x, s1.y); mainCtx.lineTo(p.x, p.y); mainCtx.stroke();
+      mainCtx.beginPath(); mainCtx.moveTo(s2.x, s2.y); mainCtx.lineTo(p.x, p.y); mainCtx.stroke();
+      // Main line
+      mainCtx.strokeStyle = rgba(color, 0.95);
+      mainCtx.lineWidth = 1.6;
+      mainCtx.beginPath(); mainCtx.moveTo(s1.x, s1.y); mainCtx.lineTo(p.x, p.y); mainCtx.stroke();
+      mainCtx.beginPath(); mainCtx.moveTo(s2.x, s2.y); mainCtx.lineTo(p.x, p.y); mainCtx.stroke();
+    } else if (viewMode === 'wavefronts') {
+      // Wavefront field IS the visualisation; just thin guide lines from sources to P
+      // so the connection to the probe stays legible against the bright field.
+      mainCtx.strokeStyle = 'rgba(255,255,255,0.55)';
+      mainCtx.lineWidth = 1;
+      mainCtx.setLineDash([3, 4]);
+      mainCtx.beginPath(); mainCtx.moveTo(s1.x, s1.y); mainCtx.lineTo(p.x, p.y); mainCtx.stroke();
+      mainCtx.beginPath(); mainCtx.moveTo(s2.x, s2.y); mainCtx.lineTo(p.x, p.y); mainCtx.stroke();
+      mainCtx.setLineDash([]);
+    } else {
+      // SINUSOIDAL WAVE MODE
+      // Faint guide line down the centre of each ray
+      mainCtx.strokeStyle = rgba(color, 0.12);
+      mainCtx.lineWidth = 1;
+      mainCtx.setLineDash([2, 4]);
+      mainCtx.beginPath(); mainCtx.moveTo(s1.x, s1.y); mainCtx.lineTo(p.x, p.y); mainCtx.stroke();
+      mainCtx.beginPath(); mainCtx.moveTo(s2.x, s2.y); mainCtx.lineTo(p.x, p.y); mainCtx.stroke();
+      mainCtx.setLineDash([]);
+
+      // Wave amplitude in pixels — scale with sqrt of available space; cap so it doesn't dominate
+      const waveAmp = Math.min(10, Math.max(5, sourceSep * 0.1));
+      const sourcePhaseRad = sourcePhaseDeg * Math.PI / 180;
+      drawWaveRay(s1, p, lambda, waveAmp, color, 0);
+      drawWaveRay(s2, p, lambda, waveAmp, color, sourcePhaseRad);
+    }
+
+    // Path-length labels (in λ) along each line
+    drawPathLabel(s1, p, l1Display);
+    drawPathLabel(s2, p, l2Display);
+
+    // ------- Sources -------
+    drawSource(s1.x, s1.y, color, 'S₁');
+    drawSource(s2.x, s2.y, color, 'S₂');
+
+    // ------- Probe at P -------
+    const probeR = 6;
+    // Halo
+    mainCtx.fillStyle = 'rgba(74, 222, 128, 0.18)';
+    mainCtx.beginPath(); mainCtx.arc(p.x, p.y, 14, 0, Math.PI * 2); mainCtx.fill();
+    // Inner
+    mainCtx.fillStyle = COLORS.constructive;
+    mainCtx.beginPath(); mainCtx.arc(p.x, p.y, probeR, 0, Math.PI * 2); mainCtx.fill();
+    mainCtx.strokeStyle = '#0a0e1a';
+    mainCtx.lineWidth = 1.5;
+    mainCtx.stroke();
+
+    // Two-line readout near P: ΔL on top (geometric path difference),
+    // Δφ underneath (total phase including any source-phase offset).
+    // Phase difference is the quantity that actually determines bright/dark,
+    // so showing both makes the central destructive-when-anti-phase case
+    // self-explanatory (ΔL = 0.0λ, Δφ = 180° → destructive).
+    // Render in two parts: numeric prefix in JetBrains Mono (whose default
+    // Latin subset doesn't include λ), then the unit characters separately.
+    // We reserve a fixed width for the unit glyphs rather than trusting
+    // measureText.
+    const monoFont   = '500 12px JetBrains Mono, monospace';
+    const lambdaFont = 'italic 500 14px serif';
+    const degFont    = '500 12px sans-serif';
+    const RESERVED_LAMBDA_W = 14;
+    const RESERVED_DEG_W    = 10;
+    const numL = `ΔL = ${pathDiffInLambda.toFixed(1)}`;
+    const numPhi = `Δφ = ${phaseDiffDeg.toFixed(0)}`;
+    mainCtx.font = monoFont;
+    const wNumL   = mainCtx.measureText(numL).width;
+    const wNumPhi = mainCtx.measureText(numPhi).width;
+    const wL   = wNumL   + 2 + RESERVED_LAMBDA_W;
+    const wPhi = wNumPhi + 2 + RESERVED_DEG_W;
+    const tw = Math.max(wL, wPhi);
+    const pillH = 32;
+    const pillW = tw + 8;
+    const txtX = p.x + 14;
+    const txtY = p.y;
+    mainCtx.fillStyle = 'rgba(10,14,26,0.88)';
+    mainCtx.fillRect(txtX - 4, txtY - pillH / 2, pillW, pillH);
+    mainCtx.strokeStyle = COLORS.axisStrong;
+    mainCtx.lineWidth = 1;
+    mainCtx.strokeRect(txtX - 4 + 0.5, txtY - pillH / 2 + 0.5, pillW, pillH);
+    mainCtx.fillStyle = COLORS.constructive;
+    mainCtx.textAlign = 'left';
+    mainCtx.textBaseline = 'middle';
+    mainCtx.font = monoFont;
+    mainCtx.fillText(numL, txtX, txtY - 7);
+    mainCtx.font = lambdaFont;
+    mainCtx.fillText('λ', txtX + wNumL + 2, txtY - 7);
+    mainCtx.font = monoFont;
+    mainCtx.fillText(numPhi, txtX, txtY + 8);
+    mainCtx.font = degFont;
+    mainCtx.fillText('°', txtX + wNumPhi + 2, txtY + 8);
+
+    // ------- Free probe (optional, draggable anywhere) -------
+    if (freeProbeEnabled) {
+      const fp = freeProbe;
+      // Path lengths from each source to the free probe
+      const fl1 = dist(s1.x, s1.y, fp.x, fp.y);
+      const fl2 = dist(s2.x, s2.y, fp.x, fp.y);
+      const fl1Display = parseFloat((fl1 / lambda).toFixed(1));
+      const fl2Display = parseFloat((fl2 / lambda).toFixed(1));
+      const fPathDiff = Math.abs(fl2Display - fl1Display);
+      // Total phase difference at Q (same convention as P):
+      // (|ΔL|/λ)·360° + Δφ_source, mod 360°. Magnitude of path difference,
+      // so the value increases monotonically as Q moves away from the central
+      // fringe in either direction.
+      const fPhaseDiffDeg = ((fPathDiff * 360 + sourcePhaseDeg) % 360 + 360) % 360;
+
+      // Path lines from sources to free probe — same treatment as the screen probe
+      // for the current view mode, but tinted cyan to distinguish it.
+      const FREE_COLOUR = { r: 94, g: 197, b: 229, css: '#5ec5e5' };
+      if (viewMode === 'rays') {
+        mainCtx.strokeStyle = rgba(FREE_COLOUR, 0.18);
+        mainCtx.lineWidth = 6;
+        mainCtx.lineCap = 'round';
+        mainCtx.beginPath(); mainCtx.moveTo(s1.x, s1.y); mainCtx.lineTo(fp.x, fp.y); mainCtx.stroke();
+        mainCtx.beginPath(); mainCtx.moveTo(s2.x, s2.y); mainCtx.lineTo(fp.x, fp.y); mainCtx.stroke();
+        mainCtx.strokeStyle = rgba(FREE_COLOUR, 0.95);
+        mainCtx.lineWidth = 1.6;
+        mainCtx.beginPath(); mainCtx.moveTo(s1.x, s1.y); mainCtx.lineTo(fp.x, fp.y); mainCtx.stroke();
+        mainCtx.beginPath(); mainCtx.moveTo(s2.x, s2.y); mainCtx.lineTo(fp.x, fp.y); mainCtx.stroke();
+      } else if (viewMode === 'wavefronts') {
+        mainCtx.strokeStyle = 'rgba(94, 197, 229, 0.85)';
+        mainCtx.lineWidth = 1;
+        mainCtx.setLineDash([3, 4]);
+        mainCtx.beginPath(); mainCtx.moveTo(s1.x, s1.y); mainCtx.lineTo(fp.x, fp.y); mainCtx.stroke();
+        mainCtx.beginPath(); mainCtx.moveTo(s2.x, s2.y); mainCtx.lineTo(fp.x, fp.y); mainCtx.stroke();
+        mainCtx.setLineDash([]);
+      } else {
+        // Sinusoidal waves mode
+        mainCtx.strokeStyle = rgba(FREE_COLOUR, 0.12);
+        mainCtx.lineWidth = 1;
+        mainCtx.setLineDash([2, 4]);
+        mainCtx.beginPath(); mainCtx.moveTo(s1.x, s1.y); mainCtx.lineTo(fp.x, fp.y); mainCtx.stroke();
+        mainCtx.beginPath(); mainCtx.moveTo(s2.x, s2.y); mainCtx.lineTo(fp.x, fp.y); mainCtx.stroke();
+        mainCtx.setLineDash([]);
+        const waveAmp = Math.min(10, Math.max(5, sourceSep * 0.1));
+        const sourcePhaseRadFree = sourcePhaseDeg * Math.PI / 180;
+        drawWaveRay(s1, fp, lambda, waveAmp, FREE_COLOUR, 0);
+        drawWaveRay(s2, fp, lambda, waveAmp, FREE_COLOUR, sourcePhaseRadFree);
+      }
+
+      // Path-length labels along each free-probe ray
+      drawPathLabel(s1, fp, fl1Display);
+      drawPathLabel(s2, fp, fl2Display);
+
+      // The probe dot itself: cyan, with a soft halo
+      mainCtx.fillStyle = 'rgba(94, 197, 229, 0.22)';
+      mainCtx.beginPath(); mainCtx.arc(fp.x, fp.y, 14, 0, Math.PI * 2); mainCtx.fill();
+      mainCtx.fillStyle = FREE_COLOUR.css;
+      mainCtx.beginPath(); mainCtx.arc(fp.x, fp.y, 6, 0, Math.PI * 2); mainCtx.fill();
+      mainCtx.strokeStyle = '#0a0e1a';
+      mainCtx.lineWidth = 1.5;
+      mainCtx.stroke();
+
+      // Two-line readout pill near Q: ΔL on top, Δφ underneath.
+      // Auto-flips to the other side if Q is too close to the right edge.
+      mainCtx.font = '500 12px JetBrains Mono, monospace';
+      const fLineL = `ΔL = ${fPathDiff.toFixed(1)}λ`;
+      const fLinePhi = `Δφ = ${fPhaseDiffDeg.toFixed(0)}°`;
+      const fwL = mainCtx.measureText(fLineL).width;
+      const fwPhi = mainCtx.measureText(fLinePhi).width;
+      const ftw = Math.max(fwL, fwPhi);
+      const pillW = ftw + 8;
+      const pillH = 32;
+      const flipLeft = (fp.x + 14 + pillW) > (W - 4);
+      const fpx = flipLeft ? (fp.x - 14 - pillW) : (fp.x + 14);
+      const fpy = fp.y - pillH / 2;
+      mainCtx.fillStyle = 'rgba(10,14,26,0.88)';
+      mainCtx.fillRect(fpx, fpy, pillW, pillH);
+      mainCtx.strokeStyle = COLORS.axisStrong;
+      mainCtx.lineWidth = 1;
+      mainCtx.strokeRect(fpx + 0.5, fpy + 0.5, pillW, pillH);
+      mainCtx.fillStyle = FREE_COLOUR.css;
+      mainCtx.textAlign = 'left';
+      mainCtx.textBaseline = 'middle';
+      mainCtx.fillText(fLineL,   fpx + 4, fp.y - 7);
+      mainCtx.fillText(fLinePhi, fpx + 4, fp.y + 8);
+
+    }
+
+    // Labels at bottom of stage area
+    mainCtx.fillStyle = '#a8b3cc';
+    mainCtx.font = '600 10px JetBrains Mono, monospace';
+    mainCtx.textAlign = 'center';
+    mainCtx.textBaseline = 'bottom';
+    mainCtx.fillText('SOURCES', sourcesMidX, H - 8);
+    mainCtx.fillText('SCREEN',  screenX - fringeStripWidth / 2, H - 8);
+    // D bracket between sources and screen
+    drawDimension(sourcesMidX, screenX - fringeStripWidth, H - 26, 'D');
+    // a bracket between sources (WJEC convention uses a for source separation)
+    drawVerticalDimension(s1.x - 26, s1.y, s2.y, 'a');
+  }
+
+  function drawWaveRay(src, p, wl, amp, color, phaseRad) {
+    const dx = p.x - src.x, dy = p.y - src.y;
+    const L = Math.sqrt(dx * dx + dy * dy);
+    if (L < 4) return;
+    // Unit vector along the ray
+    const ux = dx / L, uy = dy / L;
+    // Perpendicular unit vector (rotate 90° CCW)
+    const nx = -uy, ny = ux;
+
+    // Step along the ray; smaller step = smoother wave
+    const step = 1.0;
+    // Build the wave path: at arc-length s, position = src + s*u + amp*sin(2π s/λ + φ)*n.
+    // The phase offset φ encodes any source-phase lead/lag. With φ = 0 the wave
+    // starts at amplitude 0 at the source. With φ = π it starts at zero but with
+    // the opposite sign of velocity (i.e. emerges as a trough propagating outward).
+    const phi = phaseRad || 0;
+
+    // Glow pass
+    mainCtx.strokeStyle = rgba(color, 0.22);
+    mainCtx.lineWidth = 4;
+    mainCtx.lineCap = 'round';
+    mainCtx.beginPath();
+    for (let s = 0; s <= L; s += step) {
+      const a = amp * Math.sin((2 * Math.PI * s) / wl + phi);
+      const x = src.x + ux * s + nx * a;
+      const y = src.y + uy * s + ny * a;
+      if (s === 0) mainCtx.moveTo(x, y);
+      else mainCtx.lineTo(x, y);
+    }
+    mainCtx.stroke();
+
+    // Main pass
+    mainCtx.strokeStyle = rgba(color, 0.95);
+    mainCtx.lineWidth = 1.4;
+    mainCtx.beginPath();
+    for (let s = 0; s <= L; s += step) {
+      const a = amp * Math.sin((2 * Math.PI * s) / wl + phi);
+      const x = src.x + ux * s + nx * a;
+      const y = src.y + uy * s + ny * a;
+      if (s === 0) mainCtx.moveTo(x, y);
+      else mainCtx.lineTo(x, y);
+    }
+    mainCtx.stroke();
+  }
+
+
+  function drawSource(x, y, color, label) {
+    // Outer glow
+    const g = mainCtx.createRadialGradient(x, y, 0, x, y, 18);
+    g.addColorStop(0, rgba(color, 0.6));
+    g.addColorStop(1, rgba(color, 0));
+    mainCtx.fillStyle = g;
+    mainCtx.beginPath(); mainCtx.arc(x, y, 18, 0, Math.PI * 2); mainCtx.fill();
+    // Source dot
+    mainCtx.fillStyle = color.css;
+    mainCtx.beginPath(); mainCtx.arc(x, y, 5, 0, Math.PI * 2); mainCtx.fill();
+    mainCtx.strokeStyle = '#0a0e1a';
+    mainCtx.lineWidth = 1;
+    mainCtx.stroke();
+    // Label
+    mainCtx.fillStyle = COLORS.label;
+    mainCtx.font = 'italic 14px Fraunces, serif';
+    mainCtx.textAlign = 'right';
+    mainCtx.textBaseline = 'middle';
+    mainCtx.fillText(label, x - 10, y);
+  }
+
+  function drawPathLabel(src, p, lenInLambdaDisplay) {
+    const dx = p.x - src.x, dy = p.y - src.y;
+    const segLen = Math.sqrt(dx * dx + dy * dy);
+    if (segLen < 50) return;
+    const mx = (src.x + p.x) / 2;
+    const my = (src.y + p.y) / 2;
+    const ox = -dy / segLen * 18;
+    const oy = dx / segLen * 18;
+    const txt = `${lenInLambdaDisplay.toFixed(1)}λ`;
+    mainCtx.font = '600 12px JetBrains Mono, monospace';
+    const w = mainCtx.measureText(txt).width;
+    // Solid backdrop pill
+    mainCtx.fillStyle = 'rgba(10,14,26,0.92)';
+    roundRect(mainCtx, mx + ox - w / 2 - 5, my + oy - 9, w + 10, 18, 3, true, false);
+    mainCtx.strokeStyle = COLORS.axisStrong;
+    mainCtx.lineWidth = 1;
+    roundRect(mainCtx, mx + ox - w / 2 - 5, my + oy - 9, w + 10, 18, 3, false, true);
+    mainCtx.fillStyle = '#ffffff';
+    mainCtx.textAlign = 'center';
+    mainCtx.textBaseline = 'middle';
+    mainCtx.fillText(txt, mx + ox, my + oy);
+  }
+
+  function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+  }
+
+  function drawDimension(x1, x2, y, label) {
+    mainCtx.strokeStyle = COLORS.labelDim;
+    mainCtx.lineWidth = 1;
+    mainCtx.beginPath();
+    mainCtx.moveTo(x1, y - 4); mainCtx.lineTo(x1, y + 4);
+    mainCtx.moveTo(x2, y - 4); mainCtx.lineTo(x2, y + 4);
+    mainCtx.moveTo(x1, y); mainCtx.lineTo(x2, y);
+    mainCtx.stroke();
+    mainCtx.font = 'italic 14px Fraunces, serif';
+    mainCtx.textAlign = 'center';
+    mainCtx.textBaseline = 'middle';
+    const w = mainCtx.measureText(label).width;
+    // Background pill
+    mainCtx.fillStyle = 'rgba(10,14,26,0.95)';
+    roundRect(mainCtx, (x1 + x2) / 2 - w / 2 - 5, y - 9, w + 10, 18, 3, true, false);
+    mainCtx.strokeStyle = COLORS.axisStrong;
+    mainCtx.lineWidth = 1;
+    roundRect(mainCtx, (x1 + x2) / 2 - w / 2 - 5, y - 9, w + 10, 18, 3, false, true);
+    mainCtx.fillStyle = '#ffffff';
+    mainCtx.fillText(label, (x1 + x2) / 2, y);
+  }
+
+  function drawVerticalDimension(x, y1, y2, label) {
+    // Tick marks at the ends and the connecting vertical line
+    mainCtx.strokeStyle = COLORS.labelDim;
+    mainCtx.lineWidth = 1;
+    mainCtx.beginPath();
+    mainCtx.moveTo(x - 4, y1); mainCtx.lineTo(x + 4, y1);
+    mainCtx.moveTo(x - 4, y2); mainCtx.lineTo(x + 4, y2);
+    mainCtx.moveTo(x, y1); mainCtx.lineTo(x, y2);
+    mainCtx.stroke();
+    // Label sits upright in a pill to the LEFT of the dimension line.
+    // For single-letter variables, rotating the text just makes it harder to read;
+    // textbook convention is upright, beside the line.
+    mainCtx.font = 'italic 16px Fraunces, serif';
+    mainCtx.textAlign = 'center';
+    mainCtx.textBaseline = 'middle';
+    const cy = (y1 + y2) / 2;
+    const w = mainCtx.measureText(label).width;
+    const pillW = Math.max(w + 12, 22);
+    const pillH = 22;
+    const pillX = x - 14 - pillW; // 14px gap between dimension line and pill
+    const pillY = cy - pillH / 2;
+    mainCtx.fillStyle = 'rgba(10,14,26,0.95)';
+    roundRect(mainCtx, pillX, pillY, pillW, pillH, 4, true, false);
+    mainCtx.strokeStyle = COLORS.axisStrong;
+    mainCtx.lineWidth = 1;
+    roundRect(mainCtx, pillX, pillY, pillW, pillH, 4, false, true);
+    mainCtx.fillStyle = '#ffffff';
+    mainCtx.fillText(label, pillX + pillW / 2, cy + 1);
+  }
+
+  // ------- Wave graph (two waves + resultant) -------
+  function drawWaves(color, phaseDeg) {
+    const W = waveGraphCanvas.width, H = waveGraphCanvas.height;
+    waveGraphCtx.clearRect(0, 0, W, H);
+
+    // Background — same gradient as upper panel for continuity
+    const bg = waveGraphCtx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#161e30');
+    bg.addColorStop(1, '#0f1422');
+    waveGraphCtx.fillStyle = bg;
+    waveGraphCtx.fillRect(0, 0, W, H);
+
+    const padL = 64, padR = 28, padT = 22, padB = 26;
+    const plotW = W - padL - padR;
+    const plotH = H - padT - padB;
+    const cy = padT + plotH / 2;
+    const amp = plotH * 0.22; // smaller so 2A resultant fits comfortably
+
+    // ----- Quiet graph-paper grid -----
+    // Vertical guide lines at quarter-cycle marks (faint)
+    const cycles = 2;
+    const wl = plotW / cycles;
+    waveGraphCtx.strokeStyle = 'rgba(255,255,255,0.035)';
+    waveGraphCtx.lineWidth = 1;
+    waveGraphCtx.beginPath();
+    for (let i = 0; i <= cycles * 4; i++) {
+      const x = padL + (i / 4) * wl;
+      waveGraphCtx.moveTo(x, padT);
+      waveGraphCtx.lineTo(x, H - padB);
+    }
+    // Horizontal: a single faint line at ±A as a quiet reference
+    waveGraphCtx.moveTo(padL, cy - amp); waveGraphCtx.lineTo(W - padR, cy - amp);
+    waveGraphCtx.moveTo(padL, cy + amp); waveGraphCtx.lineTo(W - padR, cy + amp);
+    waveGraphCtx.stroke();
+
+    // ----- Centreline (zero displacement) -----
+    waveGraphCtx.strokeStyle = COLORS.axis;
+    waveGraphCtx.lineWidth = 1;
+    waveGraphCtx.beginPath();
+    waveGraphCtx.moveTo(padL, cy);
+    waveGraphCtx.lineTo(W - padR, cy);
+    waveGraphCtx.stroke();
+
+    // ----- Y axis (left edge) -----
+    waveGraphCtx.strokeStyle = COLORS.axisStrong;
+    waveGraphCtx.beginPath();
+    waveGraphCtx.moveTo(padL, padT);
+    waveGraphCtx.lineTo(padL, H - padB);
+    waveGraphCtx.stroke();
+
+    // Y-axis tick marks (small) at ±A, no labels — just visual scale
+    waveGraphCtx.strokeStyle = COLORS.axisStrong;
+    waveGraphCtx.beginPath();
+    waveGraphCtx.moveTo(padL - 4, cy - amp); waveGraphCtx.lineTo(padL, cy - amp);
+    waveGraphCtx.moveTo(padL - 4, cy);       waveGraphCtx.lineTo(padL, cy);
+    waveGraphCtx.moveTo(padL - 4, cy + amp); waveGraphCtx.lineTo(padL, cy + amp);
+    waveGraphCtx.stroke();
+
+    // y-axis title (rotated): "displacement"
+    waveGraphCtx.save();
+    waveGraphCtx.translate(16, cy);
+    waveGraphCtx.rotate(-Math.PI / 2);
+    waveGraphCtx.fillStyle = '#c8d2e6';
+    waveGraphCtx.font = 'italic 13px Fraunces, serif';
+    waveGraphCtx.textAlign = 'center';
+    waveGraphCtx.textBaseline = 'middle';
+    waveGraphCtx.fillText('displacement', 0, 0);
+    waveGraphCtx.restore();
+
+    // x-axis title: "time" — outside the plot, below the centreline at the right
+    waveGraphCtx.fillStyle = '#c8d2e6';
+    waveGraphCtx.font = 'italic 13px Fraunces, serif';
+    waveGraphCtx.textAlign = 'right';
+    waveGraphCtx.textBaseline = 'top';
+    waveGraphCtx.fillText('time', W - padR, H - padB + 8);
+
+    const phaseShift = phaseDeg * (Math.PI / 180);
+
+    // ----- Component waves: wavelength colour, low opacity, thin solid -----
+    drawSineCurve(padL, plotW, cy, wl, amp, 0,           rgba(color, 0.42), 1.4);
+    drawSineCurve(padL, plotW, cy, wl, amp, phaseShift,  rgba(color, 0.42), 1.4);
+
+    // ----- Resultant: accent yellow, thicker, with subtle glow -----
+    // Glow underneath
+    waveGraphCtx.beginPath();
+    for (let x = 0; x <= plotW; x += 0.5) {
+      const t = (2 * Math.PI * x) / wl;
+      const yR = Math.sin(t) + Math.sin(t - phaseShift);
+      const py = cy - amp * yR;
+      if (x === 0) waveGraphCtx.moveTo(padL + x, py);
+      else waveGraphCtx.lineTo(padL + x, py);
+    }
+    waveGraphCtx.strokeStyle = 'rgba(255, 209, 102, 0.25)';
+    waveGraphCtx.lineWidth = 5;
+    waveGraphCtx.lineCap = 'round';
+    waveGraphCtx.stroke();
+    // Main resultant line
+    waveGraphCtx.beginPath();
+    for (let x = 0; x <= plotW; x += 0.5) {
+      const t = (2 * Math.PI * x) / wl;
+      const yR = Math.sin(t) + Math.sin(t - phaseShift);
+      const py = cy - amp * yR;
+      if (x === 0) waveGraphCtx.moveTo(padL + x, py);
+      else waveGraphCtx.lineTo(padL + x, py);
+    }
+    waveGraphCtx.strokeStyle = COLORS.accent;
+    waveGraphCtx.lineWidth = 1.8;
+    waveGraphCtx.stroke();
+
+    // ----- Legend: top-right corner of plot, stacked, with colour swatches -----
+    // Pulled out of the curves themselves so labels don't compete with the data.
+    drawWaveLegend(W - padR, padT - 4, color);
+  }
+
+  function drawWaveLegend(rightX, topY, color) {
+    const items = [
+      { text: 'wave 1',     col: rgba(color, 0.85) },
+      { text: 'wave 2',     col: rgba(color, 0.85) },
+      { text: 'resultant',  col: COLORS.accent }
+    ];
+    waveGraphCtx.font = '500 11px JetBrains Mono, monospace';
+    waveGraphCtx.textAlign = 'right';
+    waveGraphCtx.textBaseline = 'middle';
+    // Measure widest label so we can right-align the swatches consistently
+    let maxW = 0;
+    for (const it of items) maxW = Math.max(maxW, waveGraphCtx.measureText(it.text).width);
+    const swatchW = 18, swatchH = 2;
+    const rowHeight = 16;
+    const padding = 10;
+    const totalW = maxW + 8 + swatchW + padding * 2;
+    const totalH = items.length * rowHeight + padding * 2 - 4;
+    const boxX = rightX - totalW;
+    const boxY = topY;
+    // Background pill
+    waveGraphCtx.fillStyle = 'rgba(10,14,26,0.85)';
+    roundRect(waveGraphCtx, boxX, boxY, totalW, totalH, 4, true, false);
+    waveGraphCtx.strokeStyle = 'rgba(255,255,255,0.08)';
+    waveGraphCtx.lineWidth = 1;
+    roundRect(waveGraphCtx, boxX, boxY, totalW, totalH, 4, false, true);
+    // Rows
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      const cy = boxY + padding + i * rowHeight + rowHeight / 2 - 4;
+      // Text
+      waveGraphCtx.fillStyle = '#e8ecf4';
+      waveGraphCtx.fillText(it.text, boxX + totalW - padding, cy);
+      // Colour swatch (a thicker stroke for the resultant, thin for components)
+      const isResultant = (i === 2);
+      waveGraphCtx.strokeStyle = it.col;
+      waveGraphCtx.lineWidth = isResultant ? 2.4 : 1.4;
+      const swatchX = boxX + totalW - padding - maxW - 8 - swatchW;
+      waveGraphCtx.beginPath();
+      waveGraphCtx.moveTo(swatchX, cy);
+      waveGraphCtx.lineTo(swatchX + swatchW, cy);
+      waveGraphCtx.stroke();
+    }
+  }
+
+  function drawSineCurve(x0, width, cy, wl, amp, phase, stroke, lw) {
+    waveGraphCtx.beginPath();
+    for (let x = 0; x <= width; x += 0.5) {
+      const y = cy - amp * Math.sin((2 * Math.PI * x) / wl - phase);
+      if (x === 0) waveGraphCtx.moveTo(x0 + x, y);
+      else waveGraphCtx.lineTo(x0 + x, y);
+    }
+    waveGraphCtx.strokeStyle = stroke;
+    waveGraphCtx.lineWidth = lw;
+    waveGraphCtx.stroke();
+  }
+
+  // ------- Init -------
+  updateAntinodalToggleVisibility();
+  update();
+</script>
+
+</body>
+</html>

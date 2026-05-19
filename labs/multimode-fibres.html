@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multimode Fibre — Modal Dispersion (WJEC A-Level)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    padding: 16px;
+    min-height: 100vh;
+  }
+  h1 {
+    color: #58a6ff;
+    font-size: 22px;
+    margin-bottom: 4px;
+  }
+  .subtitle { color: #8b949e; font-size: 13px; margin-bottom: 14px; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 14px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .panel h2 {
+    color: #79c0ff;
+    font-size: 15px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #30363d;
+    padding-bottom: 6px;
+  }
+
+  canvas {
+    background: #010409;
+    border-radius: 6px;
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .controls { display: flex; flex-direction: column; gap: 12px; }
+  .control-group { display: flex; flex-direction: column; gap: 4px; }
+  .control-group label {
+    font-size: 12px;
+    color: #8b949e;
+    display: flex;
+    justify-content: space-between;
+  }
+  .control-group label span { color: #58a6ff; font-weight: bold; }
+  input[type="range"] {
+    width: 100%;
+    accent-color: #58a6ff;
+  }
+  button {
+    background: #238636;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  button:hover { background: #2ea043; }
+  button.secondary { background: #30363d; }
+  button.secondary:hover { background: #484f58; }
+
+  .calc-box {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 10px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  .calc-line { margin: 3px 0; color: #c9d1d9; }
+  .calc-line .var { color: #79c0ff; }
+  .calc-line .val { color: #ffa657; font-weight: bold; }
+  .calc-line .res { color: #7ee787; font-weight: bold; }
+
+  .formula {
+    background: #0d1117;
+    border-left: 3px solid #58a6ff;
+    padding: 8px 10px;
+    font-family: 'Cambria Math', 'Times New Roman', serif;
+    font-size: 14px;
+    margin: 8px 0;
+    border-radius: 4px;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    font-size: 12px;
+    margin-top: 8px;
+    color: #8b949e;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .swatch { width: 18px; height: 4px; border-radius: 2px; }
+
+  .pulse-row {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0;
+  }
+  .pulse-label { font-size: 11px; color: #8b949e; }
+
+  .info-strip {
+    background: #1f2937;
+    border-left: 3px solid #f59e0b;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: #d1d5db;
+    border-radius: 4px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Multimode Step-Index Optical Fibre — Modal Dispersion</h1>
+<p class="subtitle">WJEC A-Level Physics · Interactive ray paths, time delay & output pulse broadening</p>
+
+<div class="layout">
+
+  <div>
+    <div class="panel">
+      <h2>Ray Propagation in Fibre Cross-Section</h2>
+      <canvas id="fibreCanvas" width="900" height="280"></canvas>
+      <div class="legend">
+        <div class="legend-item"><div class="swatch" style="background:#7ee787"></div>Axial ray (shortest path)</div>
+        <div class="legend-item"><div class="swatch" style="background:#ffd166"></div>Intermediate rays</div>
+        <div class="legend-item"><div class="swatch" style="background:#ff7b72"></div>Off-axis ray (TIR, longest path)</div>
+        <div class="legend-item"><div class="swatch" style="background:#58a6ff;height:18px;width:4px"></div>Core (n₁)</div>
+        <div class="legend-item"><div class="swatch" style="background:#6e7681;height:18px;width:4px"></div>Cladding (n₂)</div>
+      </div>
+      <div style="font-size:11px; color:#6e7681; margin-top:6px; font-style:italic;">
+        Schematic only — bounce density depends on n₁, n₂ but not on L (a real 100 m fibre would have ~10⁶ bounces). All quantitative effects of L appear in the calculations and pulse panels.
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:14px;">
+      <h2>Input vs Output Pulse</h2>
+      <div style="font-size:12px; color:#c9d1d9; margin-bottom:10px; line-height:1.5;">
+        Showing a continuous train of <b style="color:#7ee787">1</b>s (binary pattern <code style="background:#0d1117; padding:1px 5px; border-radius:3px; color:#7ee787;">11111111…</code>) — the worst case for pulse overlap. The <b style="color:#58a6ff">bit period T</b> is the time from the start of one pulse to the start of the next. The <b style="color:#7ee787">input pulse width</b> (how long each pulse is ON) is set independently by the transmitter; the gap inside each bit slot is "off-time" for that bit, not a 0.
+      </div>
+      <div class="pulse-row">
+        <div class="pulse-label">INPUT<br><span style="color:#7ee787">(sharp)</span></div>
+        <canvas id="inputPulse" width="700" height="80"></canvas>
+      </div>
+      <div class="pulse-row">
+        <div class="pulse-label">OUTPUT<br><span style="color:#ff7b72">(broadened)</span></div>
+        <canvas id="outputPulse" width="700" height="80"></canvas>
+      </div>
+      <div style="display:grid; grid-template-columns:80px 1fr; align-items:center; gap:10px; margin-top:8px;">
+        <label style="font-size:12px; color:#8b949e;">Bit period T:</label>
+        <input type="range" id="bitPeriod" min="20" max="500" step="1" value="200">
+      </div>
+      <div class="info-strip" id="pulseInfo">Pulse broadening Δt sets the maximum bit-rate of the fibre.</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="panel">
+      <h2>Fibre Parameters</h2>
+      <div class="controls">
+        <div class="control-group">
+          <label>Core refractive index n₁ <span id="n1Val">1.50</span></label>
+          <input type="range" id="n1" min="1.40" max="1.60" step="0.01" value="1.50">
+        </div>
+        <div class="control-group">
+          <label>Cladding refractive index n₂ <span id="n2Val">1.45</span></label>
+          <input type="range" id="n2" min="1.30" max="1.55" step="0.01" value="1.45">
+        </div>
+        <div class="control-group">
+          <label>Fibre length L <span id="LVal">100 m</span></label>
+          <input type="range" id="L" min="10" max="2000" step="10" value="100">
+        </div>
+        <button id="playBtn">▶ Play / Pause Animation</button>
+        <button id="resetBtn" class="secondary">Reset Rays</button>
+        <label style="display:flex; align-items:center; gap:8px; font-size:12px; color:#c9d1d9; margin-top:4px; cursor:pointer;">
+          <input type="checkbox" id="showMultipleRays" style="accent-color:#58a6ff; width:16px; height:16px; cursor:pointer;">
+          Show range of ray paths
+        </label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Calculations</h2>
+      <div class="formula">
+        sin θ<sub>c</sub> = n₂ / n₁
+      </div>
+      <div class="calc-box" id="calcBox"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Physics Notes</h2>
+      <div style="font-size:12px; color:#c9d1d9; line-height:1.5;">
+        <p><b style="color:#79c0ff">Modal dispersion</b> arises because rays at different angles travel different path lengths through the fibre.</p>
+        <p style="margin-top:6px;">All rays travel at the same speed <b style="color:#ffa657">v = c/n₁</b> inside the core, but the <b style="color:#7ee787">axial ray</b> goes straight down the axis, while the <b style="color:#ff7b72">zig-zag ray</b> at the critical angle moves only at speed <b>v·sin θc</b> along the axis (the component of v parallel to the fibre).</p>
+        <p style="margin-top:6px;">The time difference Δt limits the fibre's <b style="color:#ffa657">bandwidth</b> — pulses arriving closer together than Δt overlap and become unreadable.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============= STATE =============
+const state = {
+  n1: 1.50,
+  n2: 1.45,
+  L: 100,        // metres
+  bitPeriodNs: 200, // nanoseconds, controlled by slider
+  playing: true,
+  showMultipleRays: false,
+  t: 0
+};
+
+const c = 3e8;
+
+// ============= CANVAS SETUP =============
+const fibreCanvas = document.getElementById('fibreCanvas');
+const fctx = fibreCanvas.getContext('2d');
+const inPulseCanvas = document.getElementById('inputPulse');
+const ipctx = inPulseCanvas.getContext('2d');
+const outPulseCanvas = document.getElementById('outputPulse');
+const opctx = outPulseCanvas.getContext('2d');
+
+// Make canvases sharp on HiDPI
+function setupHiDPI(canvas, ctx) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = Math.round(rect.width * dpr);
+  canvas.height = Math.round(rect.height * dpr);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);   // reset any existing transform before re-scaling
+  ctx.scale(dpr, dpr);
+  return { w: rect.width, h: rect.height };
+}
+
+let fibreDim, inPulseDim, outPulseDim;
+
+function resizeAll() {
+  fibreDim = setupHiDPI(fibreCanvas, fctx);
+  inPulseDim = setupHiDPI(inPulseCanvas, ipctx);
+  outPulseDim = setupHiDPI(outPulseCanvas, opctx);
+}
+
+// ============= FIBRE GEOMETRY =============
+// We draw a stylised cross-section (longitudinal slice) of the fibre.
+// Core occupies the central horizontal band; cladding above and below.
+// Rays travel left-to-right.
+
+function drawFibre() {
+  const w = fibreDim.w, h = fibreDim.h;
+  fctx.clearRect(0, 0, w, h);
+
+  // Layout
+  const padX = 50;
+  const fibreLeft = padX;
+  const fibreRight = w - padX;
+  const fibreLen = fibreRight - fibreLeft;
+  const cy = h / 2;
+  const coreHalf = 50;     // half-thickness of core in pixels
+  const claddingHalf = 75;
+
+  // Cladding
+  fctx.fillStyle = '#1c2128';
+  fctx.fillRect(fibreLeft, cy - claddingHalf, fibreLen, 2*claddingHalf);
+
+  // Cladding outline
+  fctx.strokeStyle = '#6e7681';
+  fctx.lineWidth = 1.5;
+  fctx.strokeRect(fibreLeft, cy - claddingHalf, fibreLen, 2*claddingHalf);
+
+  // Core
+  fctx.fillStyle = 'rgba(56, 139, 253, 0.12)';
+  fctx.fillRect(fibreLeft, cy - coreHalf, fibreLen, 2*coreHalf);
+
+  // Core/cladding boundary lines
+  fctx.strokeStyle = '#58a6ff';
+  fctx.lineWidth = 1;
+  fctx.setLineDash([4, 3]);
+  fctx.beginPath();
+  fctx.moveTo(fibreLeft, cy - coreHalf); fctx.lineTo(fibreRight, cy - coreHalf);
+  fctx.moveTo(fibreLeft, cy + coreHalf); fctx.lineTo(fibreRight, cy + coreHalf);
+  fctx.stroke();
+  fctx.setLineDash([]);
+
+  // Labels
+  fctx.fillStyle = '#8b949e';
+  fctx.font = '11px Segoe UI';
+  fctx.fillText('Cladding (n₂ = ' + state.n2.toFixed(2) + ')', fibreLeft + 4, cy - claddingHalf - 6);
+  fctx.fillText('Core (n₁ = ' + state.n1.toFixed(2) + ')', fibreLeft + 4, cy - coreHalf - 4);
+  fctx.fillText('Fibre axis', fibreRight - 60, cy - 4);
+
+  // Compute critical angle
+  let sinTc = state.n2 / state.n1;
+  if (sinTc > 1) sinTc = 1; // no TIR — rays leak; we'll cap visually
+  const thetaC = Math.asin(sinTc);          // measured from normal to boundary
+  // Angle of ray with axis = 90 - thetaC
+  const rayAngleFromAxis = Math.PI/2 - thetaC;
+
+  // === Master animation cycle ===
+  // Both photons enter the fibre at cycleProgress = 0 and race across it.
+  // Cycle = (slowest ray's in-fibre time) + (small exit time). Each ray's
+  // in-fibre traversal takes its own fraction of the cycle, then a brief
+  // exit phase shows it leaving the fibre into the right padding.
+  const masterPeriod = 4.0;
+  const cycleProgress = (state.t % masterPeriod) / masterPeriod;
+  const exitFraction = 0.05;
+  const inFibreFraction = 1.0 - exitFraction;
+  // Axial in-fibre time = (n2/n1) * zigzag in-fibre time
+  const axialFraction = (state.n2 / state.n1) * inFibreFraction;
+
+  // === Transmitter LED (flashes briefly at the start of each cycle) ===
+  drawTransmitterLED(fibreLeft, cy, cycleProgress);
+
+  // === AXIAL RAY (green) ===
+  drawAxialRay(fibreLeft, fibreRight, cy, cycleProgress, axialFraction);
+
+  // === Intermediate rays (only when checkbox enabled) ===
+  // Draw a fan of rays at angles between 0 (axial) and the critical-angle ray.
+  // Each ray represents a different acceptance angle and arrives at a different
+  // time, illustrating the "continuous range of zigzag routes" that causes
+  // modal dispersion.
+  if (state.showMultipleRays) {
+    const numIntermediate = 3;  // rays between axial and extreme
+    for (let i = 1; i <= numIntermediate; i++) {
+      const fraction = i / (numIntermediate + 1);
+      const angle = fraction * rayAngleFromAxis;  // partial angle
+      drawIntermediateRay(fibreLeft, fibreRight, cy, coreHalf, angle, cycleProgress);
+    }
+  }
+
+  // === OFF-AXIS RAY (red) — bounces between boundaries at critical angle ===
+  drawZigzagRay(fibreLeft, fibreRight, cy, coreHalf, rayAngleFromAxis, cycleProgress);
+
+  // Annotate critical angle near first bounce
+  annotateCriticalAngle(fibreLeft, cy, coreHalf, rayAngleFromAxis, thetaC);
+
+  // Length label at bottom
+  fctx.strokeStyle = '#8b949e';
+  fctx.lineWidth = 1;
+  fctx.beginPath();
+  fctx.moveTo(fibreLeft, h - 18); fctx.lineTo(fibreRight, h - 18);
+  fctx.stroke();
+  // tick marks
+  fctx.beginPath();
+  fctx.moveTo(fibreLeft, h - 22); fctx.lineTo(fibreLeft, h - 14);
+  fctx.moveTo(fibreRight, h - 22); fctx.lineTo(fibreRight, h - 14);
+  fctx.stroke();
+  fctx.fillStyle = '#8b949e';
+  fctx.textAlign = 'center';
+  fctx.fillText('Fibre length L = ' + formatLength(state.L), (fibreLeft+fibreRight)/2, h - 4);
+  fctx.textAlign = 'left';
+}
+
+function formatLength(L) {
+  if (L >= 1000) return (L/1000).toFixed(2) + ' km';
+  return L + ' m';
+}
+
+function drawAxialRay(x1, x2, cy, cycleProgress, axialFraction) {
+  // Timing: photon enters at cycleProgress=0, traverses fibre during
+  // [0, axialFraction], exits during [axialFraction, axialFraction + exitFraction],
+  // then disappears until the cycle restarts.
+  const len = x2 - x1;
+  const exitLen = 35;
+  const exitFraction = 0.05;
+
+  // Fibre interior ray
+  fctx.strokeStyle = 'rgba(126, 231, 135, 0.85)';
+  fctx.lineWidth = 2.5;
+  fctx.beginPath();
+  fctx.moveTo(x1, cy); fctx.lineTo(x2, cy);
+  fctx.stroke();
+
+  // Exit ray (clearly visible solid line, slightly thicker than in-fibre line)
+  fctx.strokeStyle = 'rgba(126, 231, 135, 0.85)';
+  fctx.lineWidth = 2.5;
+  fctx.beginPath();
+  fctx.moveTo(x2, cy); fctx.lineTo(x2 + exitLen, cy);
+  fctx.stroke();
+  fctx.lineWidth = 2;
+
+  // Photon position
+  let px = null;
+  if (cycleProgress < axialFraction) {
+    px = x1 + (cycleProgress / axialFraction) * len;
+  } else if (cycleProgress < axialFraction + exitFraction) {
+    px = x2 + ((cycleProgress - axialFraction) / exitFraction) * exitLen;
+  }
+
+  if (px !== null) {
+    fctx.fillStyle = '#7ee787';
+    fctx.shadowColor = '#7ee787';
+    fctx.shadowBlur = 12;
+    fctx.beginPath();
+    fctx.arc(px, cy, 5, 0, Math.PI*2);
+    fctx.fill();
+    fctx.shadowBlur = 0;
+  }
+  drawArrowHead(x2 + exitLen, cy, 0, '#7ee787');
+}
+
+function drawZigzagRay(x1, x2, cy, coreHalf, rayAngleFromAxis, cycleProgress) {
+  // cycleProgress: 0..1 across the full master cycle.
+  // The zigzag photon takes the entire cycle to traverse (it is the slowest ray),
+  // so it sets the cycle duration. Both photons re-enter at cycleProgress=0.
+  const len = x2 - x1;
+  // Horizontal distance covered in one full bounce (boundary to opposite boundary).
+  // Vertical distance is 2*coreHalf, so dx = 2*coreHalf / tan(angle).
+  let dx;
+  if (Math.tan(rayAngleFromAxis) < 1e-6) {
+    dx = len; // essentially axial
+  } else {
+    dx = (2 * coreHalf) / Math.tan(rayAngleFromAxis);
+  }
+  // Limit visual zigzag density
+  if (dx < 16) dx = 16;
+
+  // Build path points
+  const points = [];
+  // Start: ray enters at the FIBRE AXIS CENTRE (not the bottom edge).
+  // From the centre it travels diagonally up to the top of the core,
+  // bounces, goes to the bottom, bounces, and so on.
+  const entryX = x1;
+  const entryY = cy;            // <-- axis centre
+  // Show incoming ray from outside (entering at the axis level)
+  const incomingExtX = entryX - 30;
+  const incomingExtY = entryY + 30 * Math.tan(rayAngleFromAxis);
+  fctx.strokeStyle = 'rgba(255,123,114,0.5)';
+  fctx.lineWidth = 1.5;
+  fctx.setLineDash([3,3]);
+  fctx.beginPath();
+  fctx.moveTo(incomingExtX, incomingExtY);
+  fctx.lineTo(entryX, entryY);
+  fctx.stroke();
+  fctx.setLineDash([]);
+  fctx.fillStyle = '#ff7b72';
+  fctx.font = '10px Segoe UI';
+  // Label sits below the dashed incoming-ray line, left-aligned and starting
+  // close to the left edge of the canvas so the full text fits on screen.
+  const lblX = 4;
+  const lblY = incomingExtY + 14;
+  fctx.fillText('incoming', lblX, lblY);
+  fctx.fillText('rays', lblX, lblY + 11);
+
+  points.push({x: entryX, y: entryY});
+  let x = entryX;
+  let y = entryY;
+  // First leg: from axis up to the top of the core. Travels half a "bounce"
+  // horizontally because the vertical distance is coreHalf, not 2*coreHalf.
+  const firstDx = (Math.tan(rayAngleFromAxis) > 1e-6)
+                    ? coreHalf / Math.tan(rayAngleFromAxis)
+                    : len;
+  if (x + firstDx >= x2) {
+    const remaining = x2 - x;
+    const yEnd = y - remaining * Math.tan(rayAngleFromAxis);
+    points.push({x: x2, y: yEnd});
+  } else {
+    x += firstDx;
+    y = cy - coreHalf;
+    points.push({x: x, y: y});
+
+    // Subsequent legs: full bounces between top and bottom edges
+    let goingUp = false;  // we just arrived at the top, so next is down
+    let safety = 0;
+    while (x < x2 - 0.5 && safety < 500) {
+      safety++;
+      const nx = x + dx;
+      if (nx >= x2) {
+        const remaining = x2 - x;
+        const yEnd = goingUp ? y - remaining * Math.tan(rayAngleFromAxis)
+                              : y + remaining * Math.tan(rayAngleFromAxis);
+        points.push({x: x2, y: yEnd});
+        break;
+      }
+      const ny = goingUp ? cy - coreHalf : cy + coreHalf;
+      points.push({x: nx, y: ny});
+      x = nx; y = ny;
+      goingUp = !goingUp;
+    }
+  }
+
+  // Compute the exit direction: continue at the slope of the final segment
+  // (the leg that exited the fibre) for a short distance into the right padding.
+  // This visualises the ray leaving the fibre.
+  const exitLen = 35;
+  let exitX2 = null, exitY2 = null;  // end-point of exit segment
+  if (points.length >= 2) {
+    const last = points[points.length - 1];
+    const prev = points[points.length - 2];
+    const segDx = last.x - prev.x;
+    const segDy = last.y - prev.y;
+    const segLen = Math.hypot(segDx, segDy);
+    if (segLen > 0.5) {
+      const ux = segDx / segLen, uy = segDy / segLen;
+      exitX2 = last.x + ux * exitLen;
+      exitY2 = last.y + uy * exitLen;
+    }
+  }
+
+  // Draw the in-fibre zigzag
+  fctx.strokeStyle = 'rgba(255, 123, 114, 0.85)';
+  fctx.lineWidth = 2.5;
+  fctx.beginPath();
+  fctx.moveTo(points[0].x, points[0].y);
+  for (let i=1; i<points.length; i++) fctx.lineTo(points[i].x, points[i].y);
+  fctx.stroke();
+
+  // Draw the exit segment (clearly visible solid line)
+  if (exitX2 !== null) {
+    const last = points[points.length - 1];
+    fctx.strokeStyle = 'rgba(255, 123, 114, 0.85)';
+    fctx.lineWidth = 2.5;
+    fctx.beginPath();
+    fctx.moveTo(last.x, last.y); fctx.lineTo(exitX2, exitY2);
+    fctx.stroke();
+    fctx.lineWidth = 2;
+  }
+
+  // Mark TIR bounce points (only those inside the fibre)
+  for (let i=1; i<points.length-1; i++) {
+    fctx.fillStyle = 'rgba(255,165,87,0.8)';
+    fctx.beginPath();
+    fctx.arc(points[i].x, points[i].y, 3, 0, Math.PI*2);
+    fctx.fill();
+  }
+
+  // Animate the photon. Timing convention (matches axial ray):
+  //   in-fibre traversal during [0, inFibreFraction]
+  //   exit traversal during [inFibreFraction, inFibreFraction + exitFraction]
+  //   then disappears until cycle restarts.
+  // For the zigzag (slowest ray), inFibreFraction = 1 - exitFraction so the
+  // exit completes exactly at cycleProgress = 1.
+  const exitFraction = 0.05;
+  const inFibreFraction = 1.0 - exitFraction;
+
+  let totalPath = 0;
+  const segLens = [];
+  for (let i=0; i<points.length-1; i++) {
+    const sx = points[i+1].x - points[i].x;
+    const sy = points[i+1].y - points[i].y;
+    const sl = Math.hypot(sx, sy);
+    segLens.push(sl);
+    totalPath += sl;
+  }
+
+  let pX = null, pY = null;
+  if (cycleProgress < inFibreFraction) {
+    // In-fibre phase
+    let dist = (cycleProgress / inFibreFraction) * totalPath;
+    pX = points[0].x; pY = points[0].y;
+    for (let i=0; i<segLens.length; i++) {
+      if (dist <= segLens[i]) {
+        const f = dist / segLens[i];
+        pX = points[i].x + (points[i+1].x - points[i].x) * f;
+        pY = points[i].y + (points[i+1].y - points[i].y) * f;
+        break;
+      }
+      dist -= segLens[i];
+    }
+  } else if (cycleProgress < inFibreFraction + exitFraction && exitX2 !== null) {
+    // Exit phase
+    const last = points[points.length - 1];
+    const f = (cycleProgress - inFibreFraction) / exitFraction;
+    pX = last.x + (exitX2 - last.x) * f;
+    pY = last.y + (exitY2 - last.y) * f;
+  }
+
+  if (pX !== null) {
+    fctx.fillStyle = '#ff7b72';
+    fctx.shadowColor = '#ff7b72';
+    fctx.shadowBlur = 12;
+    fctx.beginPath();
+    fctx.arc(pX, pY, 5, 0, Math.PI*2);
+    fctx.fill();
+    fctx.shadowBlur = 0;
+  }
+}
+
+function drawTransmitterLED(x1, cy, cycleProgress) {
+  // A small LED sits just to the left of the fibre input face. It flashes
+  // briefly at the very start of each cycle (cycleProgress 0..flashFraction),
+  // representing the transmitter "firing" — the moment all photons enter.
+  const ledX = x1 - 18;       // sits in the left padding
+  const ledY = cy;
+  const ledR = 5;
+
+  const flashFraction = 0.08;  // LED is lit for first 8% of the cycle
+  const isOn = cycleProgress < flashFraction;
+
+  // Outer housing (dim ring, always visible)
+  fctx.strokeStyle = '#484f58';
+  fctx.fillStyle = '#1c2128';
+  fctx.lineWidth = 1.5;
+  fctx.beginPath();
+  fctx.arc(ledX, ledY, ledR + 2, 0, Math.PI*2);
+  fctx.fill();
+  fctx.stroke();
+
+  if (isOn) {
+    // Bright LED with glow that fades over the flash duration
+    const fadeT = cycleProgress / flashFraction;     // 0..1 across the flash
+    const intensity = 1 - fadeT * 0.6;                // 1.0 → 0.4 over the flash
+    const glowR = ledR + 6 * intensity;
+
+    // Outer glow
+    const grad = fctx.createRadialGradient(ledX, ledY, ledR * 0.3, ledX, ledY, glowR);
+    grad.addColorStop(0, 'rgba(255, 220, 100, ' + intensity + ')');
+    grad.addColorStop(1, 'rgba(255, 220, 100, 0)');
+    fctx.fillStyle = grad;
+    fctx.beginPath();
+    fctx.arc(ledX, ledY, glowR, 0, Math.PI*2);
+    fctx.fill();
+
+    // Bright core
+    fctx.fillStyle = 'rgba(255, 240, 180, ' + (0.7 + 0.3 * intensity) + ')';
+    fctx.shadowColor = '#ffd166';
+    fctx.shadowBlur = 8;
+    fctx.beginPath();
+    fctx.arc(ledX, ledY, ledR, 0, Math.PI*2);
+    fctx.fill();
+    fctx.shadowBlur = 0;
+  } else {
+    // Dim LED (off)
+    fctx.fillStyle = '#3a4250';
+    fctx.beginPath();
+    fctx.arc(ledX, ledY, ledR, 0, Math.PI*2);
+    fctx.fill();
+  }
+
+  // Label above the LED
+  fctx.fillStyle = '#6e7681';
+  fctx.font = '9px Segoe UI';
+  fctx.textAlign = 'center';
+  fctx.fillText('LED', ledX, ledY - 12);
+  fctx.textAlign = 'left';
+}
+
+function drawArrowHead(x, y, angle, color) {
+  fctx.fillStyle = color;
+  fctx.beginPath();
+  fctx.moveTo(x, y);
+  fctx.lineTo(x - 8, y - 4);
+  fctx.lineTo(x - 8, y + 4);
+  fctx.closePath();
+  fctx.fill();
+}
+
+function drawIntermediateRay(x1, x2, cy, coreHalf, rayAngleFromAxis, cycleProgress) {
+  // A zigzag ray at an intermediate angle (between 0 and the critical-angle ray).
+  // Drawn faintly with a small photon — there can be several of these on screen
+  // at once, so the visual must stay uncluttered.
+  // Colour: orange-yellow (between green axial and red extreme).
+  const colour = '#ffd166';
+
+  if (rayAngleFromAxis < 1e-4) return;  // skip near-axial (already drawn as the green ray)
+
+  // Build the zigzag path: start at axis centre, first leg up to top edge,
+  // then full bounces between top and bottom.
+  const points = [];
+  const entryX = x1, entryY = cy;
+  points.push({x: entryX, y: entryY});
+
+  const tanA = Math.tan(rayAngleFromAxis);
+  const firstDx = coreHalf / tanA;
+  const fullDx = (2 * coreHalf) / tanA;
+
+  let x = entryX, y = entryY;
+  if (x + firstDx >= x2) {
+    const remaining = x2 - x;
+    points.push({x: x2, y: y - remaining * tanA});
+  } else {
+    x += firstDx; y = cy - coreHalf;
+    points.push({x: x, y: y});
+    let goingUp = false;
+    let safety = 0;
+    while (x < x2 - 0.5 && safety < 500) {
+      safety++;
+      const nx = x + fullDx;
+      if (nx >= x2) {
+        const remaining = x2 - x;
+        const yEnd = goingUp ? y - remaining * tanA : y + remaining * tanA;
+        points.push({x: x2, y: yEnd});
+        break;
+      }
+      const ny = goingUp ? cy - coreHalf : cy + coreHalf;
+      points.push({x: nx, y: ny});
+      x = nx; y = ny;
+      goingUp = !goingUp;
+    }
+  }
+
+  // Compute exit segment (continues at slope of last in-fibre leg)
+  const exitLen = 35;
+  let exitX2 = null, exitY2 = null;
+  if (points.length >= 2) {
+    const last = points[points.length - 1];
+    const prev = points[points.length - 2];
+    const segDx = last.x - prev.x;
+    const segDy = last.y - prev.y;
+    const segLen = Math.hypot(segDx, segDy);
+    if (segLen > 0.5) {
+      const ux = segDx / segLen, uy = segDy / segLen;
+      exitX2 = last.x + ux * exitLen;
+      exitY2 = last.y + uy * exitLen;
+    }
+  }
+
+  // In-fibre path
+  fctx.strokeStyle = 'rgba(255, 209, 102, 0.75)';
+  fctx.lineWidth = 1.6;
+  fctx.beginPath();
+  fctx.moveTo(points[0].x, points[0].y);
+  for (let i=1; i<points.length; i++) fctx.lineTo(points[i].x, points[i].y);
+  fctx.stroke();
+
+  // Visible exit segment (solid)
+  if (exitX2 !== null) {
+    const last = points[points.length - 1];
+    fctx.strokeStyle = 'rgba(255, 209, 102, 0.75)';
+    fctx.lineWidth = 1.6;
+    fctx.beginPath();
+    fctx.moveTo(last.x, last.y); fctx.lineTo(exitX2, exitY2);
+    fctx.stroke();
+    fctx.lineWidth = 1.2;
+  }
+
+  // Compute total in-fibre path length for animation timing
+  let totalPath = 0;
+  const segLens = [];
+  for (let i=0; i<points.length-1; i++) {
+    const sx = points[i+1].x - points[i].x;
+    const sy = points[i+1].y - points[i].y;
+    const sl = Math.hypot(sx, sy);
+    segLens.push(sl);
+    totalPath += sl;
+  }
+
+  // Timing: in-fibre time as fraction of master cycle.
+  // For the slowest ray, in-fibre fraction = 1 - exitFraction.
+  // For this ray (faster), in-fibre fraction scales with (cos(angle))^-1.
+  // Master in-fibre fraction = inFibreFraction = (1 - exitFraction)
+  // For this ray: inFibreFractionThis = (n2/n1) / cos(angle) * inFibreFraction
+  const cosA = Math.cos(rayAngleFromAxis);
+  const exitFraction = 0.05;
+  const inFibreFractionRoot = 1.0 - exitFraction;
+  const inFibreFractionThis = (state.n2 / state.n1) / cosA * inFibreFractionRoot;
+
+  // Photon position
+  let pX = null, pY = null;
+  if (cycleProgress < inFibreFractionThis) {
+    // In-fibre phase
+    const frac = cycleProgress / inFibreFractionThis;
+    let dist = frac * totalPath;
+    pX = points[0].x; pY = points[0].y;
+    for (let i=0; i<segLens.length; i++) {
+      if (dist <= segLens[i]) {
+        const f = dist / segLens[i];
+        pX = points[i].x + (points[i+1].x - points[i].x) * f;
+        pY = points[i].y + (points[i+1].y - points[i].y) * f;
+        break;
+      }
+      dist -= segLens[i];
+    }
+  } else if (cycleProgress < inFibreFractionThis + exitFraction && exitX2 !== null) {
+    // Exit phase
+    const last = points[points.length - 1];
+    const f = (cycleProgress - inFibreFractionThis) / exitFraction;
+    pX = last.x + (exitX2 - last.x) * f;
+    pY = last.y + (exitY2 - last.y) * f;
+  }
+
+  if (pX !== null) {
+    // Small photon (smaller than the labelled axial/extreme dots)
+    fctx.fillStyle = colour;
+    fctx.shadowColor = colour;
+    fctx.shadowBlur = 6;
+    fctx.beginPath();
+    fctx.arc(pX, pY, 3, 0, Math.PI*2);
+    fctx.fill();
+    fctx.shadowBlur = 0;
+  }
+}
+
+function annotateCriticalAngle(x1, cy, coreHalf, rayAngleFromAxis, thetaC) {
+  // Annotate θc at the FIRST TIR point — the first bounce off the top boundary.
+  // The ray enters at the axis centre and travels up-and-right at angle
+  // rayAngleFromAxis above horizontal; it hits the top boundary after a horizontal
+  // distance of coreHalf/tan(angle).
+  // Geometry at this bounce:
+  //   - top boundary: inward-pointing normal goes DOWN into the core
+  //   - incoming ray came from below-left, so reversed direction is below-left too
+  //   - draw the arc INSIDE the fibre between the downward normal and the
+  //     reversed-ray direction — this places it in the lower-left quadrant
+  //     of the bounce point, well within the core
+  const tanA = Math.tan(rayAngleFromAxis);
+  if (!isFinite(tanA) || tanA < 1e-4) return;
+
+  let dxFirst = coreHalf / tanA;
+  if (!isFinite(dxFirst) || dxFirst > 400) dxFirst = 100;
+
+  // First bounce position (at top boundary)
+  const bx = x1 + dxFirst;
+  const by = cy - coreHalf;
+
+  // Normal from top boundary: points DOWN into the core. Draw it inside the fibre.
+  fctx.strokeStyle = '#ffa657';
+  fctx.lineWidth = 1.2;
+  fctx.setLineDash([2,2]);
+  fctx.beginPath();
+  fctx.moveTo(bx, by);
+  fctx.lineTo(bx, by + 30);    // down into core
+  fctx.stroke();
+  fctx.setLineDash([]);
+
+  // Arc for θc: from downward-normal direction (+π/2) sweeping clockwise to the
+  // reversed-ray direction (π - rayAngleFromAxis), placing the arc inside the
+  // fibre in the lower-left quadrant of the bounce point.
+  const r = 18;
+  const startAngle = Math.PI / 2;                       // straight down (normal)
+  const endAngle = Math.PI - rayAngleFromAxis;          // down-and-left (reversed ray)
+  fctx.strokeStyle = '#ffa657';
+  fctx.lineWidth = 1.5;
+  fctx.beginPath();
+  fctx.arc(bx, by, r, startAngle, endAngle, false);     // clockwise (default)
+  fctx.stroke();
+
+  // Label "θc" at the arc midpoint, slightly outside the arc radius
+  const midAngle = (startAngle + endAngle) / 2;
+  const labelR = r + 10;
+  const lx = bx + labelR * Math.cos(midAngle);
+  const ly = by + labelR * Math.sin(midAngle);
+  fctx.fillStyle = '#ffa657';
+  fctx.font = 'bold 13px Segoe UI';
+  fctx.textAlign = 'center';
+  fctx.textBaseline = 'middle';
+  fctx.fillText('θc', lx, ly);
+  fctx.textAlign = 'left';
+  fctx.textBaseline = 'alphabetic';
+}
+
+// ============= PULSE DRAWING =============
+function drawPulses() {
+  const wIn = inPulseDim.w, hIn = inPulseDim.h;
+  const wOut = outPulseDim.w, hOut = outPulseDim.h;
+
+  ipctx.clearRect(0, 0, wIn, hIn);
+  opctx.clearRect(0, 0, wOut, hOut);
+
+  // Axis label only - the waveform's baseline serves as the time axis
+  function axis(ctx, w, h) {
+    ctx.fillStyle = '#6e7681';
+    ctx.font = '10px Segoe UI';
+    ctx.fillText('time →', w-50, h-4);
+  }
+  axis(ipctx, wIn, hIn);
+  axis(opctx, wOut, hOut);
+
+  // ----------------------------------------------------------------
+  // PULSE TRAIN MODEL (A-level WJEC convention):
+  // - Input: a sequence of rectangular pulses of width τ_in spaced by
+  //   bit period T (controlled by slider).
+  // - Each input pulse → trapezium output of base (τ_in + Δt),
+  //   peak height τ_in/(τ_in+Δt) (area conserved).
+  // - Output train = SUM of individual trapezia (incoherent power add).
+  //   When T < τ_in + Δt, adjacent trapezia overlap → bits unreadable.
+  // - Style intentionally identical to single-pulse view.
+  // ----------------------------------------------------------------
+
+  const dt = computeDeltaT();
+  const usableW = wOut - 40;
+  const startX = 50;
+
+  // Bit period (slider value, in pixels — direct correspondence so slider feels live)
+  const T_px = state.bitPeriodNs;       // treat slider value as "pixels per bit"
+  // Input pulse width: chunky (matches WJEC exam diagrams which show pulses with
+  // clearly visible width). Capped so it never exceeds bit period.
+  const tauInPx = Math.min(T_px * 0.35, 30);
+
+  // Pixel scale: same as before (500 ns spans usable canvas width)
+  const scale = usableW / 500e-9;
+  let dtPx = dt * scale;
+  if (dtPx < 0) dtPx = 0;
+
+  // How many bits fit in the canvas?
+  const maxBits = Math.floor((usableW - 30) / T_px);
+  const numBits = Math.min(maxBits, 8);
+
+  const inputH = 1.0;
+  // Output peak: input top stays the same; pulse spreads to right with sloping
+  // trailing edge. Energy conservation: triangle-on-top means area = tauIn + dt/2
+  // peak height ≈ tauIn / (tauIn + dt/2). Cap at 1.
+  const outputPeak = Math.min(1.0, tauInPx / (tauInPx + dtPx/2 || 1));
+
+  // Shared geometry helpers
+  const baseY_in  = hIn  - 14;
+  const inH_px    = hIn  - 42;  // smaller waveform area to leave room at top for labels
+  const baseY_out = hOut - 30;  // baseline raised to leave room for label
+  const outH_px   = hOut - 38;  // waveform height stays proportional
+
+  // ---------- INPUT TRAIN: rectangular pulses ----------
+  ipctx.strokeStyle = '#7ee787';
+  ipctx.fillStyle = 'rgba(126, 231, 135, 0.18)';
+  ipctx.lineWidth = 2;
+
+  // Draw filled rectangles first
+  for (let k = 0; k < numBits; k++) {
+    const inLead  = startX + k * T_px;
+    const inTrail = inLead + tauInPx;
+    if (inTrail > wIn - 10) break;
+    const topY = baseY_in - inputH * inH_px;
+
+    ipctx.beginPath();
+    ipctx.moveTo(inLead, baseY_in);
+    ipctx.lineTo(inLead, topY);
+    ipctx.lineTo(inTrail, topY);
+    ipctx.lineTo(inTrail, baseY_in);
+    ipctx.closePath();
+    ipctx.fill();
+  }
+
+  // Draw a single continuous green polyline tracing the digital waveform:
+  // baseline → up → top → down → baseline → up → top → down → ...
+  ipctx.beginPath();
+  ipctx.moveTo(20, baseY_in);
+  for (let k = 0; k < numBits; k++) {
+    const inLead  = startX + k * T_px;
+    const inTrail = inLead + tauInPx;
+    if (inTrail > wIn - 10) break;
+    const topY = baseY_in - inputH * inH_px;
+    ipctx.lineTo(inLead, baseY_in);
+    ipctx.lineTo(inLead, topY);
+    ipctx.lineTo(inTrail, topY);
+    ipctx.lineTo(inTrail, baseY_in);
+  }
+  ipctx.lineTo(wIn - 10, baseY_in);
+  ipctx.stroke();
+
+  ipctx.textAlign = 'left';
+
+  // ---------- LABELS: leading edge / trailing edge on second input pulse ----------
+  // Annotated on the SECOND pulse so the start of the panel stays uncluttered.
+  if (numBits >= 2 && tauInPx > 6) {
+    const secondLead = startX + T_px;
+    const secondTrail = secondLead + tauInPx;
+    const topY = baseY_in - inputH * inH_px;
+    if (secondTrail < wIn - 80) {
+      const labelY = topY - 14;  // sit just above the pulse top
+
+      ipctx.strokeStyle = '#8b949e';
+      ipctx.fillStyle = '#8b949e';
+      ipctx.font = '12px Segoe UI';
+      ipctx.lineWidth = 1;
+
+      // "leading edge" — points to leading edge of second pulse
+      ipctx.beginPath();
+      ipctx.moveTo(secondLead, topY - 2);
+      ipctx.lineTo(secondLead - 16, labelY);
+      ipctx.stroke();
+      ipctx.textAlign = 'right';
+      ipctx.fillText('leading edge', secondLead - 18, labelY + 4);
+
+      // "trailing edge" — points to trailing edge of second pulse
+      ipctx.beginPath();
+      ipctx.moveTo(secondTrail, topY - 2);
+      ipctx.lineTo(secondTrail + 16, labelY);
+      ipctx.stroke();
+      ipctx.textAlign = 'left';
+      ipctx.fillText('trailing edge', secondTrail + 18, labelY + 4);
+
+      ipctx.textAlign = 'left';
+    }
+  }
+
+  // ---------- OUTPUT TRAIN: skewed pulse shape (matches WJEC mark scheme) ----------
+  // Each output pulse: sharp vertical leading edge (axial ray arrives first),
+  // brief flat top while pulse-width's worth of rays arrive together,
+  // then a SMOOTH CURVED decay over Δt to baseline (more rays pile up near
+  // the trailing edge because rays at angles approaching the critical angle
+  // have more closely-spaced arrival times — a curved tail is more physically
+  // honest than a hard linear ramp).
+  function pulseShape(offsetPx, tau, dt, peak) {
+    if (offsetPx < 0 || offsetPx > tau + dt) return 0;
+    if (offsetPx <= tau) return peak;                     // flat top
+    // Smooth concave-down decay from peak → 0 over the interval [tau, tau+dt].
+    // Using a cosine half-wave gives a soft start to the slope (matches the
+    // gentle initial drop) and a soft landing on baseline (matches the WJEC
+    // diagram's curved tail). Normalised so f(tau)=peak, f(tau+dt)=0.
+    const x = (offsetPx - tau) / dt;          // 0 → 1 across the trailing edge
+    return peak * 0.5 * (1 + Math.cos(Math.PI * x));
+  }
+
+  // Sample the summed output across canvas
+  const samples = new Float32Array(wOut);
+  for (let px = 0; px < wOut; px++) {
+    let sum = 0;
+    for (let k = 0; k < numBits; k++) {
+      const lead = startX + k * T_px;
+      sum += pulseShape(px - lead, tauInPx, dtPx, outputPeak);
+    }
+    samples[px] = sum;
+  }
+
+  // Filled summed waveform
+  opctx.fillStyle = 'rgba(255, 123, 114, 0.18)';
+  opctx.beginPath();
+  opctx.moveTo(20, baseY_out);
+  for (let px = 20; px < wOut - 10; px++) {
+    const y = baseY_out - Math.min(samples[px], 1.5) * outH_px;
+    opctx.lineTo(px, y);
+  }
+  opctx.lineTo(wOut - 10, baseY_out);
+  opctx.closePath();
+  opctx.fill();
+
+  // Outline of summed waveform
+  opctx.strokeStyle = '#ff7b72';
+  opctx.lineWidth = 2;
+  opctx.beginPath();
+  opctx.moveTo(20, baseY_out);
+  for (let px = 20; px < wOut - 10; px++) {
+    const y = baseY_out - Math.min(samples[px], 1.5) * outH_px;
+    opctx.lineTo(px, y);
+  }
+  opctx.lineTo(wOut - 10, baseY_out);
+  opctx.stroke();
+
+  // Faint dashed input rectangles overlaid on output for direct comparison
+  opctx.strokeStyle = 'rgba(126,231,135,0.45)';
+  opctx.setLineDash([3,3]);
+  opctx.lineWidth = 1;
+  for (let k = 0; k < numBits; k++) {
+    const lead = startX + k * T_px;
+    const trail = lead + tauInPx;
+    if (trail > wOut - 10) break;
+    opctx.beginPath();
+    opctx.moveTo(lead, baseY_out);
+    opctx.lineTo(lead, baseY_out - inputH * outH_px);
+    opctx.lineTo(trail, baseY_out - inputH * outH_px);
+    opctx.lineTo(trail, baseY_out);
+    opctx.stroke();
+  }
+  opctx.setLineDash([]);
+
+  // Width label (input pulse width + Δt) under FIRST output pulse only
+  const firstLead = startX;
+  const firstTrail = startX + tauInPx + dtPx;
+  if (firstTrail < wOut - 10) {
+    opctx.strokeStyle = '#8b949e';
+    opctx.lineWidth = 1;
+    opctx.beginPath();
+    opctx.moveTo(firstLead, baseY_out + 8); opctx.lineTo(firstTrail, baseY_out + 8);
+    opctx.moveTo(firstLead, baseY_out + 6); opctx.lineTo(firstLead, baseY_out + 10);
+    opctx.moveTo(firstTrail, baseY_out + 6); opctx.lineTo(firstTrail, baseY_out + 10);
+    opctx.stroke();
+    opctx.fillStyle = '#8b949e';
+    opctx.font = '9px Segoe UI';
+    opctx.textAlign = 'center';
+    opctx.fillText('input pulse width + Δt', (firstLead+firstTrail)/2, baseY_out + 17);
+    opctx.textAlign = 'left';
+  }
+
+  // Δt arrow on FIRST output pulse — spans the sloped trailing edge region
+  if (dtPx > 6) {
+    const peakY1 = baseY_out - outputPeak * outH_px;
+    const dtArrowY = peakY1 - 8;
+    const dtX1 = startX + tauInPx;            // start of slope (end of flat top)
+    const dtX2 = startX + tauInPx + dtPx;     // end of slope (back to baseline)
+    opctx.strokeStyle = '#ffa657';
+    opctx.lineWidth = 1.2;
+    opctx.beginPath();
+    opctx.moveTo(dtX1, dtArrowY); opctx.lineTo(dtX2, dtArrowY);
+    opctx.moveTo(dtX1, dtArrowY); opctx.lineTo(dtX1+5, dtArrowY-3); opctx.moveTo(dtX1, dtArrowY); opctx.lineTo(dtX1+5, dtArrowY+3);
+    opctx.moveTo(dtX2, dtArrowY); opctx.lineTo(dtX2-5, dtArrowY-3); opctx.moveTo(dtX2, dtArrowY); opctx.lineTo(dtX2-5, dtArrowY+3);
+    opctx.stroke();
+    opctx.fillStyle = '#ffa657';
+    opctx.font = '10px Segoe UI';
+    opctx.textAlign = 'center';
+    opctx.fillText('Δt', (dtX1+dtX2)/2, dtArrowY - 3);
+    opctx.textAlign = 'left';
+  }
+
+  // ---------- Resolvability check & info strip ----------
+  // WJEC criterion (from mark scheme): the second pulse may start at A only after
+  // the first output pulse has fully ended at B. So the leading edges must be
+  // separated by at least the full output pulse width:
+  //   T_min = input pulse width + Δt
+  //   max bit rate = 1 / (input pulse width + Δt)
+  const T_seconds = T_px / scale;
+  const tauIn_seconds = tauInPx / scale;
+  const minPeriod = tauIn_seconds + dt;
+  const resolvable = (dt === 0) || (T_seconds >= minPeriod);
+
+  const bitRate = 1 / T_seconds;
+  const maxBitRate = 1 / minPeriod;
+  let html = '';
+  html += 'Input pulse width = <b style="color:#7ee787">' + formatTime(tauIn_seconds) + '</b>';
+  html += ' &nbsp; · &nbsp; Δt = <b style="color:#ffa657">' + formatTime(dt) + '</b>';
+  html += '<br>Min period T_min = pulse width + Δt = <b style="color:#ffa657">' + formatTime(minPeriod) + '</b>';
+  html += ' &nbsp; → &nbsp; max bit-rate = <b style="color:#ffa657">' + formatRate(maxBitRate) + '</b>';
+  html += '<br>Current T = <b style="color:#58a6ff">' + formatTime(T_seconds) + '</b>';
+  html += ' &nbsp; → &nbsp; bit rate = <b style="color:#58a6ff">' + formatRate(bitRate) + '</b>';
+  html += ' &nbsp; · &nbsp; ';
+  if (dt === 0) {
+    html += '<b style="color:#7ee787">no dispersion</b>';
+  } else if (resolvable) {
+    html += '<b style="color:#7ee787">✔ T ≥ T_min — resolvable</b>';
+  } else {
+    html += '<b style="color:#ff7b72">✘ T &lt; T_min — pulses overlap</b>';
+  }
+  document.getElementById('pulseInfo').innerHTML = html;
+}
+
+function computeDeltaT() {
+  if (state.n2 >= state.n1) return 0; // no TIR
+  return (state.L * state.n1 / c) * (state.n1/state.n2 - 1);
+}
+
+function formatTime(t) {
+  if (t === 0) return '0 (no TIR — n₂ ≥ n₁)';
+  if (t < 1e-9) return (t*1e12).toFixed(2) + ' ps';
+  if (t < 1e-6) return (t*1e9).toFixed(2) + ' ns';
+  if (t < 1e-3) return (t*1e6).toFixed(2) + ' µs';
+  return (t*1e3).toFixed(2) + ' ms';
+}
+function formatRate(r) {
+  if (!isFinite(r)) return '∞';
+  if (r > 1e9) return (r/1e9).toFixed(2) + ' Gbit/s';
+  if (r > 1e6) return (r/1e6).toFixed(2) + ' Mbit/s';
+  if (r > 1e3) return (r/1e3).toFixed(2) + ' kbit/s';
+  return r.toFixed(0) + ' bit/s';
+}
+
+// ============= CALCULATION DISPLAY =============
+function updateCalcs() {
+  const cb = document.getElementById('calcBox');
+  const sinTc = state.n2 / state.n1;
+
+  if (sinTc >= 1) {
+    cb.innerHTML = '<div class="calc-line" style="color:#ff7b72">⚠ n₂ ≥ n₁ — no total internal reflection possible. Light leaks into cladding.</div>';
+    return;
+  }
+
+  const thetaCrad = Math.asin(sinTc);
+  const thetaC = thetaCrad * 180/Math.PI;
+  const vCore = c / state.n1;                  // m/s
+  const tShort = state.L / vCore;              // s — axial: path = L
+  const vAxialComp = vCore * sinTc;            // axial component of v for critical-angle ray
+  const tLong = state.L / vAxialComp;          // s — longest path: time = L / (v·sin θc)
+  const dt = tLong - tShort;                   // s
+
+  // Helper to format times in microseconds with 2 dp.
+  // Picoseconds for very short, microseconds for typical fibres.
+  function fmt_t(t) {
+    if (t < 1e-9) return (t*1e12).toFixed(2) + ' ps';
+    if (t < 1e-6) return (t*1e9).toFixed(2) + ' ns';
+    if (t < 1e-3) return (t*1e6).toFixed(2) + ' µs';
+    return (t*1e3).toFixed(2) + ' ms';
+  }
+
+  let html = '';
+
+  // Step 1 — critical angle
+  html += '<div class="calc-line" style="color:#79c0ff;">Step 1: Critical angle</div>';
+  html += '<div class="calc-line">&nbsp; <span class="var">sin θc</span> = n₂ / n₁ = ' + state.n2.toFixed(2) + ' / ' + state.n1.toFixed(2) + ' = <span class="val">' + sinTc.toFixed(2) + '</span></div>';
+  html += '<div class="calc-line">&nbsp; <span class="var">θc</span> = sin⁻¹(' + sinTc.toFixed(2) + ') = <span class="res">' + thetaC.toFixed(2) + '°</span></div>';
+  html += '<div class="calc-line">&nbsp;</div>';
+
+  // Step 2 — speed in core
+  html += '<div class="calc-line" style="color:#79c0ff;">Step 2: Speed of light in core</div>';
+  html += '<div class="calc-line">&nbsp; <span class="var">v</span> = c / n₁ = (3.00×10⁸) / ' + state.n1.toFixed(2) + ' = <span class="res">' + (vCore/1e8).toFixed(2) + '×10⁸ m/s</span></div>';
+  html += '<div class="calc-line">&nbsp;</div>';
+
+  // Step 3 — time for shortest path (axial)
+  html += '<div class="calc-line" style="color:#7ee787;">Step 3: Time along shortest path (axial)</div>';
+  html += '<div class="calc-line">&nbsp; <span class="var">t_short</span> = L / v = ' + state.L.toFixed(2) + ' / (' + (vCore/1e8).toFixed(2) + '×10⁸)</div>';
+  html += '<div class="calc-line">&nbsp; &nbsp; &nbsp; &nbsp; = <span class="res">' + fmt_t(tShort) + '</span></div>';
+  html += '<div class="calc-line">&nbsp;</div>';
+
+  // Step 4 — time for longest path (zigzag at critical angle)
+  // Key pedagogical insight: v·sin θc is the component of v along the fibre axis.
+  html += '<div class="calc-line" style="color:#ff7b72;">Step 4: Time along longest path (TIR at θc)</div>';
+  html += '<div class="calc-line">&nbsp; The zig-zag ray moves at speed v but at angle (90°−θc) to the axis.</div>';
+  html += '<div class="calc-line">&nbsp; The component of v along the axis is <span class="var">v·sin θc</span>.</div>';
+  html += '<div class="calc-line">&nbsp; <span class="var">t_long</span> = L / (v·sin θc)</div>';
+  html += '<div class="calc-line">&nbsp; &nbsp; &nbsp; = ' + state.L.toFixed(2) + ' / (' + (vCore/1e8).toFixed(2) + '×10⁸ × ' + sinTc.toFixed(2) + ')</div>';
+  html += '<div class="calc-line">&nbsp; &nbsp; &nbsp; = <span class="res">' + fmt_t(tLong) + '</span></div>';
+  html += '<div class="calc-line">&nbsp;</div>';
+
+  // Step 5 — pulse broadening
+  html += '<div class="calc-line" style="color:#ffa657;">Step 5: Pulse broadening</div>';
+  html += '<div class="calc-line">&nbsp; <span class="var">Δt</span> = t_long − t_short</div>';
+  html += '<div class="calc-line">&nbsp; &nbsp; &nbsp; = ' + fmt_t(tLong) + ' − ' + fmt_t(tShort) + '</div>';
+  html += '<div class="calc-line">&nbsp; &nbsp; &nbsp; = <span class="res">' + fmt_t(dt) + '</span></div>';
+
+  cb.innerHTML = html;
+}
+
+// ============= EVENT HANDLERS =============
+document.getElementById('n1').addEventListener('input', e => {
+  state.n1 = parseFloat(e.target.value);
+  document.getElementById('n1Val').textContent = state.n1.toFixed(2);
+  updateAll();
+});
+document.getElementById('n2').addEventListener('input', e => {
+  state.n2 = parseFloat(e.target.value);
+  document.getElementById('n2Val').textContent = state.n2.toFixed(2);
+  updateAll();
+});
+document.getElementById('L').addEventListener('input', e => {
+  state.L = parseInt(e.target.value);
+  document.getElementById('LVal').textContent = formatLength(state.L);
+  updateAll();
+});
+document.getElementById('bitPeriod').addEventListener('input', e => {
+  state.bitPeriodNs = parseInt(e.target.value);
+  drawPulses();
+});
+document.getElementById('playBtn').addEventListener('click', () => {
+  state.playing = !state.playing;
+});
+document.getElementById('resetBtn').addEventListener('click', () => {
+  state.t = 0;
+  drawFibre();
+});
+document.getElementById('showMultipleRays').addEventListener('change', e => {
+  state.showMultipleRays = e.target.checked;
+  drawFibre();
+});
+window.addEventListener('resize', () => {
+  resizeAll();
+  updateAll();
+});
+
+function updateAll() {
+  drawFibre();
+  drawPulses();
+  updateCalcs();
+}
+
+// ============= ANIMATION LOOP =============
+let lastTime = performance.now();
+function loop(now) {
+  const dt = (now - lastTime) / 1000;
+  lastTime = now;
+  if (state.playing) {
+    state.t += dt;
+    drawFibre();
+  }
+  requestAnimationFrame(loop);
+}
+
+// ============= INIT =============
+resizeAll();
+updateAll();
+requestAnimationFrame(loop);
+</script>
+
+</body>
+</html>

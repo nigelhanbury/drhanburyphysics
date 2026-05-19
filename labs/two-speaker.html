@@ -1,0 +1,2051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Two-Speaker Interference — Sound Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Cream / paper palette — feels like a physics worksheet */
+    --bg-deep: #f0e9d9;        /* page background */
+    --bg-panel: #faf5e8;       /* panels (controls, stage, footer) */
+    --bg-panel-light: #fdfaf2; /* graph area */
+    --ink: #1f2a3a;            /* primary text — deep navy */
+    --ink-dim: #58657a;        /* secondary text */
+    --ink-faint: #94a0b3;      /* tertiary / inactive */
+    --rule: #d8d0bd;           /* borders, dividers */
+    --rule-strong: #b8ad94;    /* stronger borders */
+    --accent: #c8821a;         /* warm amber — readable on cream */
+    --accent-bright: #ea9c2a;  /* brighter amber for highlights */
+    --wave: #1d5e85;           /* deep teal-blue for waves and curves */
+    --wave-light: #4a89b3;     /* lighter shade for secondary wave elements */
+    --equipment: #2d3a4f;      /* matte navy-grey for speakers, mic */
+    --constructive: #2f7d3a;
+    --destructive: #b9322f;
+    --sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  /* iPad/Pencil compatibility: ensure form controls receive pointer input
+     from Pencil as well as finger. touch-action: manipulation removes the
+     300ms tap delay and lets the browser route Pencil input as a pointer
+     without trying to interpret it as scribble or selection. */
+  input, button, label, select,
+  .view-btn, .play-btn, .stage-toggle {
+    touch-action: manipulation;
+  }
+
+  /* Range sliders need touch-action: none, NOT manipulation. With
+     "manipulation" the browser still claims pan/scroll gestures for itself,
+     so Apple Pencil drag on a slider thumb scrolls the surrounding panel
+     instead of moving the thumb. "none" gives the slider full control of
+     the gesture. This rule must come after the block above to win the cascade. */
+  input[type="range"] {
+    touch-action: none;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg-deep);
+    color: var(--ink);
+    font-family: var(--sans);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Subtle paper grain — very faint warm noise to give the cream texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.4  0 0 0 0 0.3  0 0 0 0 0.1  0 0 0 0.05 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    pointer-events: none;
+    z-index: 1;
+    mix-blend-mode: multiply;
+  }
+
+  #app {
+    position: relative;
+    z-index: 2;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 20px 60px;
+  }
+
+  /* ------- Header ------- */
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 24px;
+  }
+  .title-block .eyebrow {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin-bottom: 6px;
+  }
+  h1 {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: clamp(26px, 4.0vw, 36px);
+    line-height: 1.1;
+    margin: 0;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  h1 em {
+    font-style: normal;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .header-meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    text-align: right;
+    line-height: 1.6;
+  }
+
+  /* ------- Controls panel ------- */
+  /* Auto-fit so the grid is 3 columns by default and expands to 4 when the
+     phase-control cell becomes visible (toggle for two-generator mode). */
+  #controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0;
+    background: var(--bg-panel);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+  .ctrl {
+    padding: 14px 18px;
+    border-right: 1px solid var(--rule);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .ctrl.hidden { display: none; }
+  .ctrl:last-child { border-right: none; }
+  .ctrl-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .ctrl-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    font-weight: 500;
+  }
+  .ctrl-label .sym {
+    color: var(--accent);
+    font-style: italic;
+    font-family: 'Times New Roman', Georgia, serif;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 15px;
+    margin-right: 5px;
+  }
+  .ctrl-value {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .ctrl-value .unit {
+    color: var(--ink-faint);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    margin-left: 2px;
+  }
+
+  /* Custom range slider */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 18px;
+    background: transparent;
+    cursor: pointer;
+    margin: 0;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 2px;
+    background: var(--rule-strong);
+    border-radius: 1px;
+  }
+  input[type="range"]::-moz-range-track {
+    height: 2px;
+    background: var(--rule-strong);
+    border-radius: 1px;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--ink);
+    border: 2px solid var(--bg-panel);
+    border-radius: 50%;
+    margin-top: -6px;
+    box-shadow: 0 0 0 1px var(--accent);
+    transition: box-shadow 0.15s;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: var(--ink);
+    border: 2px solid var(--bg-panel);
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  input[type="range"]:hover::-webkit-slider-thumb {
+    box-shadow: 0 0 0 1px var(--accent), 0 0 0 5px rgba(200, 130, 26, 0.18);
+  }
+
+  /* ------- Stage (canvas) ------- */
+  .stage {
+    background: var(--bg-panel);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 0;
+    overflow: hidden;
+    margin-bottom: 14px;
+    position: relative;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  /* Top-right toggles inside stage */
+  .stage-toggles {
+    position: absolute;
+    top: 8px;
+    right: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 5;
+    align-items: flex-end;
+  }
+  .stage-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(250, 245, 232, 0.92);
+    border: 1px solid var(--rule-strong);
+    border-radius: 3px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    user-select: none;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+  }
+  .stage-toggle:hover { color: var(--ink); background: rgba(255, 255, 245, 0.98); }
+  .stage-toggle input { margin: 0; cursor: pointer; accent-color: var(--accent); }
+  .stage-toggle:has(input:checked) {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: rgba(255, 247, 230, 0.95);
+  }
+  /* Antinodal toggle is only relevant when wavefronts are visible */
+  #antinodalToggle.hidden { display: none; }
+  /* Anchored just to the right of the Wavefronts row in the view-toggle stack.
+     The view-toggle stack starts at top:12 left:12, has min-width:110, and the
+     Wavefronts row is the 4th item (each row ~25px tall) → centre y ≈ 100 px. */
+  .antinodal-toggle {
+    position: absolute;
+    top: 94px;
+    left: 132px;
+    z-index: 5;
+  }
+  /* Play button — sits to the right of the antinodal toggle on the same row.
+     Same height/look as the toggle so they read as a control pair. */
+  .play-btn {
+    position: absolute;
+    top: 94px;
+    left: 282px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(250, 245, 232, 0.92);
+    border: 1px solid var(--rule-strong);
+    border-radius: 3px;
+    padding: 5px 12px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    user-select: none;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+  }
+  .play-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .play-btn.hidden { display: none; }
+  .play-btn:disabled { opacity: 0.45; cursor: default; }
+  .play-btn:disabled:hover { color: var(--ink-dim); border-color: var(--rule-strong); }
+  .play-btn svg { display: block; transition: transform 0.15s; }
+  .play-btn:hover svg { transform: translateX(1px); }
+
+  /* View-mode toggle (top-left, vertical stack) */
+  .view-toggle {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background: rgba(250, 245, 232, 0.92);
+    border: 1px solid var(--rule-strong);
+    border-radius: 3px;
+    overflow: hidden;
+    z-index: 5;
+    min-width: 110px;
+  }
+  .view-btn {
+    background: transparent;
+    border: none;
+    color: var(--ink-dim);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border-bottom: 1px solid var(--rule);
+    font-weight: 500;
+    text-align: left;
+  }
+  .view-btn:last-child { border-bottom: none; }
+  .view-btn:hover { color: var(--ink); background: rgba(255, 247, 230, 0.6); }
+  .view-btn.active {
+    color: #fff;
+    background: var(--accent);
+    font-weight: 700;
+  }
+
+  /* ------- Footer note ------- */
+  .footnote {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--ink-dim);
+    font-style: normal;
+    text-align: center;
+    margin-top: 18px;
+    line-height: 1.6;
+  }
+  .waves-mode-note {
+    color: var(--ink-faint);
+    font-size: 12px;
+  }
+  .waves-mode-note.hidden { display: none; }
+
+  @media (max-width: 640px) {
+    #controls { grid-template-columns: 1fr; }
+    .ctrl { border-right: none; border-bottom: 1px solid var(--rule); }
+    .ctrl:last-child { border-bottom: none; }
+    header { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .header-meta { text-align: left; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <div class="title-block">
+      <div class="eyebrow">Wave Acoustics · Interactive</div>
+      <h1>Two-Speaker <em>Interference</em></h1>
+    </div>
+    <div class="header-meta">
+      Sound Lab<br>
+      Path-Difference Method
+    </div>
+  </header>
+
+  <div id="controls">
+    <div class="ctrl">
+      <div class="ctrl-head">
+        <span class="ctrl-label"><span class="sym">f</span>Frequency</span>
+        <span class="ctrl-value" id="freqValue">600 Hz</span>
+      </div>
+      <input type="range" id="freqSlider" min="400" max="1200" value="600" step="10">
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-head">
+        <span class="ctrl-label"><span class="sym">a</span>Source Separation</span>
+      </div>
+      <input type="range" id="separationSlider" min="60" max="280" value="160" step="1">
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-head">
+        <span class="ctrl-label"><span class="sym">D</span>Path Distance</span>
+      </div>
+      <input type="range" id="distanceSlider" min="200" max="500" value="380" step="1">
+    </div>
+    <div class="ctrl hidden" id="phaseCtrl">
+      <div class="ctrl-head">
+        <span class="ctrl-label"><span class="sym">Δφ</span>Source Phase</span>
+        <span class="ctrl-value" id="phaseValue">0°</span>
+      </div>
+      <input type="range" id="phaseSlider" min="0" max="360" value="0" step="1">
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="view-toggle">
+      <button class="view-btn active" data-mode="off">Off</button>
+      <button class="view-btn" data-mode="waves">Waves</button>
+      <button class="view-btn" data-mode="rays">Rays</button>
+      <button class="view-btn" data-mode="wavefronts">Wavefronts</button>
+    </div>
+    <label class="stage-toggle antinodal-toggle hidden" id="antinodalToggle" title="Show antinodal lines — paths of constructive interference">
+      <input type="checkbox" id="antinodalCheckbox">
+      <span>Antinodal lines</span>
+    </label>
+    <button class="play-btn hidden" id="playWavefrontsBtn" title="Animate wavefronts radiating outward from each speaker">
+      <svg width="10" height="11" viewBox="0 0 10 11" aria-hidden="true"><polygon points="0,0 0,11 10,5.5" fill="currentColor"/></svg>
+      <span>Play</span>
+    </button>
+    <div class="stage-toggles">
+      <label class="stage-toggle" title="Connect each speaker to its own signal generator. Lets you set a phase difference between them.">
+        <input type="checkbox" id="twoGensCheckbox">
+        <span>Two generators</span>
+      </label>
+      <label class="stage-toggle" title="Model each speaker as a finite-width radiator. Wavefronts spread everywhere with intensity falling off-axis (sin β / β)², where β = π a sin θ / λ.">
+        <input type="checkbox" id="diffractionCheckbox">
+        <span>Add diffraction</span>
+      </label>
+      <label class="stage-toggle" title="Play the audible interference signal at the microphone position">
+        <input type="checkbox" id="audioCheckbox">
+        <span>Hear sound</span>
+      </label>
+    </div>
+    <canvas id="mainCanvas" width="920" height="640"></canvas>
+  </div>
+
+  <div class="footnote">
+    Drag the microphone left or right along the path. The amber dots show where the sound is loudest.
+  </div>
+</div>
+
+<script>
+  // ----- Element refs -----
+  const freqSlider = document.getElementById('freqSlider');
+  const freqValueEl = document.getElementById('freqValue');
+  const separationSlider = document.getElementById('separationSlider');
+  const distanceSlider = document.getElementById('distanceSlider');
+  const audioCheckbox = document.getElementById('audioCheckbox');
+  const antinodalCheckbox = document.getElementById('antinodalCheckbox');
+  const antinodalToggle = document.getElementById('antinodalToggle');
+  const playWavefrontsBtn = document.getElementById('playWavefrontsBtn');
+  const twoGensCheckbox = document.getElementById('twoGensCheckbox');
+  const diffractionCheckbox = document.getElementById('diffractionCheckbox');
+  const phaseSlider = document.getElementById('phaseSlider');
+  const phaseValueEl = document.getElementById('phaseValue');
+  const phaseCtrl = document.getElementById('phaseCtrl');
+  const mainCanvas = document.getElementById('mainCanvas');
+  const ctx = mainCanvas.getContext('2d');
+
+  // ----- State -----
+  // Pixel-mapped values. We don't display physical units (m, ms) in the UI to
+  // avoid the same small-angle-formula-misapplication problem we hit in the
+  // light app. The frequency is shown in Hz because students expect that.
+  let frequency = parseFloat(freqSlider.value);     // Hz, only used for audio + label
+  let sourceSep = parseFloat(separationSlider.value); // pixel separation between speakers
+  let distance = parseFloat(distanceSlider.value);    // pixel distance from speakers to walking line
+  let viewMode = 'off';                               // 'off' | 'waves' | 'rays' | 'wavefronts'
+  let audioOn = false;                                // master sound toggle
+  let showAntinodal = false;                          // overlay antinodal hyperbolae (only meaningful in wavefronts mode)
+  let twoGenerators = false;                          // when true, each speaker has its own generator and phase can differ
+  let sourcePhaseDeg = 0;                             // S₂'s phase lead over S₁ in degrees (only meaningful when twoGenerators)
+  let diffractionOn = false;                          // when true, model finite-aperture diffraction; replaces hard cone-overlap with smooth (sin β / β)² envelope
+
+  // ----- Wavefront animation state -----
+  // null         → static steady-state rendering (all wavefronts always shown)
+  // number > 0   → animation in progress, value is current "travel distance"
+  //                of the leading wavefront in pixels. Rings sit at radii
+  //                (animMaxRadius mod λ) + kλ for k = 0, 1, 2, ... up to
+  //                animMaxRadius. As animMaxRadius grows continuously each
+  //                frame, every ring slides outward smoothly (no quantised
+  //                pop-in) and new rings emerge from the source as the phase
+  //                wraps every λ.
+  let animMaxRadius = null;
+  let animFreezeRadius = 0;
+  let animStartTime = 0;
+  const ANIM_DURATION_MS = 6000;
+  let micX = mainCanvas.width / 2;                    // microphone position along the walking line
+
+  // The "wavelength in pixels" controls the visual fringe spacing. In a real
+  // experiment λ = v/f with v = 340 m/s. Here we map the frequency slider to
+  // a visual wavelength through a tunable scale so that the fringe pattern
+  // looks rich at typical settings: more fringes at high frequency, fewer at low.
+  // 500 Hz → real λ ≈ 0.68 m; we map that to ~50 px so the diagram reads well.
+  const FREQ_TO_PIXEL_WAVELENGTH = (f) => 25000 / f; // px wavelength
+  let lambdaPx = FREQ_TO_PIXEL_WAVELENGTH(frequency);
+
+  // ----- Geometry -----
+  // Speakers sit at the top of the canvas, roughly 1/4 of the way down,
+  // separated horizontally by sourceSep about the centre.
+  const speakerY = 110;
+  const walkingLineY = speakerY + distance; // updated when distance slider changes
+  function speakerPositions() {
+    const cx = mainCanvas.width / 2;
+    return {
+      s1: { x: cx - sourceSep / 2, y: speakerY },
+      s2: { x: cx + sourceSep / 2, y: speakerY }
+    };
+  }
+
+  // ----- Listeners -----
+  freqSlider.addEventListener('input', e => {
+    frequency = parseFloat(e.target.value);
+    lambdaPx = FREQ_TO_PIXEL_WAVELENGTH(frequency);
+    freqValueEl.textContent = `${frequency.toFixed(0)} Hz`;
+    updateAudioFrequency();
+    updateAudioGain(); // λ change shifts intensity at mic
+    update();
+  });
+  separationSlider.addEventListener('input', e => {
+    sourceSep = parseFloat(e.target.value);
+    updateAudioGain();
+    update();
+  });
+  distanceSlider.addEventListener('input', e => {
+    distance = parseFloat(e.target.value);
+    updateAudioGain();
+    update();
+  });
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      viewMode = btn.dataset.mode;
+      updateAntinodalToggleVisibility();
+      update();
+    });
+  });
+  antinodalCheckbox.addEventListener('change', e => {
+    showAntinodal = e.target.checked;
+    update();
+  });
+  function updateAntinodalToggleVisibility() {
+    // Antinodal lines and the Play button are overlays specific to the
+    // wavefronts view. In other modes they're hidden so the controls don't
+    // sit there inert and confusing.
+    if (viewMode === 'wavefronts') {
+      antinodalToggle.classList.remove('hidden');
+      playWavefrontsBtn.classList.remove('hidden');
+    } else {
+      antinodalToggle.classList.add('hidden');
+      playWavefrontsBtn.classList.add('hidden');
+      animMaxRadius = null;
+      playWavefrontsBtn.disabled = false;
+    }
+  }
+  // Initial visibility (default mode is 'off' so toggle starts hidden)
+  updateAntinodalToggleVisibility();
+  playWavefrontsBtn.addEventListener('click', () => {
+    startWavefrontAnimation();
+  });
+
+  function startWavefrontAnimation() {
+    // Disable the play button while animating to prevent restart-mid-flight
+    playWavefrontsBtn.disabled = true;
+    // Compute the radius at which wavefronts should be considered to have
+    // covered the apparatus. Use the farthest visible canvas corner from each
+    // speaker, so by the freeze moment the diagram fully fills with rings.
+    const { s1, s2 } = speakerPositions();
+    const W = mainCanvas.width, H = mainCanvas.height;
+    animFreezeRadius = Math.max(
+      Math.hypot(s1.x, s1.y),       Math.hypot(W - s1.x, s1.y),
+      Math.hypot(s1.x, H - s1.y),   Math.hypot(W - s1.x, H - s1.y),
+      Math.hypot(s2.x, s2.y),       Math.hypot(W - s2.x, s2.y),
+      Math.hypot(s2.x, H - s2.y),   Math.hypot(W - s2.x, H - s2.y)
+    );
+    animMaxRadius = 0;
+    animStartTime = performance.now();
+    animateFrame();
+  }
+
+  function animateFrame() {
+    if (animMaxRadius === null) {
+      // animation cancelled (e.g. mode switched)
+      playWavefrontsBtn.disabled = false;
+      return;
+    }
+    const elapsed = performance.now() - animStartTime;
+    const t = Math.min(1, elapsed / ANIM_DURATION_MS);
+    animMaxRadius = t * animFreezeRadius;
+    update();
+    // The audio gain depends on intensityAt(mic), which itself depends on
+    // animMaxRadius (via the arrival-factor gating). So during animation we
+    // must re-push the gain each frame, otherwise the audio would be stuck at
+    // the pre-animation value while the visualisation fills in. With this in
+    // place, the mic stays silent until the wavefronts physically reach it,
+    // matching exactly what the intensity graph shows.
+    updateAudioGain();
+    if (t < 1) {
+      requestAnimationFrame(animateFrame);
+    } else {
+      // Done — return to static steady-state rendering
+      animMaxRadius = null;
+      playWavefrontsBtn.disabled = false;
+      update();
+      updateAudioGain();
+    }
+  }
+  audioCheckbox.addEventListener('change', e => {
+    audioOn = e.target.checked;
+    if (audioOn) {
+      ensureAudioStarted();
+    } else {
+      stopAudio();
+    }
+  });
+  twoGensCheckbox.addEventListener('change', e => {
+    twoGenerators = e.target.checked;
+    if (twoGenerators) {
+      phaseCtrl.classList.remove('hidden');
+    } else {
+      phaseCtrl.classList.add('hidden');
+      // Reset phase to 0 when reverting to single-generator mode so the user
+      // doesn't get a hidden phase offset persisting silently.
+      sourcePhaseDeg = 0;
+      phaseSlider.value = 0;
+      phaseValueEl.textContent = '0°';
+    }
+    updateAudioGain();
+    update();
+  });
+  phaseSlider.addEventListener('input', e => {
+    sourcePhaseDeg = parseFloat(e.target.value);
+    phaseValueEl.textContent = `${sourcePhaseDeg.toFixed(0)}°`;
+    updateAudioGain();
+    update();
+  });
+  diffractionCheckbox.addEventListener('change', e => {
+    diffractionOn = e.target.checked;
+    updateAudioGain();
+    update();
+  });
+
+  // ----- Audio (Web Audio API) -----
+  // Approach: a single sine-tone oscillator whose gain is continuously modulated
+  // to match the intensity at the microphone's current position. This is
+  // perceptually equivalent to summing two phase-shifted oscillators — the ear
+  // can't distinguish single-tone phase, only amplitude — and avoids the
+  // artefacts of dynamically-sweeping DelayNodes. The mic's "loudness" follows
+  // the same cos²(Δφ/2) curve drawn on the intensity graph, so what students
+  // hear matches what they see, frame-perfect.
+  let audioCtx = null;
+  let oscillator = null;
+  let gainNode = null;
+  const MASTER_GAIN = 0.12; // peak gain at intensity = 1; conservative to avoid being unpleasant
+  const RAMP_TIME = 0.04;   // seconds — smoothing ramp for gain changes; small enough that
+                            // dragging feels responsive, large enough that there are no clicks
+
+  // Pending-suspend timer ID — held so it can be cleared if the user toggles
+  // audio back on before the suspend takes effect.
+  let suspendTimer = null;
+
+  function ensureAudioStarted() {
+    // If a stop is in flight (suspend timer pending), cancel it so we don't
+    // suspend the context immediately after re-enabling. Without this, rapid
+    // off-then-on toggles would leave the context muted.
+    if (suspendTimer !== null) {
+      clearTimeout(suspendTimer);
+      suspendTimer = null;
+    }
+    if (audioCtx) {
+      // Already exists — resume if suspended, then refresh gain so we ramp up
+      // from the silent state to whatever the current intensity is.
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      updateAudioGain();
+      return;
+    }
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    oscillator = audioCtx.createOscillator();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = frequency;
+    gainNode = audioCtx.createGain();
+    gainNode.gain.value = 0;
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    oscillator.start();
+    updateAudioGain();
+  }
+
+  function stopAudio() {
+    if (!audioCtx) return;
+    // Ramp gain down to zero before suspending — avoids click
+    const now = audioCtx.currentTime;
+    gainNode.gain.cancelScheduledValues(now);
+    gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+    gainNode.gain.linearRampToValueAtTime(0, now + RAMP_TIME);
+    // Suspend slightly later so the ramp completes before audio is paused.
+    // Stash the timer id so it can be cancelled if the user re-enables audio
+    // before this fires.
+    suspendTimer = setTimeout(() => {
+      suspendTimer = null;
+      if (audioCtx && !audioOn) audioCtx.suspend();
+    }, (RAMP_TIME + 0.01) * 1000);
+  }
+
+  function updateAudioGain() {
+    if (!audioCtx || !audioOn) return;
+    const I = intensityAt(micX, walkingLine());
+    const targetGain = I * MASTER_GAIN;
+    const now = audioCtx.currentTime;
+    gainNode.gain.cancelScheduledValues(now);
+    gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+    gainNode.gain.linearRampToValueAtTime(targetGain, now + RAMP_TIME);
+  }
+
+  function updateAudioFrequency() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    oscillator.frequency.cancelScheduledValues(now);
+    oscillator.frequency.setValueAtTime(oscillator.frequency.value, now);
+    oscillator.frequency.linearRampToValueAtTime(frequency, now + RAMP_TIME);
+  }
+
+  // ----- Drag handling for the microphone -----
+  // The mic is constrained to the walking line; only x changes.
+  function eventToCanvas(e) {
+    const rect = mainCanvas.getBoundingClientRect();
+    const scaleX = mainCanvas.width / rect.width;
+    const scaleY = mainCanvas.height / rect.height;
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY
+    };
+  }
+  let dragging = false;
+  const MIC_PICKUP_RADIUS = 30;
+  function tryStartDrag(cx, cy) {
+    const wy = walkingLine();
+    const dy = Math.abs(cy - wy);
+    if (dy <= 30 || (Math.abs(cx - micX) <= MIC_PICKUP_RADIUS && dy <= 60)) {
+      dragging = true;
+      micX = Math.max(20, Math.min(mainCanvas.width - 20, cx));
+      updateAudioGain();
+      update();
+    }
+  }
+  function continueDrag(cx) {
+    if (!dragging) return;
+    micX = Math.max(20, Math.min(mainCanvas.width - 20, cx));
+    updateAudioGain();
+    update();
+  }
+  mainCanvas.addEventListener('mousedown', e => {
+    const { x, y } = eventToCanvas(e);
+    tryStartDrag(x, y);
+  });
+  mainCanvas.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const { x } = eventToCanvas(e);
+    continueDrag(x);
+  });
+  window.addEventListener('mouseup', () => { dragging = false; });
+  // Touch support. passive:false on all so we can preventDefault and stop
+  // Safari from scrolling/zooming the page while the mic is being dragged.
+  // Multi-touch is rejected (e.touches.length !== 1) so a second finger
+  // landing on the canvas during a drag doesn't hijack the gesture or
+  // produce a sudden coordinate jump. touchcancel mirrors touchend so a
+  // system interruption (notification, palm rejection) cleans up the drag
+  // state instead of leaving 'dragging' stuck.
+  mainCanvas.addEventListener('touchstart', function (e) {
+    e.preventDefault();
+    if (e.touches.length !== 1) return;
+    var p = eventToCanvas(e.touches[0]);
+    tryStartDrag(p.x, p.y);
+  }, { passive: false });
+  mainCanvas.addEventListener('touchmove', function (e) {
+    e.preventDefault();
+    if (e.touches.length !== 1) return;
+    var p = eventToCanvas(e.touches[0]);
+    continueDrag(p.x);
+  }, { passive: false });
+  mainCanvas.addEventListener('touchend', function (e) {
+    e.preventDefault();
+    dragging = false;
+  }, { passive: false });
+  mainCanvas.addEventListener('touchcancel', function (e) {
+    e.preventDefault();
+    dragging = false;
+  }, { passive: false });
+
+  // ---- iPad / Apple Pencil polyfill for <input type="range"> ----
+  // Mobile Safari has a long-standing bug where dragging a range slider
+  // thumb to the LEFT and releasing causes the slider to snap to its
+  // minimum value, regardless of where the touch actually ended. The
+  // fix is to recompute the slider value from the actual touch position
+  // and dispatch corrected input/change events. Delegated at document
+  // level so it covers all four sliders without per-element rebinding.
+  function _ipadSliderTouchEnd(e) {
+    var el = e.target;
+    if (!el || el.tagName !== 'INPUT' || el.type !== 'range') return;
+    if (el.disabled) return;
+    if (!e.changedTouches || e.changedTouches.length === 0) return;
+    var t = e.changedTouches[0];
+    var rect = el.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    var min = parseFloat(el.min);
+    var max = parseFloat(el.max);
+    if (isNaN(min)) min = 0;
+    if (isNaN(max)) max = 100;
+    var step = parseFloat(el.step);
+    if (isNaN(step) || step <= 0) step = 1;
+    var frac = (t.clientX - rect.left) / rect.width;
+    if (frac < 0) frac = 0;
+    if (frac > 1) frac = 1;
+    var raw = min + frac * (max - min);
+    var stepped = min + Math.round((raw - min) / step) * step;
+    if (stepped < min) stepped = min;
+    if (stepped > max) stepped = max;
+    var stepStr = String(step);
+    var dotIdx = stepStr.indexOf('.');
+    var decimals = (dotIdx >= 0) ? (stepStr.length - dotIdx - 1) : 0;
+    var newVal = decimals > 0 ? parseFloat(stepped.toFixed(decimals)) : stepped;
+    var current = parseFloat(el.value);
+    if (newVal === current) return;
+    el.value = String(newVal);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  document.addEventListener('touchend', _ipadSliderTouchEnd, { passive: true });
+  document.addEventListener('touchcancel', _ipadSliderTouchEnd, { passive: true });
+
+  function walkingLine() { return speakerY + distance; }
+
+  // ----- Geometry helpers -----
+  function dist(x1, y1, x2, y2) {
+    return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+  }
+
+  // ----- Speaker radiation pattern -----
+  // Two models, switched by the diffractionOn toggle:
+  //
+  // (a) Hard-cone model (diffractionOn = false): each speaker emits uniformly
+  //     within ±CONE_HALF_ANGLE of straight down, nothing outside. Pedagogically
+  //     clean but obviously idealised.
+  //
+  // (b) Diffraction model (diffractionOn = true): each speaker is a finite-
+  //     width radiator (aperture = the cone wide-end width). Its radiation
+  //     amplitude follows the standard Fraunhofer (sin β / β) pattern with
+  //     β = π · a · sin(θ) / λ. No hard cutoff — the envelope itself defines
+  //     directionality, going naturally to zero at θ where sin β = 0, with
+  //     small secondary lobes beyond.
+  const CONE_HALF_ANGLE = (50 * Math.PI) / 180;
+  // APERTURE_WIDTH controls how aggressively the diffraction envelope falls
+  // off with angle. With β = π·a·sin(θ)/λ, at small angles sin(θ) ≈ θ, so
+  // larger a means narrower beam. We pick a value such that at the default
+  // frequency (~600 Hz, λ ≈ 42 px) and a moderate off-axis angle (~30°,
+  // sin θ = 0.5), the envelope drops to about 0.5 — a noticeable but not
+  // overwhelming directionality. The drawn cone face is much wider than this
+  // (96 px) — the cone is a stylised speaker symbol, while a real driver's
+  // *acoustically active aperture* is smaller than the visible cabinet front.
+  const APERTURE_WIDTH = 50;
+
+  // Amplitude factor at a point (x, y) due to a single speaker, under whichever
+  // model is active. Returns a value in [0, 1] — multiply both speakers'
+  // amplitudes together to get the joint amplitude factor for interference.
+  //
+  // In diffraction mode, the off-axis angle is measured from the *midpoint*
+  // of the source array, not from the individual speaker — so both speakers
+  // see any given probe point at the same angle. This means the central
+  // fringe (geometrically on-axis from the array as a whole) gets full
+  // amplitude regardless of frequency. Measuring the angle from each speaker
+  // separately would attribute a small off-axis angle to the central position
+  // (because each speaker is offset from the array centre), leading to a
+  // central-peak intensity that drops at high frequencies — pedagogically
+  // confusing. The simplification treats the speaker pair as a coherent
+  // composite radiator with a shared angular envelope, which is the cleaner
+  // teaching abstraction.
+  function sourceAmplitude(src, x, y) {
+    const dx = x - src.x;
+    const dy = y - src.y;
+    if (dy <= 0) return 0;
+    if (diffractionOn) {
+      // Angle from array-centre, NOT from this individual speaker
+      const { s1, s2 } = speakerPositions();
+      const arrayCx = (s1.x + s2.x) / 2;
+      const arrayCy = (s1.y + s2.y) / 2;
+      const adx = x - arrayCx;
+      const ady = y - arrayCy;
+      if (ady <= 0) return 0;
+      const angleFromForward = Math.atan2(adx, ady);
+      const beta = Math.PI * APERTURE_WIDTH * Math.sin(angleFromForward) / lambdaPx;
+      if (Math.abs(beta) < 1e-6) return 1;
+      return Math.abs(Math.sin(beta) / beta);
+    } else {
+      // Hard cone — measured from each individual speaker (the cone *is* a
+      // physical cone attached to that speaker)
+      const angleFromForward = Math.atan2(dx, dy);
+      return (Math.abs(angleFromForward) < CONE_HALF_ANGLE) ? 1 : 0;
+    }
+  }
+
+  // Joint amplitude product — represents the per-speaker amplitudes that
+  // multiply with the cos² interference factor to give intensity.
+  function amplitudeProduct(x, y) {
+    const { s1, s2 } = speakerPositions();
+    return sourceAmplitude(s1, x, y) * sourceAmplitude(s2, x, y);
+  }
+
+  // Backward-compat wrapper used by the existing code paths. In hard-cone mode
+  // this is exactly the original 0/1 overlap. In diffraction mode it returns
+  // the amplitude product, which smoothly varies from ~1 in the central region
+  // to ~0 at the envelope minima.
+  function coneOverlapAt(x, y) {
+    return amplitudeProduct(x, y);
+  }
+  function inCone(src, x, y) {
+    return sourceAmplitude(src, x, y) > 0;
+  }
+
+  // Intensity at a point (x, y), gated by the cone overlap.
+  // Inside both cones: I = cos²(Δφ_total / 2) where
+  //   Δφ_total = (r₁ − r₂)·2π/λ + Δφ_source
+  // and Δφ_source is the phase by which S₂ leads S₁ (only nonzero when the user
+  // has enabled two-generator mode and dialled it in).
+  // Outside either cone: I = 0.
+  // During animation, additionally gated on whether both wavefronts have
+  // travelled far enough to reach the point — interference can't be measured
+  // until both waves are present and superposing.
+  // Intensity at a point (x, y), with envelope-modulated cos² interference.
+  //
+  // Formula: I = (A₁ · A₂) · cos²(Δφ / 2)
+  //
+  // Where A₁, A₂ are the per-speaker amplitudes (1 inside cone in hard mode;
+  // (sin β / β) envelope in diffraction mode). The cos²(Δφ/2) factor gives
+  // *clean* zeros at destructive positions — at half-integer ΔL the intensity
+  // drops exactly to zero, regardless of the envelope. The envelope only
+  // affects the *peak height* of each fringe.
+  //
+  // Note: this is the simpler "amplitude product times cos²" formula, NOT the
+  // rigorous |A₁·e^(iφ₁) + A₂·e^(iφ₂)|² which would give (A₁−A₂)² at minima
+  // when the envelopes differ. The simpler form is what students expect
+  // pedagogically — clean cancellation at destructive points — and it matches
+  // standard textbook treatment of diffraction-modulated interference.
+  function intensityAt(x, y) {
+    const { s1, s2 } = speakerPositions();
+    const A1 = sourceAmplitude(s1, x, y);
+    const A2 = sourceAmplitude(s2, x, y);
+    if (A1 === 0 && A2 === 0) return 0;
+    const r1 = dist(s1.x, s1.y, x, y);
+    const r2 = dist(s2.x, s2.y, x, y);
+    const arrivalFactor = animArrivalFactor(r1, r2);
+    if (arrivalFactor === 0) return 0;
+    const sourcePhaseRad = sourcePhaseDeg * Math.PI / 180;
+    const deltaPhi = (r1 - r2) * 2 * Math.PI / lambdaPx + sourcePhaseRad;
+    const interference = Math.cos(deltaPhi / 2) ** 2;
+    return arrivalFactor * A1 * A2 * interference;
+  }
+
+  // Returns 1 if both wavefronts have fully reached the point (or no
+  // animation in progress), 0 if neither has reached, with a smooth ramp
+  // over ~1.5λ as the slower-of-the-two arrives.
+  function animArrivalFactor(r1, r2) {
+    if (animMaxRadius === null) return 1;
+    const slowerWaveDistance = Math.max(r1, r2);
+    const overshoot = animMaxRadius - slowerWaveDistance;
+    const fadeDistance = lambdaPx * 1.5;
+    return Math.max(0, Math.min(1, overshoot / fadeDistance));
+  }
+
+  // Find x-positions of intensity maxima along the walking line.
+  //
+  // We detect peaks of the raw cos² interference factor (positions where
+  // crests align, regardless of amplitude). Then we gate by the amplitude
+  // product at each peak — in hard-cone mode this is 0/1 (show only inside
+  // the overlap zone); in diffraction mode it's smooth, so we apply a small
+  // threshold to suppress maxima where the actual loudness is near zero.
+  function findMaximaX() {
+    const wy = walkingLine();
+    const out = [];
+    const W = mainCanvas.width;
+    const samples = 800;
+    const Iraw = new Array(samples + 1);
+    const ampProduct = new Array(samples + 1);
+    const { s1, s2 } = speakerPositions();
+    const sourcePhaseRad = sourcePhaseDeg * Math.PI / 180;
+    for (let i = 0; i <= samples; i++) {
+      const x = (i / samples) * W;
+      const r1 = dist(s1.x, s1.y, x, wy);
+      const r2 = dist(s2.x, s2.y, x, wy);
+      const totalPhase = (r1 - r2) * 2 * Math.PI / lambdaPx + sourcePhaseRad;
+      Iraw[i] = Math.cos(totalPhase / 2) ** 2;
+      ampProduct[i] = sourceAmplitude(s1, x, wy) * sourceAmplitude(s2, x, wy) * animArrivalFactor(r1, r2);
+    }
+    // Threshold: minimum amplitude product for a maximum to be marked. In
+    // hard-cone mode this is just "both must reach it"; in diffraction mode
+    // it suppresses near-zero off-axis maxima that would otherwise spawn
+    // ghost dots students can't hear.
+    const AMP_THRESHOLD = diffractionOn ? 0.06 : 0;
+    for (let i = 1; i < samples; i++) {
+      if (Iraw[i] > Iraw[i - 1] && Iraw[i] > Iraw[i + 1] && Iraw[i] > 0.95 && ampProduct[i] > AMP_THRESHOLD) {
+        let lo = (i - 1) / samples * W;
+        let hi = (i + 1) / samples * W;
+        for (let k = 0; k < 30; k++) {
+          const m1 = lo + (hi - lo) * 0.382;
+          const m2 = lo + (hi - lo) * 0.618;
+          const I1 = rawInterferenceAt(m1, wy, s1, s2);
+          const I2 = rawInterferenceAt(m2, wy, s1, s2);
+          if (I1 > I2) hi = m2; else lo = m1;
+        }
+        out.push((lo + hi) / 2);
+      }
+    }
+    return out;
+  }
+  function rawInterferenceAt(x, y, s1, s2) {
+    const r1 = dist(s1.x, s1.y, x, y);
+    const r2 = dist(s2.x, s2.y, x, y);
+    const sourcePhaseRad = sourcePhaseDeg * Math.PI / 180;
+    const totalPhase = (r1 - r2) * 2 * Math.PI / lambdaPx + sourcePhaseRad;
+    return Math.cos(totalPhase / 2) ** 2;
+  }
+
+  // ===== RENDERING =====
+  function update() {
+    const W = mainCanvas.width;
+    const H = mainCanvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    // Background — flat cream paper. The faint radial vignette is enough to
+    // focus the eye on the apparatus without making it feel "lit" like the
+    // optics-lab light app.
+    const bgGrad = ctx.createRadialGradient(W * 0.5, H * 0.4, 50, W * 0.5, H * 0.4, W * 0.7);
+    bgGrad.addColorStop(0, '#fbf6e8');
+    bgGrad.addColorStop(1, '#f0e9d9');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    drawSignalGenerator();
+    drawSpeakers();
+
+    // ----- View-mode rendering (in the apparatus space) -----
+    if (viewMode !== 'off') {
+      drawApparatusVisualization();
+    }
+
+    drawWalkingLine();
+    drawIntensityGraph();
+    drawMaximaMarkers();
+    drawMicrophone();
+  }
+
+  // ----- View-mode rendering (Waves / Rays / Wavefronts) -----
+  function drawApparatusVisualization() {
+    const { s1, s2 } = speakerPositions();
+    const wy = walkingLine();
+    const mic = { x: micX, y: wy };
+
+    if (viewMode === 'wavefronts') {
+      drawWavefronts(s1, s2);
+      if (showAntinodal) {
+        drawAntinodalLines(s1, s2);
+      }
+    }
+
+    // Path lines from each speaker to the mic, with mode-specific styling.
+    if (viewMode === 'rays') {
+      drawRayPaths(s1, s2, mic);
+    } else if (viewMode === 'waves') {
+      drawWavePaths(s1, s2, mic);
+    } else if (viewMode === 'wavefronts') {
+      // In wavefronts mode the rays themselves are just thin guide lines
+      // from each speaker's cone face to the mic, against the rich wavefront field.
+      const f1 = coneFaceOf(s1);
+      const f2 = coneFaceOf(s2);
+      ctx.strokeStyle = 'rgba(45, 58, 79, 0.65)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath();
+      ctx.moveTo(f1.x, f1.y); ctx.lineTo(mic.x, mic.y); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(f2.x, f2.y); ctx.lineTo(mic.x, mic.y); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  // Visual origin of the wave/ray: the cone face, not the speaker's mathematical
+  // centre. The maths still uses the source point for path-difference (the
+  // intensity formula and ΔL readout are based on speaker-centre distances), but
+  // the visualisation looks more honest if the wave train emerges from the front
+  // of the cone where sound physically projects, not from inside the cabinet.
+  // The cone face sits at y = cy + 40 in the speaker geometry (see drawOneSpeaker).
+  function coneFaceOf(src) {
+    return { x: src.x, y: src.y + 40 };
+  }
+
+  function drawRayPaths(s1, s2, mic) {
+    const f1 = coneFaceOf(s1);
+    const f2 = coneFaceOf(s2);
+    // Soft halo underneath
+    ctx.strokeStyle = 'rgba(29, 94, 133, 0.18)';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(f1.x, f1.y); ctx.lineTo(mic.x, mic.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(f2.x, f2.y); ctx.lineTo(mic.x, mic.y); ctx.stroke();
+    // Main lines — solid teal-blue, the wave colour
+    ctx.strokeStyle = '#1d5e85';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.moveTo(f1.x, f1.y); ctx.lineTo(mic.x, mic.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(f2.x, f2.y); ctx.lineTo(mic.x, mic.y); ctx.stroke();
+  }
+
+  function drawWavePaths(s1, s2, mic) {
+    const f1 = coneFaceOf(s1);
+    const f2 = coneFaceOf(s2);
+    // Faint guide line down the centre of each ray
+    ctx.strokeStyle = 'rgba(29, 94, 133, 0.18)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 4]);
+    ctx.beginPath(); ctx.moveTo(f1.x, f1.y); ctx.lineTo(mic.x, mic.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(f2.x, f2.y); ctx.lineTo(mic.x, mic.y); ctx.stroke();
+    ctx.setLineDash([]);
+    // Wave amplitude in pixels
+    const waveAmp = Math.min(10, Math.max(5, sourceSep * 0.07));
+    // S₂'s wave starts with the source-phase offset, so anti-phase sources
+    // visibly arrive at the mic out of step.
+    const sourcePhaseRad = sourcePhaseDeg * Math.PI / 180;
+    drawWaveRay(f1, mic, waveAmp, 0);
+    drawWaveRay(f2, mic, waveAmp, sourcePhaseRad);
+
+    // Path-length labels on each wave train. Length is computed from the
+    // speaker's *source point* (centre) to the mic — matches what the ΔL pill
+    // uses and what the M dots are positioned by, so the whole diagram is
+    // self-consistent. The visible wave train is drawn from the cone face down,
+    // which is slightly shorter than this labelled length: the implicit gap
+    // (~40 px = ~1λ at 600 Hz) represents the part of the wave that's
+    // "inside the speaker" between the modelled source point and the cone face
+    // where it physically emerges. Worth mentioning to students if they notice.
+    const l1 = dist(s1.x, s1.y, mic.x, mic.y) / lambdaPx;
+    const l2 = dist(s2.x, s2.y, mic.x, mic.y) / lambdaPx;
+    drawPathLengthLabel(f1, mic, `${l1.toFixed(1)}λ`);
+    drawPathLengthLabel(f2, mic, `${l2.toFixed(1)}λ`);
+
+    // Modelling note next to the right-hand speaker. The labelled wave-train
+    // length is measured from the modelled point source at the speaker centre,
+    // not from where the wave train visibly begins (the cone face). So the
+    // visible cycle count is ~1 wavelength less than the label. Worth showing
+    // students this directly so they notice the modelling assumption.
+    drawSourceNote(s2);
+  }
+
+  function drawSourceNote(s2) {
+    // Anchor the note in the empty space to the right of speaker 2.
+    // Multi-line text using a paragraph-style layout. Sized for clear reading.
+    const pillX = s2.x + 70;
+    const pillY = s2.y - 14;
+    const lines = [
+      'Path lengths are measured',
+      'from the modelled source',
+      'point inside each speaker.',
+      'The visible wave train is',
+      'shorter by the same amount',
+      'for both, so ΔL is unchanged.',
+    ];
+    ctx.font = '500 13px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    // Background pill — opaque enough to read against any wave train that
+    // happens to drift behind it
+    let maxW = 0;
+    for (const line of lines) {
+      const w = ctx.measureText(line).width;
+      if (w > maxW) maxW = w;
+    }
+    const padding = 12;
+    const lineHeight = 18;
+    const pillW = maxW + padding * 2;
+    const pillH = lines.length * lineHeight + padding * 2 - 4;
+    ctx.fillStyle = 'rgba(253, 250, 242, 0.95)';
+    ctx.strokeStyle = '#b8ad94';
+    ctx.lineWidth = 1;
+    roundRect(ctx, pillX, pillY, pillW, pillH, 4, true, true);
+    // Text
+    ctx.fillStyle = '#2d3a4f';
+    let ty = pillY + padding;
+    for (const line of lines) {
+      ctx.fillText(line, pillX + padding, ty);
+      ty += lineHeight;
+    }
+  }
+
+  // Place a small label pill at the midpoint of a wave train, offset
+  // perpendicular to the ray so it doesn't sit directly on the wiggle.
+  function drawPathLengthLabel(start, end, text) {
+    const midX = (start.x + end.x) / 2;
+    const midY = (start.y + end.y) / 2;
+    ctx.font = '500 11px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const tw = ctx.measureText(text).width;
+    const pillW = tw + 10, pillH = 18;
+    const px = midX - pillW / 2;
+    const py = midY - pillH / 2;
+    // Background pill
+    ctx.fillStyle = 'rgba(253, 250, 242, 0.92)';
+    ctx.strokeStyle = '#b8ad94';
+    ctx.lineWidth = 1;
+    roundRect(ctx, px, py, pillW, pillH, 3, true, true);
+    // Text
+    ctx.fillStyle = '#1f2a3a';
+    ctx.fillText(text, midX, midY);
+  }
+
+  // Draw a sine wave along the ray from src to p, oscillating perpendicular
+  // to the ray direction with one full cycle per λ_px. The phase offset φ
+  // shifts where in its cycle the wave starts at the source — used to encode
+  // a source-phase lead for S₂.
+  function drawWaveRay(src, p, amp, phaseRad) {
+    const dx = p.x - src.x, dy = p.y - src.y;
+    const L = Math.sqrt(dx * dx + dy * dy);
+    if (L < 4) return;
+    const ux = dx / L, uy = dy / L;
+    const nx = -uy, ny = ux;
+    const step = 1.0;
+    const phi = phaseRad || 0;
+    // Glow pass — soft teal halo
+    ctx.strokeStyle = 'rgba(29, 94, 133, 0.22)';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let s = 0; s <= L; s += step) {
+      const a = amp * Math.sin((2 * Math.PI * s) / lambdaPx + phi);
+      const x = src.x + ux * s + nx * a;
+      const y = src.y + uy * s + ny * a;
+      if (s === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    // Main pass — solid teal-blue
+    ctx.strokeStyle = '#1d5e85';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let s = 0; s <= L; s += step) {
+      const a = amp * Math.sin((2 * Math.PI * s) / lambdaPx + phi);
+      const x = src.x + ux * s + nx * a;
+      const y = src.y + uy * s + ny * a;
+      if (s === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  // ----- Wavefronts: concentric crest circles from each source -----
+  // Same Huygens picture as the light app: rings at radii λ, 2λ, 3λ, ...
+  // from each source, with troughs as fainter rings between.
+  function drawWavefronts(s1, s2) {
+    const W = mainCanvas.width, H = mainCanvas.height;
+    // Maximum radius needed: to cover the visible apparatus area
+    const maxR = Math.max(
+      dist(s1.x, s1.y, 0, H), dist(s1.x, s1.y, W, H),
+      dist(s2.x, s2.y, 0, H), dist(s2.x, s2.y, W, H)
+    );
+    const maxN = Math.ceil(maxR / lambdaPx) + 1;
+
+    // Speakers face straight downward. We use a simple directional model: each
+    // speaker radiates into a forward cone with a hard cutoff. The cone's
+    // angular spread matches the speaker's *drawn* cone shape so the wavefront
+    // edges line up with the cone edges. The CONE_HALF_ANGLE constant is shared
+    // with the intensity calculation so the visual cone and the physics-gated
+    // cone always agree.
+
+    // The mathematical source point is at the speaker's centre (cx, cy), but
+    // the cone face is well below that — at y = cy + 40 in the speaker
+    // geometry from drawOneSpeaker (cabH/2 - 2 + coneH = 16 - 2 + 22 = 36 +
+    // a small margin = ~40). We need the smallest visible ring to have a radius
+    // *at least* equal to that distance, otherwise the arc passes through the
+    // cone itself. Adding a small extra margin so the first ring sits just
+    // below the cone face rather than tangent to it.
+    const SOURCE_TO_CONE_FACE = 42;
+
+    ctx.save();
+    ctx.lineCap = 'round';
+
+    // Crest rings only. Troughs (half-wavelength offsets) were too visually
+    // noisy here — at A-level, students reason in terms of path difference
+    // between crest patterns, and the textbook convention is to show crests
+    // alone. The full sound field is still continuous, of course; we're just
+    // not rendering the troughs in the diagram.
+    // S₂'s rings are shifted radially by the source-phase: if S₂ leads S₁ by
+    // Δφ_source degrees, its waves have travelled (Δφ_source/360)·λ further at
+    // any moment. With the slider at 180° this puts S₂ on a trough where S₁
+    // is on a crest, exactly as in the textbook anti-phase picture.
+    const s2RadiusShift = (sourcePhaseDeg / 360) * lambdaPx;
+
+    // During animation, each wavefront ring moves outward continuously rather
+    // than popping in at integer multiples of λ. We model this by giving each
+    // visible ring a radius of (phaseOffset + kλ + sourceShift) where
+    // phaseOffset = animMaxRadius mod λ smoothly cycles 0..λ over time, and
+    // animMaxRadius is the current upper limit on visible radius. In steady
+    // state (no animation), phaseOffset = 0 and animMaxRadius = ∞, so we
+    // recover the original fixed pattern at λ, 2λ, 3λ, …
+    const phaseOffset = (animMaxRadius === null) ? 0 : (animMaxRadius % lambdaPx);
+    const radiusLimit = (animMaxRadius === null) ? Infinity : animMaxRadius;
+
+    drawDirectionalRings(s1.x, s1.y, maxN, CONE_HALF_ANGLE, SOURCE_TO_CONE_FACE, 0, phaseOffset, radiusLimit);
+    drawDirectionalRings(s2.x, s2.y, maxN, CONE_HALF_ANGLE, SOURCE_TO_CONE_FACE, s2RadiusShift, phaseOffset, radiusLimit);
+
+    ctx.restore();
+  }
+
+  // Helper: draw crest rings emerging from (sx, sy) facing straight down,
+  // clipped to ±coneHalfAngle of the forward direction with a hard cutoff,
+  // and skipping any ring that would render inside the speaker's cone.
+  // radiusShift offsets every ring radius by a fixed amount (used to render
+  // the second source's wavefronts shifted by the source-phase offset).
+  // phaseOffset is added to all ring radii (used for animation: gives the
+  // travelling-wave appearance). radiusLimit gates which rings render
+  // (Infinity for steady state).
+  function drawDirectionalRings(sx, sy, maxN, coneHalfAngle, minRadius, radiusShift, phaseOffset, radiusLimit) {
+    const forward = Math.PI / 2;
+    if (!diffractionOn) {
+      // Hard-cone mode: uniform brightness within ±coneHalfAngle, nothing outside.
+      const startA = forward - coneHalfAngle;
+      const endA = forward + coneHalfAngle;
+      ctx.strokeStyle = 'rgba(29, 94, 133, 0.5)';
+      ctx.lineWidth = 1.2;
+      for (let n = 0; n <= maxN + 1; n++) {
+        const r = phaseOffset + n * lambdaPx + radiusShift;
+        if (r < minRadius) continue;
+        if (r <= 0) continue;
+        if (r > radiusLimit) break;
+        ctx.beginPath();
+        ctx.arc(sx, sy, r, startA, endA);
+        ctx.stroke();
+      }
+      return;
+    }
+    // Diffraction mode — visualisation only. We use a *cartoon* angular taper
+    // (smooth cos²) here, NOT the rigorous (sin β / β)² Fraunhofer envelope.
+    // Reasons:
+    //   • The far-field Fraunhofer pattern only applies beyond the Rayleigh
+    //     distance (~a²/λ ≈ 350 px in our setup), which is well past where
+    //     wavefronts start being drawn. Applying it close to the source
+    //     gives a misleading angular-spread picture of what's really a
+    //     near-field columnar beam.
+    //   • The Fraunhofer pattern has secondary lobes that read as "the
+    //     speaker also radiates in those directions" when in reality those
+    //     lobes are weak and only appear as small bumps in the *far-field
+    //     intensity*, not as wave-fronts you'd visualise this close.
+    //   • The visualisation's job is to convey "the speaker is a directional
+    //     radiator" — a smooth cos² taper does this cleanly without
+    //     committing to specific lobe geometry.
+    // The rigorous envelope IS still applied — but only to the intensity
+    // calculation (graph, audio, M-dot threshold). So the visualisation says
+    // "directional radiation"; the graph rigorously shows the far-field
+    // pattern including the missing-orders effect at high frequencies.
+    const segDeg = 4;
+    const segRad = segDeg * Math.PI / 180;
+    // Tighten the visual angular range to ±70° — at angles closer to ±90°,
+    // arcs would wrap around so close to the speaker's own height that they
+    // visually look like the wave is going *behind* the speaker. Clamping
+    // tighter than the strict mathematical hemisphere keeps the wavefronts
+    // unambiguously forward-going.
+    const halfRange = (70 * Math.PI) / 180;
+    ctx.lineWidth = 1.2;
+    for (let n = 0; n <= maxN + 1; n++) {
+      const r = phaseOffset + n * lambdaPx + radiusShift;
+      if (r < minRadius) continue;
+      if (r <= 0) continue;
+      if (r > radiusLimit) break;
+      for (let a = -halfRange; a < halfRange; a += segRad) {
+        const a2 = Math.min(a + segRad, halfRange);
+        const aMid = (a + a2) / 2;
+        // Cos² visual taper: 1 at centre, 0 at ±90°, smooth and beam-shaped.
+        // Power 2 makes the taper a bit more pronounced (concentrates the
+        // visual beam) than a plain cos.
+        const taper = Math.cos(aMid) ** 2;
+        const alpha = 0.5 * taper;
+        if (alpha < 0.01) continue;
+        ctx.strokeStyle = `rgba(29, 94, 133, ${alpha})`;
+        const arcStart = forward + a;
+        const arcEnd   = forward + a2;
+        ctx.beginPath();
+        ctx.arc(sx, sy, r, arcStart, arcEnd);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // ----- Antinodal lines (paths of constructive interference) -----
+  // For each integer order n, the locus of points where path difference equals
+  // n·λ is a hyperbola fanning out from the midpoint between the two sources.
+  // We render two things:
+  //   (1) Dots at every place a crest ring from S₁ meets a crest ring from S₂
+  //       (i.e. every actual intersection point in the visible wavefront field)
+  //   (2) The smooth hyperbola passing through each order's set of dots,
+  //       computed analytically by sampling y and solving for x at each row.
+  // Both are clipped to the cone-overlap zone — outside it, neither speaker's
+  // wavefront actually reaches that point in our directional model.
+  function drawAntinodalLines(s1, s2) {
+    const wy = walkingLine();
+    const a = Math.abs(s2.x - s1.x);
+    if (a < 1) return;
+    const maxOrder = Math.floor(a / lambdaPx);
+
+    ctx.save();
+    ctx.lineCap = 'round';
+
+    // Antinodal lines are suppressed during animation — they need the full
+    // steady-state pattern to make sense, and showing partial lines that grow
+    // alongside the dots would be visually chaotic. They snap in at freeze.
+    const animating = (animMaxRadius !== null);
+
+    // ----- Smooth hyperbola lines for each order -----
+    if (!animating) {
+      // For each n, sample y from just below the speakers down to the walking
+      // line and find the x where path-difference = nλ − (Δφ_source/360)λ.
+      const phaseShiftLambda = sourcePhaseDeg / 360;
+      const yStart = s1.y + 35;
+      const yEnd = wy;
+      const yStep = 2;
+      for (let n = -maxOrder; n <= maxOrder; n++) {
+        const target = (n - phaseShiftLambda) * lambdaPx;
+        const segments = [];
+        let current = [];
+        for (let y = yStart; y <= yEnd; y += yStep) {
+          const x = solvePathDiffX(target, y, s1, s2);
+          if (x === null) {
+            if (current.length >= 2) segments.push(current);
+            current = [];
+            continue;
+          }
+          if (coneOverlapAt(x, y) <= 0) {
+            if (current.length >= 2) segments.push(current);
+            current = [];
+            continue;
+          }
+          current.push({ x, y });
+        }
+        if (current.length >= 2) segments.push(current);
+
+        for (const seg of segments) {
+          ctx.strokeStyle = 'rgba(200, 130, 26, 0.18)';
+          ctx.lineWidth = 6;
+          ctx.beginPath();
+          ctx.moveTo(seg[0].x, seg[0].y);
+          for (let i = 1; i < seg.length; i++) ctx.lineTo(seg[i].x, seg[i].y);
+          ctx.stroke();
+          ctx.strokeStyle = '#c8821a';
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.moveTo(seg[0].x, seg[0].y);
+          for (let i = 1; i < seg.length; i++) ctx.lineTo(seg[i].x, seg[i].y);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // ----- Dots at every visible crest-meets-crest intersection -----
+    // During animation, the dots ride the moving wavefronts: each dot is the
+    // intersection of the *current* visible rings (not the steady-state ones).
+    // As rings grow outward smoothly, the dots flow outward along the antinodal
+    // hyperbolae — visibly tracing them out.
+    const W = mainCanvas.width, H = mainCanvas.height;
+    const maxR = Math.max(
+      dist(s1.x, s1.y, 0, H), dist(s1.x, s1.y, W, H),
+      dist(s2.x, s2.y, 0, H), dist(s2.x, s2.y, W, H)
+    );
+    const maxN = Math.ceil(maxR / lambdaPx) + 1;
+    const phaseOffset = animating ? (animMaxRadius % lambdaPx) : 0;
+    const radiusLimit = animating ? animMaxRadius : Infinity;
+
+    // S₂'s rings shifted radially by the phase offset (matches what's drawn
+    // in the wavefronts visualisation).
+    const s2RadiusShift = (sourcePhaseDeg / 360) * lambdaPx;
+
+    const dotColor = '#c8821a';
+    const dotEdgeColor = '#7a4f0d';
+    // Ring k from S₁ has radius (phaseOffset + (k-1)λ); ring k from S₂ has
+    // (phaseOffset + (k-1)λ + s2RadiusShift). We iterate visible rings.
+    const ringsS1 = [];
+    const ringsS2 = [];
+    for (let k = 1; k <= maxN + 1; k++) {
+      const r1 = phaseOffset + (k - 1) * lambdaPx;
+      const r2 = phaseOffset + (k - 1) * lambdaPx + s2RadiusShift;
+      if (r1 > 0 && r1 <= radiusLimit) ringsS1.push(r1);
+      if (r2 > 0 && r2 <= radiusLimit) ringsS2.push(r2);
+    }
+
+    for (const r1 of ringsS1) {
+      for (const r2 of ringsS2) {
+        const pts = intersectCircles(s1.x, s1.y, r1, s2.x, s2.y, r2);
+        for (const pt of pts) {
+          if (pt.y < s1.y || pt.y > wy) continue;
+          if (coneOverlapAt(pt.x, pt.y) <= 0) continue;
+          ctx.fillStyle = dotColor;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 2.8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = dotEdgeColor;
+          ctx.lineWidth = 0.8;
+          ctx.stroke();
+        }
+      }
+    }
+
+    ctx.restore();
+  }
+
+  // Geometric helper: intersection points of two circles. Returns 0, 1, or 2 points.
+  function intersectCircles(x1, y1, r1, x2, y2, r2) {
+    const d = Math.hypot(x2 - x1, y2 - y1);
+    if (d > r1 + r2 || d < Math.abs(r1 - r2) || d === 0) return [];
+    const a = (r1 * r1 - r2 * r2 + d * d) / (2 * d);
+    const h2 = r1 * r1 - a * a;
+    if (h2 < 0) return [];
+    const h = Math.sqrt(h2);
+    const px = x1 + (a * (x2 - x1)) / d;
+    const py = y1 + (a * (y2 - y1)) / d;
+    const offX = (h * (y2 - y1)) / d;
+    const offY = (h * (x2 - x1)) / d;
+    return [
+      { x: px + offX, y: py - offY },
+      { x: px - offX, y: py + offY }
+    ];
+  }
+
+  // Solve for the x at a given y where the path difference l₁ − l₂ equals target.
+  // Returns null if no such x exists in the canvas. Uses bisection — l₁ − l₂ is
+  // a monotonic function of x for fixed y (smooth hyperbolic geometry).
+  function solvePathDiffX(target, y, s1, s2) {
+    const a = Math.abs(s2.x - s1.x);
+    if (Math.abs(target) >= a) return null; // target unreachable
+    let lo = 0, hi = mainCanvas.width;
+    const f = (x) => {
+      const l1 = dist(s1.x, s1.y, x, y);
+      const l2 = dist(s2.x, s2.y, x, y);
+      return l1 - l2;
+    };
+    const fLo = f(lo), fHi = f(hi);
+    // Since s2 has x > s1 (by convention), moving x rightward INCREASES (l₁−l₂)
+    // — the point gets relatively further from s1 and closer to s2. So f is
+    // monotonically increasing in x; target is reached if fLo < target < fHi.
+    if (target < fLo || target > fHi) return null;
+    for (let k = 0; k < 50; k++) {
+      const mid = (lo + hi) / 2;
+      if (f(mid) < target) lo = mid; else hi = mid;
+    }
+    return (lo + hi) / 2;
+  }
+
+  // ----- Signal generator -----
+  function drawSignalGenerator() {
+    const { s1, s2 } = speakerPositions();
+    if (twoGenerators) {
+      // Two independent generators, each above its own speaker. Wires go
+      // straight down rather than fanning, since each speaker has its own
+      // dedicated cable. Each generator shows its own phase (gen1 = 0° as
+      // reference, gen2 = the slider value).
+      drawOneGenerator(s1.x, 14, 116, 50, 'GEN 1', 0);
+      drawOneGenerator(s2.x, 14, 116, 50, 'GEN 2', sourcePhaseDeg);
+
+      // Straight wires from each generator's bottom to its speaker's top
+      ctx.strokeStyle = '#374151';
+      ctx.lineWidth = 1.8;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(s1.x, 64);
+      ctx.lineTo(s1.x, s1.y - 5);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(s2.x, 64);
+      ctx.lineTo(s2.x, s2.y - 5);
+      ctx.stroke();
+    } else {
+      // Single generator at canvas centre, wires fanning down to each speaker
+      const cx = mainCanvas.width / 2;
+      drawOneGenerator(cx, 18, 140, 52, 'SIGNAL GENERATOR', null);
+
+      ctx.strokeStyle = '#374151';
+      ctx.lineWidth = 1.8;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(cx - 25, 18 + 52);
+      ctx.bezierCurveTo(cx - 25, 18 + 52 + 25, s1.x, s1.y - 35, s1.x, s1.y - 5);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx + 25, 18 + 52);
+      ctx.bezierCurveTo(cx + 25, 18 + 52 + 25, s2.x, s2.y - 35, s2.x, s2.y - 5);
+      ctx.stroke();
+    }
+  }
+
+  // Draw one generator panel centred at (cx, gy_top) with given size and label.
+  // If phaseDeg is non-null, the LCD shows phase below frequency.
+  function drawOneGenerator(cx, gy, gw, gh, label, phaseDeg) {
+    const gx = cx - gw / 2;
+
+    // Body
+    const bodyGrad = ctx.createLinearGradient(gx, gy, gx, gy + gh);
+    bodyGrad.addColorStop(0, '#3a4658');
+    bodyGrad.addColorStop(1, '#2d3a4f');
+    ctx.fillStyle = bodyGrad;
+    ctx.strokeStyle = '#1f2a3a';
+    ctx.lineWidth = 1.2;
+    roundRect(ctx, gx, gy, gw, gh, 4, true, true);
+
+    // LCD area — narrower if phase is also displayed
+    const lcdX = gx + 8;
+    const lcdY = gy + 6;
+    const lcdW = gw - 42;
+    const lcdH = gh - 12;
+    ctx.fillStyle = '#0e1722';
+    roundRect(ctx, lcdX, lcdY, lcdW, lcdH, 2, true, false);
+    ctx.strokeStyle = '#0a0f17';
+    ctx.lineWidth = 1;
+    roundRect(ctx, lcdX, lcdY, lcdW, lcdH, 2, false, true);
+
+    // Frequency reading
+    ctx.fillStyle = '#f5b945';
+    ctx.font = '500 12px JetBrains Mono, monospace';
+    ctx.textAlign = 'right';
+    if (phaseDeg !== null) {
+      // Two-line readout: frequency on top, phase below
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${frequency.toFixed(0)} Hz`, lcdX + lcdW - 6, lcdY + lcdH * 0.32);
+      ctx.font = '500 11px JetBrains Mono, monospace';
+      ctx.fillText(`Δφ ${phaseDeg.toFixed(0)}°`, lcdX + lcdW - 6, lcdY + lcdH * 0.72);
+    } else {
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${frequency.toFixed(0)} Hz`, lcdX + lcdW - 6, lcdY + lcdH / 2);
+    }
+
+    // Knob to the right
+    const knobX = lcdX + lcdW + 14;
+    const knobY = gy + gh / 2;
+    const knobR = 10;
+    const knobGrad = ctx.createRadialGradient(knobX - 3, knobY - 3, 1, knobX, knobY, knobR);
+    knobGrad.addColorStop(0, '#d8d2c5');
+    knobGrad.addColorStop(1, '#7a7060');
+    ctx.fillStyle = knobGrad;
+    ctx.beginPath();
+    ctx.arc(knobX, knobY, knobR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#3a3225';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    const min = parseFloat(freqSlider.min), max = parseFloat(freqSlider.max);
+    const knobAngle = -Math.PI * 0.75 + ((frequency - min) / (max - min)) * Math.PI * 1.5;
+    ctx.strokeStyle = '#1f2a3a';
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(knobX, knobY);
+    ctx.lineTo(knobX + Math.cos(knobAngle) * (knobR - 2), knobY + Math.sin(knobAngle) * (knobR - 2));
+    ctx.stroke();
+
+    // Label above the generator
+    ctx.fillStyle = '#58657a';
+    ctx.font = '600 8.5px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(label, cx, gy - 3);
+  }
+
+  // ----- Speakers -----
+  // Each speaker: rectangular cabinet with a circular cone, facing downward
+  // (toward the walking line). Two slight depth shading details to make it
+  // recognisable as a speaker rather than a generic rectangle.
+  function drawSpeakers() {
+    const { s1, s2 } = speakerPositions();
+    // During animation, the cones oscillate at the wave frequency, with S₂
+    // leading by sourcePhaseDeg (matching the actual source-phase difference).
+    // The cone's outward extension corresponds to the moment a crest is
+    // emerging — so cone-out = crest, cone-in = trough.
+    //
+    // We use animMaxRadius as a "time" coordinate: every λ of travel = one
+    // full cycle of cone motion. cos(2π · animMaxRadius / λ) is therefore the
+    // displacement in cycles-of-extension. Outside animation (steady state),
+    // both phases are zero and cones rest at their default position.
+    let phase1 = 0, phase2 = 0;
+    if (animMaxRadius !== null) {
+      const sourcePhaseRad = sourcePhaseDeg * Math.PI / 180;
+      const baseAngle = (2 * Math.PI * animMaxRadius) / lambdaPx;
+      phase1 = baseAngle;
+      phase2 = baseAngle + sourcePhaseRad;
+    }
+    drawOneSpeaker(s1.x, s1.y, phase1);
+    drawOneSpeaker(s2.x, s2.y, phase2);
+  }
+
+  function drawOneSpeaker(cx, cy, phaseRad) {
+    // Textbook-convention speaker symbol, oriented to face downward:
+    //   - Rectangular cabinet on top
+    //   - Triangular cone below it, narrow point attached to the cabinet's
+    //     bottom edge, wide end opening downward (the direction of sound)
+    // During the wavefront animation, the cone's wide end oscillates in/out
+    // along the speaker's axis, simulating the cone's physical motion as it
+    // emits sound. The narrow end stays fixed at the cabinet (which doesn't
+    // move). Cone-out = crest emission, cone-in = trough emission.
+
+    const cabW = 28;
+    const cabH = 32;
+    const coneTopW = 12;
+    const coneBotW = 96;
+    const coneH = 22;
+    const CONE_OSCILLATION_PX = 2.5; // peak displacement of cone wide end
+
+    const cabX = cx - cabW / 2;
+    const cabY = cy - cabH / 2 + 2;
+
+    // Cone displacement: positive = pushed outward (downward in our coords)
+    // = crest being emitted right now. cos(0) = 1 corresponds to the moment a
+    // crest is just emerging from the cone face.
+    const coneDisplacement = (phaseRad === 0 && animMaxRadius === null)
+      ? 0
+      : CONE_OSCILLATION_PX * Math.cos(phaseRad || 0);
+
+    // Wood-tone fill, matching the cream-theme palette
+    const grad = ctx.createLinearGradient(cabX, cabY, cabX + cabW, cabY + cabH);
+    grad.addColorStop(0, '#d4a675');
+    grad.addColorStop(1, '#a07644');
+
+    // Cabinet — never moves
+    ctx.fillStyle = grad;
+    ctx.strokeStyle = '#6e4d2a';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.rect(cabX, cabY, cabW, cabH);
+    ctx.fill();
+    ctx.stroke();
+
+    // Cone — narrow end fixed at cabinet, wide end displaced by coneDisplacement
+    const coneTopY = cabY + cabH;
+    const coneBotY = coneTopY + coneH + coneDisplacement;
+    ctx.fillStyle = grad;
+    ctx.strokeStyle = '#6e4d2a';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(cx - coneTopW / 2, coneTopY);
+    ctx.lineTo(cx + coneTopW / 2, coneTopY);
+    ctx.lineTo(cx + coneBotW / 2, coneBotY);
+    ctx.lineTo(cx - coneBotW / 2, coneBotY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // ----- Walking line -----
+  function drawWalkingLine() {
+    const wy = walkingLine();
+    const W = mainCanvas.width;
+    ctx.strokeStyle = '#7a7060';
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(20, wy);
+    ctx.lineTo(W - 20, wy);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Endpoints with small caps
+    ctx.fillStyle = '#7a7060';
+    ctx.fillRect(18, wy - 4, 2, 8);
+    ctx.fillRect(W - 20, wy - 4, 2, 8);
+  }
+
+  // ----- Maxima markers (M dots, no labels) -----
+  // Solid amber circles on the walking line. No glow halo (which read as
+  // "luminous" in the dark theme but as "fuzzy stain" on cream paper).
+  function drawMaximaMarkers() {
+    const wy = walkingLine();
+    const maxima = findMaximaX();
+    for (const x of maxima) {
+      // Soft halo behind the dot — amber wash on cream
+      ctx.fillStyle = 'rgba(200, 130, 26, 0.22)';
+      ctx.beginPath();
+      ctx.arc(x, wy, 8, 0, Math.PI * 2);
+      ctx.fill();
+      // Solid dot
+      ctx.fillStyle = '#c8821a';
+      ctx.beginPath();
+      ctx.arc(x, wy, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#7a4f0d';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  // ----- Microphone -----
+  // A measurement-style mic: tall slim cylinder with a flat top, on a small base
+  // pad. Sits on the walking line.
+  function drawMicrophone() {
+    const wy = walkingLine();
+    const x = micX;
+    // Base shadow pad — subtle indication of where the mic sits / can be grabbed
+    ctx.fillStyle = 'rgba(45, 58, 79, 0.10)';
+    ctx.beginPath();
+    ctx.arc(x, wy, 14, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Mic body — silvery/grey, like a real measurement mic
+    const bodyW = 8;
+    const bodyH = 32;
+    const bodyTop = wy - bodyH;
+    const bodyGrad = ctx.createLinearGradient(x - bodyW / 2, bodyTop, x + bodyW / 2, bodyTop);
+    bodyGrad.addColorStop(0, '#6c7689');
+    bodyGrad.addColorStop(0.5, '#aab3c2');
+    bodyGrad.addColorStop(1, '#6c7689');
+    ctx.fillStyle = bodyGrad;
+    roundRect(ctx, x - bodyW / 2, bodyTop, bodyW, bodyH, 3, true, false);
+    ctx.strokeStyle = '#2d3a4f';
+    ctx.lineWidth = 0.8;
+    roundRect(ctx, x - bodyW / 2, bodyTop, bodyW, bodyH, 3, false, true);
+
+    // Mesh head at top
+    const meshR = 6;
+    const meshCY = bodyTop - 1;
+    ctx.fillStyle = '#3a4658';
+    ctx.beginPath();
+    ctx.arc(x, meshCY, meshR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#2d3a4f';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    // Mesh dots
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+    for (let i = -1; i <= 1; i++) {
+      for (let j = -1; j <= 1; j++) {
+        ctx.beginPath();
+        ctx.arc(x + i * 2.5, meshCY + j * 2.5, 0.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Status dot at the base — saturated green so it pops against the cream
+    ctx.fillStyle = '#2f7d3a';
+    ctx.beginPath();
+    ctx.arc(x, wy, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#1a4520';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // ----- Readout pill near the mic -----
+    // Two lines: ΔL (path difference, in λ) on top, Δφ (total phase
+    // difference) underneath. ΔL is computed from speaker-centre distances,
+    // matching the source point used for M dot placement, intensity calculation,
+    // and the wave-train labels — so the whole diagram tells a consistent story.
+    // We round the path *difference* directly (not the individual ray lengths),
+    // so an M dot reads as ΔL = n.0λ exactly without the rounding-flip artefact.
+    const { s1, s2 } = speakerPositions();
+    const l1Lambda = dist(s1.x, s1.y, x, wy) / lambdaPx;
+    const l2Lambda = dist(s2.x, s2.y, x, wy) / lambdaPx;
+    const pathDiff = parseFloat(Math.abs(l2Lambda - l1Lambda).toFixed(1));
+    // Δφ: total phase difference at mic, including source-phase offset, mod 360°.
+    const phaseDeg = ((pathDiff * 360 + sourcePhaseDeg) % 360 + 360) % 360;
+    // Split number and unit so we can render the unit in a font that has the
+    // glyph (JetBrains Mono's default Latin subset doesn't include λ; canvas
+    // doesn't fall back per-character like CSS does, so without splitting,
+    // the unit silently renders as zero-width tofu).
+    const numL   = `ΔL = ${pathDiff.toFixed(1)}`;
+    const numPhi = `Δφ = ${phaseDeg.toFixed(0)}`;
+    const monoFont = '500 11px JetBrains Mono, monospace';
+    const lambdaFont = 'italic 500 12px Inter, system-ui, sans-serif';
+    const degFont    = '500 11px Inter, system-ui, sans-serif';
+
+    ctx.font = monoFont;
+    const wNumL   = ctx.measureText(numL).width;
+    const wNumPhi = ctx.measureText(numPhi).width;
+    ctx.font = lambdaFont;
+    const wLambda = ctx.measureText('λ').width;
+    ctx.font = degFont;
+    const wDeg    = ctx.measureText('°').width;
+    const wL   = wNumL   + 2 + wLambda;
+    const wPhi = wNumPhi + 2 + wDeg;
+    const tw = Math.max(wL, wPhi);
+    const pillW = tw + 12;
+    const pillH = 32;
+    // Position to the right of the mic by default; flip to the left if too
+    // close to the canvas edge.
+    const pillGap = 14;
+    const flipLeft = (x + pillGap + pillW) > (mainCanvas.width - 6);
+    const pillX = flipLeft ? (x - pillGap - pillW) : (x + pillGap);
+    const pillY = wy - bodyH - 4 - pillH; // sits above the mic head
+
+    ctx.fillStyle = 'rgba(253, 250, 242, 0.95)';
+    ctx.strokeStyle = '#b8ad94';
+    ctx.lineWidth = 1;
+    roundRect(ctx, pillX, pillY, pillW, pillH, 3, true, true);
+
+    ctx.fillStyle = '#1f2a3a';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    // ΔL line — number in mono, λ in italic sans
+    ctx.font = monoFont;
+    ctx.fillText(numL, pillX + 6, pillY + pillH * 0.30);
+    ctx.font = lambdaFont;
+    ctx.fillText('λ', pillX + 6 + wNumL + 2, pillY + pillH * 0.30);
+    // Δφ line — number in mono, ° in sans
+    ctx.font = monoFont;
+    ctx.fillText(numPhi, pillX + 6, pillY + pillH * 0.70);
+    ctx.font = degFont;
+    ctx.fillText('°', pillX + 6 + wNumPhi + 2, pillY + pillH * 0.70);
+  }
+
+  // ----- Intensity graph (under the walking line) -----
+  // Shows the smooth loudness pattern along the walking line. Plain "Intensity"
+  // y-axis, no formula or theoretical decoration. Vertical indicator at the
+  // mic's current x-position.
+  //
+  // CRITICAL: the plot's x-range must match the walking line's x-range exactly,
+  // so that an M dot drawn at canvas-x=N sits directly above the corresponding
+  // peak in the graph. Earlier the plot had an inset y-axis gutter that
+  // compressed/shifted the graph relative to the walking line — visually the
+  // dots and peaks then drifted apart.
+  function drawIntensityGraph() {
+    const W = mainCanvas.width;
+    const H = mainCanvas.height;
+    const wy = walkingLine();
+    const graphTop = wy + 30;
+    const graphBottom = H - 38;
+    const graphH = graphBottom - graphTop;
+    // Plot spans exactly the same canvas-x range as the walking line: [20, W-20].
+    const plotLeft = 20;
+    const plotRight = W - 20;
+    const plotW = plotRight - plotLeft;
+
+    // Faint graph-paper-style panel (full width to match the walking line)
+    ctx.fillStyle = '#fdfaf2';
+    ctx.fillRect(plotLeft, graphTop, plotW, graphH);
+    // Subtle inner stroke
+    ctx.strokeStyle = '#d8d0bd';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(plotLeft + 0.5, graphTop + 0.5, plotW, graphH);
+
+    // Light grid lines — vertical
+    ctx.strokeStyle = 'rgba(184, 173, 148, 0.45)';
+    ctx.lineWidth = 0.8;
+    for (let i = 1; i < 10; i++) {
+      const gx = plotLeft + (plotW * i / 10);
+      ctx.beginPath();
+      ctx.moveTo(gx, graphTop);
+      ctx.lineTo(gx, graphBottom);
+      ctx.stroke();
+    }
+    // Light grid lines — horizontal
+    for (let i = 1; i < 4; i++) {
+      const gy = graphTop + (graphH * i / 4);
+      ctx.beginPath();
+      ctx.moveTo(plotLeft, gy);
+      ctx.lineTo(plotRight, gy);
+      ctx.stroke();
+    }
+
+    // Y-axis label
+    ctx.save();
+    ctx.translate(14, (graphTop + graphBottom) / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = 'var(--ink)';
+    ctx.fillStyle = '#1f2a3a';
+    ctx.font = '600 12px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Intensity', 0, 0);
+    ctx.restore();
+
+    // The intensity curve — deep teal-blue, the wave colour for this app
+    ctx.strokeStyle = '#1d5e85';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    const samples = 600;
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples;
+      const x = plotLeft + t * plotW;
+      const I = intensityAt(x, wy);
+      const py = graphBottom - I * graphH * 0.92;
+      if (i === 0) ctx.moveTo(x, py);
+      else ctx.lineTo(x, py);
+    }
+    ctx.stroke();
+
+    // Vertical indicator at the mic's canvas-x
+    ctx.strokeStyle = 'rgba(47, 125, 58, 0.7)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(micX, graphTop);
+    ctx.lineTo(micX, graphBottom);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Dot on the curve at mic's intensity
+    const micI = intensityAt(micX, wy);
+    const micDotY = graphBottom - micI * graphH * 0.92;
+    ctx.fillStyle = '#2f7d3a';
+    ctx.beginPath();
+    ctx.arc(micX, micDotY, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#1a4520';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // X-axis label
+    ctx.fillStyle = '#58657a';
+    ctx.font = '500 11px Inter, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.fillText('position along path', plotRight, graphBottom + 6);
+  }
+
+  // ----- Utility: rounded rectangle path -----
+  function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+  }
+
+  // ----- Init -----
+  update();
+</script>
+
+</body>
+</html>

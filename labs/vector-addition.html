@@ -1,0 +1,3454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vector Addition & Components</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* iPad/Pencil compatibility: ensure form controls receive pointer input
+   from Pencil as well as finger. touch-action: manipulation removes the
+   300ms tap delay and lets the browser route Pencil input as a pointer
+   without trying to interpret it as scribble or selection. Without this,
+   sliders/checkboxes/buttons either ignore Pencil entirely or only react
+   when the label text (not the control) is tapped. */
+input, button, label, select,
+.mode-btn, .btn, .btn-clear, .btn-example, .help-btn, .help-close,
+.vector-item, .vector-delete, .checkbox-item {
+    touch-action: manipulation;
+}
+
+/* Range sliders need touch-action: none, NOT manipulation. With
+   "manipulation" the browser still claims pan/scroll gestures for itself,
+   so Apple Pencil drag on a slider thumb scrolls the surrounding panel
+   instead of moving the thumb. "none" gives the slider full control of
+   the gesture - pan, pinch, and double-tap zoom are all suppressed inside
+   the slider, which is what you want when the drag IS the input. This
+   rule must come after the block above to win the cascade. */
+input[type="range"] {
+    touch-action: none;
+}
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    min-height: 100vh;
+    padding: 15px;
+    display: flex;
+    justify-content: center;
+}
+
+.container {
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 20px;
+    max-width: 1150px;
+    width: 100%;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+h1 {
+    text-align: center;
+    color: #fff;
+    font-size: 1.8em;
+    margin-bottom: 5px;
+    text-shadow: 0 0 20px rgba(100,150,255,0.5);
+}
+
+.subtitle {
+    text-align: center;
+    color: #aaa;
+    margin-bottom: 15px;
+    font-size: 0.9em;
+}
+
+.main-area {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.canvas-area {
+    flex: 1;
+    min-width: 550px;
+    overflow: auto;
+}
+
+canvas {
+    background: linear-gradient(180deg, #0a0a1f 0%, #151530 100%);
+    border-radius: 15px;
+    display: block;
+    cursor: crosshair;
+    border: 2px solid rgba(255,200,100,0.4);
+    box-shadow: inset 0 0 50px rgba(0,0,0,0.5), 0 0 30px rgba(255,150,50,0.2);
+}
+
+.controls {
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.panel {
+    background: rgba(0,0,0,0.3);
+    border-radius: 12px;
+    padding: 15px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.panel h3 {
+    color: #888;
+    font-size: 0.7em;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+}
+
+.mode-buttons {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.mode-btn {
+    flex: 1;
+    min-width: 70px;
+    padding: 10px 6px;
+    border: 2px solid #444;
+    background: transparent;
+    color: #888;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.7em;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.mode-btn:hover {
+    border-color: #666;
+    color: #fff;
+}
+
+.mode-btn.active {
+    border-color: #3498db;
+    background: rgba(52,152,219,0.2);
+    color: #3498db;
+}
+
+.vector-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.vector-item {
+    background: rgba(0,0,0,0.3);
+    padding: 10px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-left: 4px solid;
+}
+
+.vector-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.vector-info {
+    flex: 1;
+    font-size: 0.8em;
+}
+
+.vector-name {
+    color: #fff;
+    font-weight: 600;
+}
+
+.vector-details {
+    color: #888;
+    font-size: 0.9em;
+    margin-top: 2px;
+}
+
+.vector-delete {
+    background: rgba(231,76,60,0.2);
+    border: 1px solid #e74c3c;
+    color: #e74c3c;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+    line-height: 1;
+}
+
+.vector-delete:hover {
+    background: rgba(231,76,60,0.4);
+}
+
+.resultant-box {
+    background: rgba(46,204,113,0.1);
+    border: 1px solid rgba(46,204,113,0.3);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.resultant-title {
+    color: #2ecc71;
+    font-weight: 600;
+    font-size: 0.9em;
+    margin-bottom: 8px;
+}
+
+.resultant-info {
+    color: #aaa;
+    font-size: 0.85em;
+    line-height: 1.6;
+}
+
+.resultant-info strong {
+    color: #2ecc71;
+}
+
+.component-box {
+    background: rgba(52,152,219,0.1);
+    border: 1px solid rgba(52,152,219,0.3);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 10px;
+}
+
+.component-title {
+    color: #3498db;
+    font-weight: 600;
+    font-size: 0.9em;
+    margin-bottom: 8px;
+}
+
+.component-info {
+    color: #aaa;
+    font-size: 0.85em;
+    line-height: 1.6;
+}
+
+.btn {
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.85em;
+}
+
+.btn-clear {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: #fff;
+}
+
+.btn-clear:hover {
+    box-shadow: 0 0 20px rgba(231,76,60,0.4);
+}
+
+.btn-example {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+    color: #fff;
+}
+
+.btn-example:hover {
+    box-shadow: 0 0 20px rgba(155,89,182,0.4);
+}
+
+.checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #aaa;
+    font-size: 0.85em;
+    cursor: pointer;
+}
+
+.checkbox-item input {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.instructions {
+    font-size: 0.8em;
+    color: #777;
+    line-height: 1.5;
+}
+
+.formula {
+    background: rgba(0,0,0,0.4);
+    padding: 10px;
+    border-radius: 6px;
+    font-family: 'Times New Roman', serif;
+    color: #ddd;
+    font-size: 1em;
+    text-align: center;
+    margin: 8px 0;
+}
+
+.legend {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 8px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.75em;
+    color: #888;
+}
+
+.legend-line {
+    width: 20px;
+    height: 4px;
+    border-radius: 2px;
+}
+
+/* ===== Help modal: matches Projectiles / Moments / DC Circuit Builder ===== */
+.help-btn {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(241,196,15,0.4);
+    background: rgba(0,0,0,0.3);
+    color: #f1c40f;
+    font-size: 0.78em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+}
+.help-btn:hover {
+    background: rgba(241,196,15,0.15);
+    border-color: #f1c40f;
+}
+.title-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 5px;
+}
+.title-row h1 {
+    margin-bottom: 0;
+}
+.help-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(3px);
+}
+.help-modal {
+    background: linear-gradient(145deg, #1a1a2e, #16213e);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 16px;
+    width: min(560px, 92vw);
+    max-height: 82vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.help-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    color: #f1c40f;
+    font-weight: 700;
+    font-size: 1.05em;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+.help-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.15s;
+}
+.help-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.help-body {
+    overflow-y: auto;
+    padding: 12px 20px 20px;
+}
+.help-group { margin-bottom: 14px; }
+.help-group:last-child { margin-bottom: 0; }
+.help-group-title {
+    color: #4fc3f7;
+    font-size: 0.75em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(79,195,247,0.15);
+}
+.help-item {
+    color: #bbb;
+    font-size: 0.82em;
+    line-height: 1.55;
+    padding: 2px 0 2px 10px;
+}
+.help-key {
+    color: #e0e0e0;
+    background: rgba(255,255,255,0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.92em;
+    font-weight: 600;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+@media (max-width: 900px) {
+    .main-area { flex-direction: column; }
+    .canvas-area { min-width: auto; }
+    .controls { width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div class="title-row">
+        <h1>📐 Vector Addition & Components</h1>
+        <button class="help-btn" onclick="toggleHelp(mode === 'add' ? 'Add' : 'Forces')">? HELP</button>
+    </div>
+    <p class="subtitle">Click and drag to create vectors • Explore components and resultants</p>
+    
+    <div class="main-area">
+        <div class="canvas-area">
+            <canvas id="canvas" width="650" height="500"></canvas>
+            <div class="legend">
+                <div class="legend-item"><div class="legend-line" style="background: linear-gradient(90deg, #e74c3c, #3498db, #f39c12);"></div> Vectors</div>
+                <div class="legend-item"><div class="legend-line" style="background: #2ecc71;"></div> Resultant</div>
+                <div class="legend-item"><div class="legend-line" style="background: #888; border: 1px dashed #888;"></div> Components</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="panel">
+                <h3>Mode</h3>
+                <div class="mode-buttons">
+                    <button class="mode-btn active" id="modeAdd" onclick="setMode('add')">Add Vectors</button>
+                    <button class="mode-btn" id="modeForces" onclick="setMode('forces')">Forces</button>
+                </div>
+                <p class="instructions" id="modeInstructions" style="margin-top: 10px;">
+                    Click and drag from the origin to create vectors. They will be added head-to-tail.
+                </p>
+            </div>
+            
+            <div class="panel" id="optionsPanel">
+                <h3>Display Options</h3>
+                <div class="checkbox-group">
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="showComponents" checked onchange="draw()"> Show components
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="showResultant" checked onchange="draw()"> Show resultant
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="showAngles" checked onchange="draw()"> Show angles
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="showGrid" checked onchange="draw()"> Show grid
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="showLabels" checked onchange="draw()"> Show labels
+                        <input type="checkbox" id="showValues" onchange="draw()"> Show values
+                    </label>
+                </div>
+            </div>
+            
+            <div class="panel" id="forcesOptionsPanel" style="display: none;">
+                <h3>Forces Options</h3>
+                <div class="checkbox-group">
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="showForceResultant" checked onchange="draw()"> Show resultant force
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="showForceMagnitudes" checked onchange="draw()"> Show magnitudes
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="showParallelogram" onchange="if(!this.checked) selectedForces=[]; updateForcesUI(); draw()"> Show parallelogram
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="showEquilibrium" checked onchange="draw()"> Equilibrium indicator
+                    </label>
+                </div>
+                <p class="instructions" id="parallelogramHint" style="margin-top: 8px; display: none;">
+                    Click on 2 forces to select them for parallelogram view
+                </p>
+                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <button class="btn btn-example" onclick="startQuiz()" id="quizBtn" style="width: 100%;">🎯 Quiz Mode</button>
+                    <div id="quizInfo" style="display: none; margin-top: 10px; padding: 10px; background: rgba(243,156,18,0.2); border: 1px solid rgba(243,156,18,0.4); border-radius: 8px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="flex: 1;">
+                                <div style="color: #f39c12; font-weight: 600; font-size: 0.9em;">Quiz Challenge</div>
+                                <div id="quizTarget" style="color: #aaa; font-size: 0.85em; margin-top: 5px;"></div>
+                            </div>
+                            <div id="quizTimerContainer" style="position: relative; width: 60px; height: 60px;">
+                                <svg width="60" height="60" style="transform: rotate(-90deg);">
+                                    <circle cx="30" cy="30" r="26" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="4"/>
+                                    <circle id="quizTimerCircle" cx="30" cy="30" r="26" fill="none" stroke="#f39c12" stroke-width="4" stroke-linecap="round" stroke-dasharray="163.36" stroke-dashoffset="0"/>
+                                </svg>
+                                <div id="quizTimerText" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #f39c12; font-weight: bold; font-size: 14px;">60</div>
+                            </div>
+                        </div>
+                        <div id="quizFeedback" style="margin-top: 8px; font-size: 0.85em;"></div>
+                        <button class="btn btn-clear" onclick="endQuiz()" style="width: 100%; margin-top: 8px; padding: 8px;">Exit Quiz</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel" id="vectorListPanel">
+                <h3>Vectors</h3>
+                <div class="vector-list" id="vectorList">
+                    <p style="color: #666; font-size: 0.85em; text-align: center; padding: 10px;">
+                        No vectors yet. Click and drag to create!
+                    </p>
+                </div>
+            </div>
+            
+            <div class="panel" id="forcesListPanel" style="display: none;">
+                <h3>Forces</h3>
+                <div class="vector-list" id="forcesList">
+                    <p style="color: #666; font-size: 0.85em; text-align: center; padding: 10px;">
+                        No forces yet. Click and drag from the mass!
+                    </p>
+                </div>
+                <div class="resultant-box" style="margin-top: 10px;">
+                    <div class="resultant-title">Resultant Force</div>
+                    <div class="resultant-info" id="forceResultantInfo">
+                        Add forces to see the resultant
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel" id="resultantPanel">
+                <h3>Resultant Vector</h3>
+                <div class="resultant-box">
+                    <div class="resultant-title">r = a + b + ...</div>
+                    <div class="resultant-info" id="resultantInfo">
+                        Add vectors to see the resultant
+                    </div>
+                </div>
+                <div class="component-box" id="componentBox" style="display: none;">
+                    <div class="component-title">Selected Vector Components</div>
+                    <div class="component-info" id="componentInfo"></div>
+                </div>
+                <div class="formula">
+                    |r| = √(rₕ² + rᵥ²) &nbsp;&nbsp; θ = tan⁻¹(rᵥ/rₕ)
+                </div>
+            </div>
+            
+            <button class="btn btn-clear" onclick="clearAll()" style="width: 100%;">Clear All</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========== HELP MODAL: ADD VECTORS MODE ========== -->
+<div id="helpOverlayAdd" class="help-overlay" style="display:none" onclick="if(event.target===this)toggleHelp('Add')">
+    <div class="help-modal">
+        <div class="help-header">
+            <span>Help — Add Vectors</span>
+            <button class="help-close" onclick="toggleHelp('Add')">✕</button>
+        </div>
+        <div class="help-body">
+            <div class="help-group">
+                <div class="help-group-title">What this mode does</div>
+                <div class="help-item">Build a sequence of vectors <b>head-to-tail</b> from the origin. The green <b>resultant</b> runs from the origin to the tip of the final vector — its magnitude and angle update live in the side panel.</div>
+            </div>
+            <div class="help-group">
+                <div class="help-group-title">Creating vectors</div>
+                <div class="help-item"><span class="help-key">Click and drag</span> from the origin to create the first vector. Each subsequent drag starts from the previous vector's tip, chaining them head-to-tail.</div>
+                <div class="help-item">The canvas auto-fits to keep all vectors and the resultant in view.</div>
+            </div>
+            <div class="help-group">
+                <div class="help-group-title">Editing vectors</div>
+                <div class="help-item"><span class="help-key">Drag a vector's tip</span> to change its magnitude and direction. Vectors that follow it in the chain reposition automatically to stay head-to-tail.</div>
+                <div class="help-item">Use the <span class="help-key">×</span> button next to any vector in the list to remove it.</div>
+            </div>
+            <div class="help-group">
+                <div class="help-group-title">Display options</div>
+                <div class="help-item"><b>Show components</b> — decomposes each vector into horizontal and vertical parts, drawn in separate lanes alongside the canvas.</div>
+                <div class="help-item"><b>Show resultant</b> — toggles the green resultant arrow.</div>
+                <div class="help-item"><b>Show angles</b> — labels the angle each vector makes with the horizontal.</div>
+                <div class="help-item"><b>Show values</b> — appends numerical magnitudes to the labels.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== HELP MODAL: FORCES MODE ========== -->
+<div id="helpOverlayForces" class="help-overlay" style="display:none" onclick="if(event.target===this)toggleHelp('Forces')">
+    <div class="help-modal">
+        <div class="help-header">
+            <span>Help — Forces</span>
+            <button class="help-close" onclick="toggleHelp('Forces')">✕</button>
+        </div>
+        <div class="help-body">
+            <div class="help-group">
+                <div class="help-group-title">What this mode does</div>
+                <div class="help-item">Apply multiple forces to a central mass and watch the <b>resultant force</b> (green) update live. Useful for equilibrium problems, concurrent forces, and the parallelogram law.</div>
+            </div>
+            <div class="help-group">
+                <div class="help-group-title">Creating forces</div>
+                <div class="help-item"><span class="help-key">Drag outwards from the mass</span> to add a force. The drag direction sets the force's line of action; the drag length sets its magnitude.</div>
+            </div>
+            <div class="help-group">
+                <div class="help-group-title">Editing forces</div>
+                <div class="help-item"><span class="help-key">Drag a force's tip</span> to change its magnitude and direction.</div>
+                <div class="help-item"><span class="help-key">Drag a force's body</span> to reposition it — useful for arranging forces head-to-tail away from the mass.</div>
+                <div class="help-item">Use the <span class="help-key">×</span> button next to any force in the list to remove it.</div>
+            </div>
+            <div class="help-group">
+                <div class="help-group-title">Parallelogram</div>
+                <div class="help-item">Tick <b>Show parallelogram</b>, then tap any two forces to select them. The parallelogram of those two forces is drawn, with its diagonal showing their combined effect.</div>
+                <div class="help-item">Tap a selected force again to deselect it.</div>
+            </div>
+            <div class="help-group">
+                <div class="help-group-title">Equilibrium indicator</div>
+                <div class="help-item">When the resultant is effectively zero, a pulsing <b>BALANCED</b> label appears at the mass. Useful for showing students when forces are in equilibrium.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+// Constants - these will be recalculated dynamically
+let ORIGIN_X = 80;
+let ORIGIN_Y = 420;
+let SCALE = 8; // pixels per unit - will be dynamic
+const GRID_SIZE = 50; // pixels
+const PADDING = 60; // padding from edges
+
+// State
+let mode = 'add'; // 'add' or 'forces'
+let vectors = [];
+let dragging = false;
+let dragStart = { x: 0, y: 0 };
+let dragEnd = { x: 0, y: 0 };
+let selectedVector = null;
+let hoveredVector = null;
+let resizingVector = null; // Vector currently being resized by dragging its tip
+
+// Forces mode state
+let forces = [];
+let selectedForces = []; // Array of indices for parallelogram selection (max 2)
+let resultantForce = null; // The resultant, treated like a force for dragging
+let resultantMoved = false; // Track if resultant has been manually positioned
+let massPos = { x: 325, y: 250 }; // Pixel position of mass
+const MASS_RADIUS = 12;
+let draggingForce = null;
+let draggingForceEnd = false; // true = dragging arrow end, false = dragging start
+let draggingForceWhole = false; // true = dragging entire force
+let dragOffset = { x: 0, y: 0 };
+let draggingResultant = false;
+
+// Equilibrium indicator state
+let equilibriumPulse = 0;
+let equilibriumAnimating = false;
+
+// Quiz mode state
+let quizMode = false;
+let quizTarget = null; // Target resultant to achieve { dx, dy, magnitude, angle }
+let quizSolved = false;
+let quizStartTime = null;
+let quizDuration = 60; // seconds
+let quizTimerInterval = null;
+
+// Particle effects
+let particles = [];
+let particleAnimating = false;
+
+// Colors for vectors - extended palette
+const COLORS = [
+    '#e74c3c', '#3498db', '#f39c12', '#9b59b6', '#1abc9c', '#e91e63',
+    '#ff7675', '#74b9ff', '#ffeaa7', '#a29bfe', '#55efc4', '#fd79a8',
+    '#fab1a0', '#81ecec', '#dfe6e9', '#b2bec3', '#00cec9', '#6c5ce7'
+];
+const NAMES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S'];
+
+function init() {
+    canvas.addEventListener('mousedown', onMouseDown);
+    canvas.addEventListener('mousemove', onMouseMove);
+    canvas.addEventListener('mouseup', onMouseUp);
+    canvas.addEventListener('mouseleave', onMouseUp);
+    
+    // Touch support. passive:false because the handlers call preventDefault()
+    // to stop the page panning during a drag - without that flag, modern
+    // Safari ignores preventDefault() on these listeners and the page scrolls
+    // while the user is dragging a vector. touchcancel mirrors touchend so a
+    // system-interrupted drag (e.g. notification banner) does not leave drag
+    // state stuck.
+    canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+    canvas.addEventListener('touchend', onTouchEnd, { passive: false });
+    canvas.addEventListener('touchcancel', onTouchEnd, { passive: false });
+    
+    draw();
+}
+
+function getMousePos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+    };
+}
+
+function getTouchPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const touch = e.touches[0];
+    return {
+        x: (touch.clientX - rect.left) * scaleX,
+        y: (touch.clientY - rect.top) * scaleY
+    };
+}
+
+function pixelToUnit(px, py) {
+    return {
+        x: (px - ORIGIN_X) / SCALE,
+        y: -(py - ORIGIN_Y) / SCALE // Flip Y
+    };
+}
+
+function unitToPixel(ux, uy) {
+    return {
+        x: ORIGIN_X + ux * SCALE,
+        y: ORIGIN_Y - uy * SCALE // Flip Y
+    };
+}
+
+function onMouseDown(e) {
+    const pos = getMousePos(e);
+    
+    // Forces mode handling
+    if (mode === 'forces') {
+        // Check if clicking on resultant force
+        if (resultantForce) {
+            const tipDist = Math.sqrt((pos.x - resultantForce.endX) ** 2 + (pos.y - resultantForce.endY) ** 2);
+            if (tipDist < 15) {
+                draggingResultant = true;
+                draggingForceEnd = true;
+                draggingForceWhole = false;
+                return;
+            }
+            const startDist = Math.sqrt((pos.x - resultantForce.startX) ** 2 + (pos.y - resultantForce.startY) ** 2);
+            if (startDist < 15) {
+                draggingResultant = true;
+                draggingForceEnd = false;
+                draggingForceWhole = false;
+                return;
+            }
+            if (isNearResultantLine(pos)) {
+                draggingResultant = true;
+                draggingForceWhole = true;
+                dragOffset = { 
+                    x: pos.x - resultantForce.startX, 
+                    y: pos.y - resultantForce.startY 
+                };
+                return;
+            }
+        }
+        
+        // Check if clicking on existing force arrow tip (to resize)
+        for (let f of forces) {
+            const tipDist = Math.sqrt((pos.x - f.endX) ** 2 + (pos.y - f.endY) ** 2);
+            if (tipDist < 15) {
+                draggingForce = f;
+                draggingForceEnd = true;
+                draggingForceWhole = false;
+                return;
+            }
+        }
+        
+        // Check if clicking on force start (to move start point)
+        for (let f of forces) {
+            const startDist = Math.sqrt((pos.x - f.startX) ** 2 + (pos.y - f.startY) ** 2);
+            if (startDist < 15) {
+                draggingForce = f;
+                draggingForceEnd = false;
+                draggingForceWhole = false;
+                return;
+            }
+        }
+        
+        // Check if clicking on force line (to drag whole force or select for parallelogram)
+        for (let i = 0; i < forces.length; i++) {
+            const f = forces[i];
+            if (isNearForceLine(pos, f)) {
+                // If parallelogram mode is on, toggle selection
+                const showParallelogram = document.getElementById('showParallelogram').checked;
+                if (showParallelogram) {
+                    const idx = selectedForces.indexOf(i);
+                    if (idx >= 0) {
+                        // Deselect
+                        selectedForces.splice(idx, 1);
+                    } else if (selectedForces.length < 2) {
+                        // Select (max 2)
+                        selectedForces.push(i);
+                    } else {
+                        // Replace oldest selection
+                        selectedForces.shift();
+                        selectedForces.push(i);
+                    }
+                    updateForcesUI();
+                    draw();
+                    return;
+                }
+                
+                draggingForce = f;
+                draggingForceWhole = true;
+                dragOffset = { 
+                    x: pos.x - f.startX, 
+                    y: pos.y - f.startY 
+                };
+                return;
+            }
+        }
+        
+        // Check if clicking near mass to create new force
+        const massDist = Math.sqrt((pos.x - massPos.x) ** 2 + (pos.y - massPos.y) ** 2);
+        if (massDist < MASS_RADIUS + 30) {
+            dragging = true;
+            dragStart = { x: massPos.x, y: massPos.y };
+            dragEnd = { ...pos };
+            return;
+        }
+        
+        return;
+    }
+    
+    // Check if clicking on existing vector tip to resize
+    for (let v of vectors) {
+        const tipPixel = unitToPixel(v.endX, v.endY);
+        const tipDist = Math.sqrt((pos.x - tipPixel.x) ** 2 + (pos.y - tipPixel.y) ** 2);
+        if (tipDist < 15) {
+            resizingVector = v;
+            selectedVector = v;
+            updateUI();
+            draw();
+            return;
+        }
+    }
+    
+    // Check if clicking on existing vector to select
+    for (let v of vectors) {
+        if (isNearVector(pos, v)) {
+            selectedVector = v;
+            updateUI();
+            draw();
+            return;
+        }
+    }
+    
+    selectedVector = null;
+    dragging = true;
+    
+    if (mode === 'add') {
+        // In add mode, start from where the last vector ended (head-to-tail)
+        if (vectors.length > 0) {
+            const last = vectors[vectors.length - 1];
+            dragStart = unitToPixel(last.endX, last.endY);
+        } else {
+            dragStart = { x: ORIGIN_X, y: ORIGIN_Y };
+        }
+    } else {
+        // In forces mode, start from origin
+        dragStart = { x: ORIGIN_X, y: ORIGIN_Y };
+    }
+    
+    dragEnd = { ...dragStart };
+    draw();
+}
+
+function onMouseMove(e) {
+    const pos = getMousePos(e);
+    
+    // Forces mode handling
+    if (mode === 'forces') {
+        // Handle resultant dragging
+        if (draggingResultant && resultantForce) {
+            if (draggingForceWhole) {
+                const newStartX = pos.x - dragOffset.x;
+                const newStartY = pos.y - dragOffset.y;
+                
+                // Snap to force endpoints
+                const snap = snapToForce({ x: newStartX, y: newStartY }, null);
+                
+                let dx, dy;
+                if (snap) {
+                    dx = snap.x - resultantForce.startX;
+                    dy = snap.y - resultantForce.startY;
+                    resultantForce.startX = snap.x;
+                    resultantForce.startY = snap.y;
+                } else {
+                    dx = newStartX - resultantForce.startX;
+                    dy = newStartY - resultantForce.startY;
+                    resultantForce.startX = newStartX;
+                    resultantForce.startY = newStartY;
+                }
+                resultantForce.endX += dx;
+                resultantForce.endY += dy;
+            } else if (draggingForceEnd) {
+                // Can't resize resultant - it's calculated
+                // Just move the whole thing
+            } else {
+                // Dragging start - snap to endpoints
+                const snap = snapToForce(pos, null);
+                if (snap) {
+                    const dx = snap.x - resultantForce.startX;
+                    const dy = snap.y - resultantForce.startY;
+                    resultantForce.startX = snap.x;
+                    resultantForce.startY = snap.y;
+                    resultantForce.endX += dx;
+                    resultantForce.endY += dy;
+                } else {
+                    const dx = pos.x - resultantForce.startX;
+                    const dy = pos.y - resultantForce.startY;
+                    resultantForce.startX = pos.x;
+                    resultantForce.startY = pos.y;
+                    resultantForce.endX += dx;
+                    resultantForce.endY += dy;
+                }
+            }
+            draw();
+            return;
+        }
+        
+        if (draggingForce) {
+            if (draggingForceWhole) {
+                // Dragging entire force - move both start and end
+                const newStartX = pos.x - dragOffset.x;
+                const newStartY = pos.y - dragOffset.y;
+                
+                // Check for snapping start to other force endpoints
+                const snapStart = snapToForce({ x: newStartX, y: newStartY }, draggingForce);
+                
+                let dx, dy;
+                if (snapStart) {
+                    dx = snapStart.x - draggingForce.startX;
+                    dy = snapStart.y - draggingForce.startY;
+                    draggingForce.startX = snapStart.x;
+                    draggingForce.startY = snapStart.y;
+                } else {
+                    dx = newStartX - draggingForce.startX;
+                    dy = newStartY - draggingForce.startY;
+                    draggingForce.startX = newStartX;
+                    draggingForce.startY = newStartY;
+                }
+                draggingForce.endX += dx;
+                draggingForce.endY += dy;
+            } else if (draggingForceEnd) {
+                // Dragging arrow tip - with snapping
+                const snapEnd = snapTip(pos, draggingForce);
+                if (snapEnd) {
+                    draggingForce.endX = snapEnd.x;
+                    draggingForce.endY = snapEnd.y;
+                } else {
+                    draggingForce.endX = pos.x;
+                    draggingForce.endY = pos.y;
+                }
+                updateForceProperties(draggingForce);
+            } else {
+                // Dragging start point - with snapping
+                const snap = snapToForce(pos, draggingForce);
+                if (snap) {
+                    draggingForce.startX = snap.x;
+                    draggingForce.startY = snap.y;
+                } else {
+                    draggingForce.startX = pos.x;
+                    draggingForce.startY = pos.y;
+                }
+                updateForceProperties(draggingForce);
+            }
+            draw();
+            updateForcesUI();
+            return;
+        }
+        
+        if (dragging) {
+            dragEnd = pos;
+            draw();
+            return;
+        }
+        
+        // Hover detection for forces and resultant
+        canvas.style.cursor = 'crosshair';
+        
+        // Check resultant hover
+        if (resultantForce) {
+            const tipDist = Math.sqrt((pos.x - resultantForce.endX) ** 2 + (pos.y - resultantForce.endY) ** 2);
+            const startDist = Math.sqrt((pos.x - resultantForce.startX) ** 2 + (pos.y - resultantForce.startY) ** 2);
+            if (tipDist < 15 || startDist < 15) {
+                canvas.style.cursor = 'grab';
+                return;
+            }
+            if (isNearResultantLine(pos)) {
+                canvas.style.cursor = 'move';
+                return;
+            }
+        }
+        
+        for (let f of forces) {
+            const tipDist = Math.sqrt((pos.x - f.endX) ** 2 + (pos.y - f.endY) ** 2);
+            const startDist = Math.sqrt((pos.x - f.startX) ** 2 + (pos.y - f.startY) ** 2);
+            if (tipDist < 15 || startDist < 15) {
+                canvas.style.cursor = 'grab';
+                break;
+            }
+            if (isNearForceLine(pos, f)) {
+                canvas.style.cursor = 'move';
+                break;
+            }
+        }
+        
+        return;
+    }
+    
+    // Handle vector resizing
+    if (resizingVector) {
+        const unitPos = pixelToUnit(pos.x, pos.y);
+        resizingVector.endX = unitPos.x;
+        resizingVector.endY = unitPos.y;
+        resizingVector.dx = resizingVector.endX - resizingVector.startX;
+        resizingVector.dy = resizingVector.endY - resizingVector.startY;
+        // Update magnitude and angle
+        resizingVector.magnitude = Math.sqrt(resizingVector.dx ** 2 + resizingVector.dy ** 2);
+        resizingVector.angle = Math.atan2(resizingVector.dy, resizingVector.dx) * 180 / Math.PI;
+        
+        // Update all subsequent vectors in add mode to maintain chain
+        if (mode === 'add') {
+            const idx = vectors.indexOf(resizingVector);
+            if (idx >= 0) {
+                for (let i = idx + 1; i < vectors.length; i++) {
+                    const prev = vectors[i - 1];
+                    const curr = vectors[i];
+                    curr.startX = prev.endX;
+                    curr.startY = prev.endY;
+                    curr.endX = curr.startX + curr.dx;
+                    curr.endY = curr.startY + curr.dy;
+                }
+            }
+        }
+        
+        updateUI();
+        draw();
+        return;
+    }
+    
+    if (dragging) {
+        dragEnd = pos;
+        draw();
+    } else {
+        // Check for hover on vector tips first (for resize cursor)
+        let nearTip = false;
+        for (let v of vectors) {
+            const tipPixel = unitToPixel(v.endX, v.endY);
+            const tipDist = Math.sqrt((pos.x - tipPixel.x) ** 2 + (pos.y - tipPixel.y) ** 2);
+            if (tipDist < 15) {
+                canvas.style.cursor = 'grab';
+                nearTip = true;
+                hoveredVector = v;
+                draw();
+                return;
+            }
+        }
+        
+        // Check for hover on vector body
+        let newHover = null;
+        for (let v of vectors) {
+            if (isNearVector(pos, v)) {
+                newHover = v;
+                break;
+            }
+        }
+        if (newHover !== hoveredVector || nearTip) {
+            hoveredVector = newHover;
+            canvas.style.cursor = hoveredVector ? 'pointer' : 'crosshair';
+            draw();
+        }
+    }
+}
+
+function onMouseUp(e) {
+    // Handle vector resizing completion
+    if (resizingVector) {
+        // Update any subsequent vectors in add mode (they chain head-to-tail)
+        if (mode === 'add') {
+            const idx = vectors.indexOf(resizingVector);
+            if (idx >= 0) {
+                // Update all subsequent vectors to maintain chain
+                for (let i = idx + 1; i < vectors.length; i++) {
+                    const prev = vectors[i - 1];
+                    const curr = vectors[i];
+                    // Keep the same dx, dy but update start/end positions
+                    curr.startX = prev.endX;
+                    curr.startY = prev.endY;
+                    curr.endX = curr.startX + curr.dx;
+                    curr.endY = curr.startY + curr.dy;
+                }
+            }
+        }
+        resizingVector = null;
+        updateUI();
+        draw();
+        return;
+    }
+    
+    // Forces mode handling
+    if (mode === 'forces') {
+        if (draggingResultant) {
+            draggingResultant = false;
+            draggingForceEnd = false;
+            draggingForceWhole = false;
+            resultantMoved = true; // Mark that resultant has been manually positioned
+            draw();
+            return;
+        }
+        
+        if (draggingForce) {
+            draggingForce = null;
+            draggingForceEnd = false;
+            draggingForceWhole = false;
+            draw();
+            return;
+        }
+        
+        if (dragging) {
+            dragging = false;
+            
+            const dx = dragEnd.x - massPos.x;
+            const dy = dragEnd.y - massPos.y;
+            const magnitude = Math.sqrt(dx * dx + dy * dy);
+            
+            if (magnitude > 20) {
+                forces.push({
+                    startX: massPos.x,
+                    startY: massPos.y,
+                    endX: dragEnd.x,
+                    endY: dragEnd.y,
+                    dx: dx,
+                    dy: dy,
+                    magnitude: magnitude,
+                    color: COLORS[forces.length % COLORS.length],
+                    name: 'F' + (forces.length + 1)
+                });
+                updateForcesUI();
+            }
+            draw();
+        }
+        return;
+    }
+    
+    if (!dragging) return;
+    dragging = false;
+    
+    const start = pixelToUnit(dragStart.x, dragStart.y);
+    const end = pixelToUnit(dragEnd.x, dragEnd.y);
+    
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const magnitude = Math.sqrt(dx * dx + dy * dy);
+    
+    if (magnitude > 1.5) { // Minimum size in units
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+        
+        let startX, startY;
+        if (mode === 'add' && vectors.length > 0) {
+            const last = vectors[vectors.length - 1];
+            startX = last.endX;
+            startY = last.endY;
+        } else {
+            startX = 0;
+            startY = 0;
+        }
+        
+        vectors.push({
+            startX: startX,
+            startY: startY,
+            endX: startX + dx,
+            endY: startY + dy,
+            dx: dx,
+            dy: dy,
+            magnitude: magnitude,
+            angle: angle,
+            color: COLORS[vectors.length % COLORS.length],
+            name: NAMES[vectors.length % NAMES.length]
+        });
+        
+        selectedVector = vectors[vectors.length - 1];
+        updateUI();
+    }
+    
+    draw();
+}
+
+function onTouchStart(e) {
+    if (e.touches.length !== 1) return;
+    e.preventDefault();
+    // Pass raw clientX/Y - onMouseDown calls getMousePos() which handles the
+    // canvas scaling. Earlier versions passed getTouchPos()'s already-scaled
+    // coordinates, which got scaled a second time inside onMouseDown - this
+    // only worked by accident when the CSS scaling factor was 1:1, and broke
+    // on any responsive layout where canvas.width !== rect.width.
+    const touch = e.touches[0];
+    onMouseDown({ clientX: touch.clientX, clientY: touch.clientY, target: canvas });
+}
+
+function onTouchMove(e) {
+    if (e.touches.length !== 1) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    onMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
+}
+
+function onTouchEnd(e) {
+    e.preventDefault();
+    // Use changedTouches because by touchend the finger has lifted - touches
+    // is empty. onMouseUp does not currently read clientX/Y, but pass them
+    // anyway so any future tap-at-mouseup logic works on touch too.
+    const touch = (e.changedTouches && e.changedTouches[0]) || null;
+    if (touch) {
+        onMouseUp({ clientX: touch.clientX, clientY: touch.clientY });
+    } else {
+        onMouseUp({});
+    }
+}
+
+function isNearVector(pos, v) {
+    const start = unitToPixel(v.startX, v.startY);
+    const end = unitToPixel(v.endX, v.endY);
+    
+    // Check distance to line segment
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len === 0) return false;
+    
+    const t = Math.max(0, Math.min(1, ((pos.x - start.x) * dx + (pos.y - start.y) * dy) / (len * len)));
+    const nearX = start.x + t * dx;
+    const nearY = start.y + t * dy;
+    
+    const dist = Math.sqrt((pos.x - nearX) ** 2 + (pos.y - nearY) ** 2);
+    return dist < 15;
+}
+
+function calculateScale() {
+    // Find bounds of all vectors
+    let minX = 0, maxX = 0, minY = 0, maxY = 0;
+    
+    for (let v of vectors) {
+        minX = Math.min(minX, v.startX, v.endX);
+        maxX = Math.max(maxX, v.startX, v.endX);
+        minY = Math.min(minY, v.startY, v.endY);
+        maxY = Math.max(maxY, v.startY, v.endY);
+    }
+    
+    // Include resultant in bounds calculation for add mode
+    if (mode === 'add' && vectors.length > 0) {
+        let rx = 0, ry = 0;
+        for (let v of vectors) {
+            rx += v.dx;
+            ry += v.dy;
+        }
+        maxX = Math.max(maxX, rx);
+        maxY = Math.max(maxY, ry);
+        minX = Math.min(minX, rx);
+        minY = Math.min(minY, ry);
+    }
+    
+    // Add some margin
+    const margin = 5;
+    minX -= margin;
+    maxX += margin;
+    minY -= margin;
+    maxY += margin;
+    
+    // Ensure minimum range
+    if (maxX - minX < 20) { maxX = 10; minX = -10; }
+    if (maxY - minY < 20) { maxY = 10; minY = -10; }
+    
+    // Calculate scale to fit
+    const availableWidth = canvas.width - PADDING * 2;
+    const availableHeight = canvas.height - PADDING * 2;
+    
+    const rangeX = maxX - minX;
+    const rangeY = maxY - minY;
+    
+    const scaleX = availableWidth / rangeX;
+    const scaleY = availableHeight / rangeY;
+    
+    SCALE = Math.min(scaleX, scaleY);
+    
+    // Cap scale to reasonable values
+    SCALE = Math.max(3, Math.min(15, SCALE));
+    
+    // Calculate origin position to center the content
+    // Origin should be positioned so that minX maps to left edge + padding
+    // and maxY maps to top edge + padding
+    ORIGIN_X = PADDING - minX * SCALE;
+    ORIGIN_Y = canvas.height - PADDING + minY * SCALE;
+    
+    // Ensure origin stays reasonable
+    ORIGIN_X = Math.max(50, Math.min(canvas.width / 2, ORIGIN_X));
+    ORIGIN_Y = Math.max(canvas.height / 2, Math.min(canvas.height - 50, ORIGIN_Y));
+}
+
+function isNearForceLine(pos, f) {
+    const dx = f.endX - f.startX;
+    const dy = f.endY - f.startY;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len === 0) return false;
+    
+    const t = Math.max(0, Math.min(1, ((pos.x - f.startX) * dx + (pos.y - f.startY) * dy) / (len * len)));
+    const nearX = f.startX + t * dx;
+    const nearY = f.startY + t * dy;
+    
+    const dist = Math.sqrt((pos.x - nearX) ** 2 + (pos.y - nearY) ** 2);
+    return dist < 12;
+}
+
+function updateForceProperties(f) {
+    f.dx = f.endX - f.startX;
+    f.dy = f.endY - f.startY;
+    f.magnitude = Math.sqrt(f.dx * f.dx + f.dy * f.dy);
+}
+
+function updateForcesUI() {
+    const list = document.getElementById('forcesList');
+    const showParallelogram = document.getElementById('showParallelogram').checked;
+    
+    // Show/hide parallelogram hint
+    document.getElementById('parallelogramHint').style.display = showParallelogram ? 'block' : 'none';
+    
+    // Clean up selectedForces - remove any that no longer exist
+    selectedForces = selectedForces.filter(i => i < forces.length);
+    
+    if (forces.length === 0) {
+        list.innerHTML = '<p style="color: #666; font-size: 0.85em; text-align: center; padding: 10px;">No forces yet. Click and drag from the mass!</p>';
+    } else {
+        list.innerHTML = forces.map((f, i) => {
+            const isSelected = selectedForces.includes(i);
+            const selectStyle = isSelected ? 'box-shadow: 0 0 10px ' + f.color + '; background: rgba(255,255,255,0.1);' : '';
+            const selectBadge = isSelected ? '<span style="background: ' + f.color + '; color: #fff; padding: 1px 6px; border-radius: 3px; font-size: 0.7em; margin-left: 5px;">✓</span>' : '';
+            return `
+            <div class="vector-item" style="border-color: ${f.color}; ${selectStyle}" onclick="toggleForceSelection(${i})">
+                <div class="vector-color" style="background: ${f.color}"></div>
+                <div class="vector-info">
+                    <div class="vector-name">${f.name}${selectBadge}</div>
+                    <div class="vector-details">
+                        |${f.name}| = ${f.magnitude.toFixed(0)} N
+                    </div>
+                </div>
+                <button class="vector-delete" onclick="event.stopPropagation(); deleteForce(${i})">×</button>
+            </div>
+        `}).join('');
+    }
+    
+    // Update resultant info
+    const resultantInfo = document.getElementById('forceResultantInfo');
+    if (forces.length === 0) {
+        resultantInfo.innerHTML = 'Add forces to see the resultant';
+    } else if (showParallelogram && selectedForces.length === 2) {
+        // Show parallelogram resultant for selected forces
+        const f1 = forces[selectedForces[0]];
+        const f2 = forces[selectedForces[1]];
+        const rx = f1.dx + f2.dx;
+        const ry = f1.dy + f2.dy;
+        const rMag = Math.sqrt(rx * rx + ry * ry);
+        const rAngle = Math.atan2(-ry, rx) * 180 / Math.PI;
+        
+        resultantInfo.innerHTML = `
+            <strong>Parallelogram: ${f1.name} + ${f2.name}</strong><br>
+            <strong>|R|</strong> = ${rMag.toFixed(0)} N<br>
+            <strong>Direction</strong>: ${rAngle.toFixed(1)}° from horizontal
+        `;
+    } else {
+        let rx = 0, ry = 0;
+        for (let f of forces) {
+            rx += f.dx;
+            ry += f.dy;
+        }
+        const rMag = Math.sqrt(rx * rx + ry * ry);
+        const rAngle = Math.atan2(-ry, rx) * 180 / Math.PI; // -ry because canvas y is inverted
+        
+        resultantInfo.innerHTML = `
+            <strong>|R|</strong> = ${rMag.toFixed(0)} N<br>
+            <strong>Direction</strong>: ${rAngle.toFixed(1)}° from horizontal
+        `;
+    }
+}
+
+function toggleForceSelection(index) {
+    const showParallelogram = document.getElementById('showParallelogram').checked;
+    if (!showParallelogram) return;
+    
+    const idx = selectedForces.indexOf(index);
+    if (idx >= 0) {
+        selectedForces.splice(idx, 1);
+    } else if (selectedForces.length < 2) {
+        selectedForces.push(index);
+    } else {
+        selectedForces.shift();
+        selectedForces.push(index);
+    }
+    updateForcesUI();
+    draw();
+}
+
+function deleteForce(index) {
+    forces.splice(index, 1);
+    // Clean up selectedForces - adjust indices and remove deleted
+    selectedForces = selectedForces
+        .filter(i => i !== index)
+        .map(i => i > index ? i - 1 : i);
+    // Rename forces
+    for (let i = 0; i < forces.length; i++) {
+        forces[i].name = 'F' + (i + 1);
+        forces[i].color = COLORS[i % COLORS.length];
+    }
+    // Reset resultant position if forces changed
+    if (forces.length === 0) {
+        resultantForce = null;
+        resultantMoved = false;
+    }
+    updateForcesUI();
+    draw();
+}
+
+function snapToForce(pos, excludeForce) {
+    const SNAP_DIST = 20;
+    
+    // Check all force endpoints (both start and end)
+    for (let f of forces) {
+        if (f === excludeForce) continue;
+        
+        // Check end (tip)
+        const endDist = Math.sqrt((pos.x - f.endX) ** 2 + (pos.y - f.endY) ** 2);
+        if (endDist < SNAP_DIST) {
+            return { x: f.endX, y: f.endY };
+        }
+        
+        // Check start (base)
+        const startDist = Math.sqrt((pos.x - f.startX) ** 2 + (pos.y - f.startY) ** 2);
+        if (startDist < SNAP_DIST) {
+            return { x: f.startX, y: f.startY };
+        }
+    }
+    
+    // Also snap to mass
+    const massDist = Math.sqrt((pos.x - massPos.x) ** 2 + (pos.y - massPos.y) ** 2);
+    if (massDist < SNAP_DIST) {
+        return { x: massPos.x, y: massPos.y };
+    }
+    
+    // Snap to resultant endpoints too
+    if (resultantForce && resultantMoved) {
+        const rEndDist = Math.sqrt((pos.x - resultantForce.endX) ** 2 + (pos.y - resultantForce.endY) ** 2);
+        if (rEndDist < SNAP_DIST) {
+            return { x: resultantForce.endX, y: resultantForce.endY };
+        }
+        const rStartDist = Math.sqrt((pos.x - resultantForce.startX) ** 2 + (pos.y - resultantForce.startY) ** 2);
+        if (rStartDist < SNAP_DIST) {
+            return { x: resultantForce.startX, y: resultantForce.startY };
+        }
+    }
+    
+    return null;
+}
+
+// Snap the tip of a force to other force bases/tips
+function snapTip(pos, excludeForce) {
+    const SNAP_DIST = 20;
+    
+    for (let f of forces) {
+        if (f === excludeForce) continue;
+        
+        // Check start (base) - tip snapping to another base
+        const startDist = Math.sqrt((pos.x - f.startX) ** 2 + (pos.y - f.startY) ** 2);
+        if (startDist < SNAP_DIST) {
+            return { x: f.startX, y: f.startY };
+        }
+        
+        // Check end (tip)
+        const endDist = Math.sqrt((pos.x - f.endX) ** 2 + (pos.y - f.endY) ** 2);
+        if (endDist < SNAP_DIST) {
+            return { x: f.endX, y: f.endY };
+        }
+    }
+    
+    // Snap to mass
+    const massDist = Math.sqrt((pos.x - massPos.x) ** 2 + (pos.y - massPos.y) ** 2);
+    if (massDist < SNAP_DIST) {
+        return { x: massPos.x, y: massPos.y };
+    }
+    
+    return null;
+}
+
+function isNearResultantLine(pos) {
+    if (!resultantForce) return false;
+    const dx = resultantForce.endX - resultantForce.startX;
+    const dy = resultantForce.endY - resultantForce.startY;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len === 0) return false;
+    
+    const t = Math.max(0, Math.min(1, ((pos.x - resultantForce.startX) * dx + (pos.y - resultantForce.startY) * dy) / (len * len)));
+    const nearX = resultantForce.startX + t * dx;
+    const nearY = resultantForce.startY + t * dy;
+    
+    const dist = Math.sqrt((pos.x - nearX) ** 2 + (pos.y - nearY) ** 2);
+    return dist < 12;
+}
+
+function setMode(m) {
+    // End quiz mode if switching away from forces
+    if (quizMode && m !== 'forces') {
+        endQuiz();
+    }
+    
+    // Dismiss any open help overlay - the user is switching tabs, the
+    // overlay for the old tab is no longer the relevant one.
+    var helpAdd = document.getElementById('helpOverlayAdd');
+    var helpForces = document.getElementById('helpOverlayForces');
+    if (helpAdd) helpAdd.style.display = 'none';
+    if (helpForces) helpForces.style.display = 'none';
+    
+    mode = m;
+    document.getElementById('modeAdd').classList.toggle('active', m === 'add');
+    document.getElementById('modeForces').classList.toggle('active', m === 'forces');
+    
+    if (m === 'add') {
+        document.getElementById('modeInstructions').textContent = 'Click and drag from the origin to create vectors. They will be added head-to-tail.';
+    } else {
+        document.getElementById('modeInstructions').textContent = 'Drag from mass to create forces. Drag arrows to move them head-to-tail for addition.';
+    }
+    
+    if (m === 'forces') {
+        vectors = [];
+        forces = [];
+        selectedForces = [];
+        resultantForce = null;
+        resultantMoved = false;
+        massPos = { x: canvas.width / 2, y: canvas.height / 2 };
+    } else {
+        forces = [];
+        selectedForces = [];
+        resultantForce = null;
+        resultantMoved = false;
+    }
+    
+    // Show/hide options based on mode
+    document.getElementById('optionsPanel').style.display = m === 'forces' ? 'none' : 'block';
+    document.getElementById('forcesOptionsPanel').style.display = m === 'forces' ? 'block' : 'none';
+    document.getElementById('vectorListPanel').style.display = m === 'forces' ? 'none' : 'block';
+    document.getElementById('forcesListPanel').style.display = m === 'forces' ? 'block' : 'none';
+    document.getElementById('resultantPanel').style.display = m === 'forces' ? 'none' : 'block';
+    
+    updateUI();
+    draw();
+}
+
+function clearAll() {
+    vectors = [];
+    forces = [];
+    selectedForces = [];
+    resultantForce = null;
+    resultantMoved = false;
+    selectedVector = null;
+    if (mode === 'forces') {
+        massPos = { x: canvas.width / 2, y: canvas.height / 2 };
+        updateForcesUI();
+    }
+    updateUI();
+    draw();
+}
+
+function deleteVector(index) {
+    vectors.splice(index, 1);
+    
+    // Recalculate positions for head-to-tail in add mode
+    if (mode === 'add') {
+        let currentX = 0, currentY = 0;
+        for (let i = 0; i < vectors.length; i++) {
+            vectors[i].startX = currentX;
+            vectors[i].startY = currentY;
+            vectors[i].endX = currentX + vectors[i].dx;
+            vectors[i].endY = currentY + vectors[i].dy;
+            currentX = vectors[i].endX;
+            currentY = vectors[i].endY;
+            vectors[i].name = NAMES[i % NAMES.length];
+            vectors[i].color = COLORS[i % COLORS.length];
+        }
+    }
+    
+    selectedVector = null;
+    updateUI();
+    draw();
+}
+
+function updateUI() {
+    // Update vector list
+    const list = document.getElementById('vectorList');
+    
+    if (vectors.length === 0) {
+        list.innerHTML = '<p style="color: #666; font-size: 0.85em; text-align: center; padding: 10px;">No vectors yet. Click and drag to create!</p>';
+    } else {
+        list.innerHTML = vectors.map((v, i) => `
+            <div class="vector-item" style="border-color: ${v.color}">
+                <div class="vector-color" style="background: ${v.color}"></div>
+                <div class="vector-info">
+                    <div class="vector-name">${v.name.toLowerCase()}</div>
+                    <div class="vector-details">
+                        |${v.name.toLowerCase()}| = ${v.magnitude.toFixed(1)} &nbsp; θ = ${v.angle.toFixed(0)}°<br>
+                        <span style="opacity: 0.7">${v.name.toLowerCase()}ₕ = ${v.dx.toFixed(1)}, ${v.name.toLowerCase()}ᵥ = ${v.dy.toFixed(1)}</span>
+                    </div>
+                </div>
+                <button class="vector-delete" onclick="deleteVector(${i})">×</button>
+            </div>
+        `).join('');
+    }
+    
+    // Update resultant info
+    const resultantInfo = document.getElementById('resultantInfo');
+    const componentBox = document.getElementById('componentBox');
+    
+    if (vectors.length === 0) {
+        resultantInfo.innerHTML = 'Add vectors to see the resultant';
+        componentBox.style.display = 'none';
+    } else if (mode === 'add') {
+        // Calculate resultant
+        let rx = 0, ry = 0;
+        let hComponents = [];
+        let vComponents = [];
+        
+        for (let v of vectors) {
+            rx += v.dx;
+            ry += v.dy;
+            hComponents.push(`${v.name.toLowerCase()}ₕ`);
+            vComponents.push(`${v.name.toLowerCase()}ᵥ`);
+        }
+        
+        const rMag = Math.sqrt(rx * rx + ry * ry);
+        const rAngle = Math.atan2(ry, rx) * 180 / Math.PI;
+        
+        resultantInfo.innerHTML = `
+            <strong>rₕ</strong> = ${hComponents.join(' + ')} = <strong>${rx.toFixed(1)}</strong><br>
+            <strong>rᵥ</strong> = ${vComponents.join(' + ')} = <strong>${ry.toFixed(1)}</strong><br>
+            <strong>|r|</strong> = √(rₕ² + rᵥ²) = <strong>${rMag.toFixed(1)}</strong><br>
+            <strong>θ</strong> = tan⁻¹(rᵥ/rₕ) = <strong>${rAngle.toFixed(1)}°</strong>
+        `;
+        
+        // Show individual components in scrollable area
+        componentBox.style.display = 'block';
+        let componentStr = '<div style="max-height: 100px; overflow-y: auto;">';
+        for (let v of vectors) {
+            componentStr += `<strong style="color:${v.color}">${v.name.toLowerCase()}:</strong> (${v.dx.toFixed(1)}, ${v.dy.toFixed(1)}) &nbsp; `;
+        }
+        componentStr += '</div>';
+        document.getElementById('componentInfo').innerHTML = componentStr;
+        document.querySelector('.component-title').textContent = 'Individual Components';
+    } else if (selectedVector) {
+        const v = selectedVector;
+        const name = v.name.toLowerCase();
+        resultantInfo.innerHTML = `
+            <strong>|${name}|</strong> = ${v.magnitude.toFixed(1)}<br>
+            <strong>θ</strong> = ${v.angle.toFixed(1)}° from horizontal
+        `;
+        
+        componentBox.style.display = 'block';
+        document.getElementById('componentInfo').innerHTML = `
+            <strong>${name}ₕ</strong> = |${name}| cos θ = ${v.dx.toFixed(1)}<br>
+            <strong>${name}ᵥ</strong> = |${name}| sin θ = ${v.dy.toFixed(1)}<br><br>
+            <em style="color: #777;">The vector equals the sum of its components:</em><br>
+            <strong>${name}</strong> = ${name}ₕ + ${name}ᵥ
+        `;
+        document.querySelector('.component-title').textContent = `Vector ${name} Components`;
+    }
+}
+
+function draw() {
+    // Forces mode has separate drawing
+    if (mode === 'forces') {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawForcesMode();
+        return;
+    }
+    
+    // Get component settings
+    const showComponents = document.getElementById('showComponents').checked;
+    const showResultant = document.getElementById('showResultant').checked;
+    const showValues = document.getElementById('showValues').checked;
+    
+    // First, reset canvas to base height to calculate proper scale/origin
+    const baseHeight = 500;
+    if (canvas.height !== baseHeight) {
+        canvas.height = baseHeight;
+    }
+    
+    // Calculate dynamic scale based on vectors (with base height)
+    calculateScale();
+    
+    // Calculate required width for components
+    let requiredWidth = 650; // Minimum width
+    
+    if (showComponents && vectors.length > 0 && mode === 'add') {
+        // Calculate resultant
+        let rx = 0, ry = 0;
+        for (let v of vectors) {
+            rx += v.dx;
+            ry += v.dy;
+        }
+        
+        // Find rightmost point of vector chain
+        let rightmostVectorEndX = ORIGIN_X;
+        let chainX = ORIGIN_X;
+        for (let v of vectors) {
+            chainX += v.dx * SCALE;
+            rightmostVectorEndX = Math.max(rightmostVectorEndX, chainX);
+        }
+        const resultantEndX = ORIGIN_X + rx * SCALE;
+        rightmostVectorEndX = Math.max(rightmostVectorEndX, resultantEndX);
+        
+        // Estimate vertical component line positions
+        const vLineXBase = rightmostVectorEndX + 25;
+        
+        // Count max columns for vertical components (estimate based on overlap)
+        const maxVCol = Math.min(vectors.length - 1, 3);
+        const vLineSpacing = 35;
+        
+        // Position of rightmost vertical line (resultant component)
+        let rightmostX = vLineXBase + (maxVCol + 2) * vLineSpacing;
+        
+        // Add width for calculation text
+        if (showValues && showResultant && vectors.length > 1) {
+            // Estimate text width: "rᵥ = X.X + X.X + X.X + ... = X.X"
+            // Each number is ~4 chars, plus " + " between, plus "rᵥ = " and " = X.X" at end
+            const textWidth = 35 + vectors.length * 50 + 50;
+            rightmostX += textWidth;
+        } else if (showResultant && vectors.length > 1) {
+            // Estimate text width for labels: "rᵥ = aᵥ + bᵥ + cᵥ"
+            const textWidth = 35 + vectors.length * 35;
+            rightmostX += textWidth;
+        } else {
+            rightmostX += 50; // Just label width
+        }
+        
+        requiredWidth = Math.max(requiredWidth, rightmostX + 30);
+    }
+    
+    // Resize canvas WIDTH if needed
+    const newWidth = Math.round(requiredWidth);
+    if (canvas.width !== newWidth) {
+        canvas.width = newWidth;
+        calculateScale();
+    }
+    
+    // Calculate required height - extend DOWNWARD only if components need more space
+    let requiredHeight = baseHeight;
+    
+    if (showComponents && vectors.length > 0 && mode === 'add') {
+        // Calculate resultant
+        let rx = 0, ry = 0;
+        for (let v of vectors) {
+            rx += v.dx;
+            ry += v.dy;
+        }
+        
+        // Find lowest point in UNIT space (most negative Y value)
+        let lowestUnitY = 0;
+        let cumulativeY = 0;
+        for (let v of vectors) {
+            cumulativeY += v.dy;
+            lowestUnitY = Math.min(lowestUnitY, cumulativeY);
+        }
+        lowestUnitY = Math.min(lowestUnitY, ry);
+        
+        // Components layout constants
+        const hLineSpacing = 30;
+        const maxHRow = Math.min(vectors.length - 1, 3);
+        const componentSpace = 40 + (maxHRow + 2) * hLineSpacing + 50;
+        
+        // Calculate the lowest pixel position of vectors relative to origin
+        const lowestVectorPixelY = ORIGIN_Y - lowestUnitY * SCALE;
+        
+        // Components go below that
+        const requiredBottomY = lowestVectorPixelY + componentSpace;
+        
+        // Only extend if needed
+        if (requiredBottomY > baseHeight) {
+            requiredHeight = requiredBottomY;
+        }
+    }
+    
+    // Extend canvas HEIGHT if needed (origin stays fixed, extends downward only)
+    if (requiredHeight > baseHeight) {
+        canvas.height = Math.round(requiredHeight);
+        // Don't recalculate scale - origin stays where it was, canvas just got taller
+    }
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const showGrid = document.getElementById('showGrid').checked;
+    const showAngles = document.getElementById('showAngles').checked;
+    const showLabels = document.getElementById('showLabels').checked;
+    
+    // Draw grid
+    if (showGrid) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.lineWidth = 1;
+        
+        // Calculate grid spacing in units (aim for ~50px spacing)
+        const gridUnit = Math.ceil(50 / SCALE / 5) * 5; // Round to nice numbers
+        const gridPx = gridUnit * SCALE;
+        
+        // Vertical lines
+        const startGridX = Math.floor(-ORIGIN_X / gridPx) * gridPx;
+        for (let x = ORIGIN_X + startGridX; x < canvas.width; x += gridPx) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, canvas.height);
+            ctx.stroke();
+        }
+        
+        // Horizontal lines  
+        const startGridY = Math.floor((ORIGIN_Y - canvas.height) / gridPx) * gridPx;
+        for (let y = ORIGIN_Y + startGridY; y < canvas.height; y += gridPx) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(canvas.width, y);
+            ctx.stroke();
+        }
+    }
+    
+    // Draw axes
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 2;
+    
+    // X axis
+    ctx.beginPath();
+    ctx.moveTo(20, ORIGIN_Y);
+    ctx.lineTo(canvas.width - 10, ORIGIN_Y);
+    ctx.stroke();
+    
+    // X axis arrow
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.beginPath();
+    ctx.moveTo(canvas.width - 10, ORIGIN_Y);
+    ctx.lineTo(canvas.width - 20, ORIGIN_Y - 6);
+    ctx.lineTo(canvas.width - 20, ORIGIN_Y + 6);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Y axis
+    ctx.beginPath();
+    ctx.moveTo(ORIGIN_X, canvas.height - 10);
+    ctx.lineTo(ORIGIN_X, 10);
+    ctx.stroke();
+    
+    // Y axis arrow
+    ctx.beginPath();
+    ctx.moveTo(ORIGIN_X, 10);
+    ctx.lineTo(ORIGIN_X - 6, 20);
+    ctx.lineTo(ORIGIN_X + 6, 20);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Axis labels
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('x', canvas.width - 25, ORIGIN_Y - 10);
+    ctx.fillText('y', ORIGIN_X + 10, 25);
+    
+    // Origin label
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('O', ORIGIN_X - 15, ORIGIN_Y + 15);
+    
+    // Draw scale markers
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '10px sans-serif';
+    
+    // Calculate nice tick interval
+    const tickUnit = Math.ceil(40 / SCALE / 5) * 5;
+    const tickPx = tickUnit * SCALE;
+    
+    // X axis ticks (positive)
+    for (let px = ORIGIN_X + tickPx; px < canvas.width - 30; px += tickPx) {
+        const val = Math.round((px - ORIGIN_X) / SCALE);
+        ctx.fillText(String(val), px - 8, ORIGIN_Y + 15);
+        ctx.beginPath();
+        ctx.moveTo(px, ORIGIN_Y - 3);
+        ctx.lineTo(px, ORIGIN_Y + 3);
+        ctx.stroke();
+    }
+    
+    // X axis ticks (negative)
+    for (let px = ORIGIN_X - tickPx; px > 30; px -= tickPx) {
+        const val = Math.round((px - ORIGIN_X) / SCALE);
+        ctx.fillText(String(val), px - 10, ORIGIN_Y + 15);
+        ctx.beginPath();
+        ctx.moveTo(px, ORIGIN_Y - 3);
+        ctx.lineTo(px, ORIGIN_Y + 3);
+        ctx.stroke();
+    }
+    
+    // Y axis ticks (positive)
+    for (let py = ORIGIN_Y - tickPx; py > 30; py -= tickPx) {
+        const val = Math.round((ORIGIN_Y - py) / SCALE);
+        ctx.fillText(String(val), ORIGIN_X - 25, py + 4);
+        ctx.beginPath();
+        ctx.moveTo(ORIGIN_X - 3, py);
+        ctx.lineTo(ORIGIN_X + 3, py);
+        ctx.stroke();
+    }
+    
+    // Y axis ticks (negative)
+    for (let py = ORIGIN_Y + tickPx; py < canvas.height - 20; py += tickPx) {
+        const val = Math.round((ORIGIN_Y - py) / SCALE);
+        ctx.fillText(String(val), ORIGIN_X - 30, py + 4);
+        ctx.beginPath();
+        ctx.moveTo(ORIGIN_X - 3, py);
+        ctx.lineTo(ORIGIN_X + 3, py);
+        ctx.stroke();
+    }
+    
+    // Draw components aligned along axes
+    if (showComponents) {
+        drawAllComponents(hoveredVector, showValues);
+    }
+    
+    // Draw vectors
+    for (let i = 0; i < vectors.length; i++) {
+        const v = vectors[i];
+        const isHighlighted = v === hoveredVector;
+        drawVector(v.startX, v.startY, v.endX, v.endY, v.color, v.name, isHighlighted, showLabels, showAngles, i + 1, showValues);
+    }
+    
+    // Draw resultant in add mode
+    if (mode === 'add' && vectors.length > 1 && showResultant) {
+        let rx = 0, ry = 0;
+        for (let v of vectors) {
+            rx += v.dx;
+            ry += v.dy;
+        }
+        
+        // Build the formula label: r = a + b + c...
+        const formulaLabel = 'r = ' + vectors.map(v => v.name.toLowerCase()).join(' + ');
+        const rMagnitude = Math.sqrt(rx * rx + ry * ry);
+        
+        // Draw resultant from origin with formula label or magnitude
+        drawResultantVector(0, 0, rx, ry, '#2ecc71', formulaLabel, showLabels, showValues, rMagnitude);
+    }
+    
+    // Draw preview while dragging
+    if (dragging) {
+        const start = pixelToUnit(dragStart.x, dragStart.y);
+        const end = pixelToUnit(dragEnd.x, dragEnd.y);
+        
+        ctx.setLineDash([8, 8]);
+        drawVector(start.x, start.y, end.x, end.y, '#fff', '', false, false, false);
+        ctx.setLineDash([]);
+        
+        // Show magnitude preview
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        const mag = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+        
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.font = '12px sans-serif';
+        ctx.fillText(`|V| = ${mag.toFixed(1)}, θ = ${angle.toFixed(1)}°`, dragEnd.x + 10, dragEnd.y - 10);
+    }
+}
+
+function drawVector(startX, startY, endX, endY, color, name, highlight, showLabel, showAngle, angleIndex = null, showValues = false) {
+    const start = unitToPixel(startX, startY);
+    const end = unitToPixel(endX, endY);
+    
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 5) return;
+    
+    const angle = Math.atan2(dy, dx);
+    
+    // Glow effect for highlighted
+    if (highlight) {
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = color;
+    }
+    
+    // Draw line
+    ctx.strokeStyle = color;
+    ctx.lineWidth = highlight ? 4 : 3;
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(end.x, end.y);
+    ctx.stroke();
+    
+    // Draw arrowhead
+    const headLen = 15;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(end.x, end.y);
+    ctx.lineTo(end.x - headLen * Math.cos(angle - Math.PI/6), end.y - headLen * Math.sin(angle - Math.PI/6));
+    ctx.lineTo(end.x - headLen * Math.cos(angle + Math.PI/6), end.y - headLen * Math.sin(angle + Math.PI/6));
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.shadowBlur = 0;
+    
+    // Calculate magnitude in units
+    const magnitude = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
+    
+    // Draw label or value - place on opposite side from angle arc
+    if ((showLabel || showValues) && name) {
+        const midX = (start.x + end.x) / 2;
+        const midY = (start.y + end.y) / 2;
+        
+        // Perpendicular offset to place label beside vector
+        let perpX = -Math.sin(angle) * 20;
+        let perpY = Math.cos(angle) * 20;
+        
+        // Flip to opposite side from angle arc
+        // Angle arc is drawn from x-axis toward vector, so it's on the "inside" of that angle
+        // For vectors pointing up (negative canvas angle), arc is below, so put label above
+        // For vectors pointing down (positive canvas angle), arc is above, so put label below
+        if (angle < 0) {
+            perpX *= -1;
+            perpY *= -1;
+        }
+        
+        const labelX = midX + perpX;
+        const labelY = midY + perpY;
+        
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillStyle = color;
+        
+        // Show value if showValues is checked, otherwise show label
+        if (showValues) {
+            ctx.fillText(magnitude.toFixed(1), labelX - 15, labelY + 5);
+        } else if (showLabel) {
+            ctx.fillText(name.toLowerCase(), labelX - 5, labelY + 5);
+        }
+    }
+    
+    // Draw angle arc with subscript
+    if (showAngle && magnitude > 3) {
+        const arcRadius = 35;
+        const angleRad = Math.atan2(endY - startY, endX - startX);
+        
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath();
+        if (angleRad >= 0) {
+            ctx.arc(start.x, start.y, arcRadius, 0, -angleRad, true);
+        } else {
+            ctx.arc(start.x, start.y, arcRadius, 0, -angleRad, false);
+        }
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        
+        // Angle label - show value or subscripted theta
+        const labelAngle = -angleRad / 2;
+        ctx.font = '12px sans-serif';
+        const angleDeg = Math.abs(angleRad * 180 / Math.PI);
+        
+        let angleText;
+        if (showValues) {
+            // Show numerical value
+            angleText = `${angleDeg.toFixed(0)}°`;
+        } else {
+            // Create subscript for theta
+            const subscript = angleIndex !== null ? String(angleIndex) : '';
+            const subscriptChars = {'1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉'};
+            const subscriptStr = subscript.split('').map(c => subscriptChars[c] || c).join('');
+            angleText = `θ${subscriptStr}`;
+        }
+        
+        const angleLabelX = start.x + Math.cos(labelAngle) * (arcRadius + 15);
+        const angleLabelY = start.y + Math.sin(labelAngle) * (arcRadius + 15);
+        
+        ctx.fillStyle = color;
+        ctx.fillText(angleText, angleLabelX, angleLabelY);
+    }
+}
+
+// Special function for drawing resultant with formula label
+function drawResultantVector(startX, startY, endX, endY, color, formulaLabel, showLabel, showValues = false, magnitude = 0) {
+    const start = unitToPixel(startX, startY);
+    const end = unitToPixel(endX, endY);
+    
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 5) return;
+    
+    const angle = Math.atan2(dy, dx);
+    
+    // Glow effect
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = color;
+    
+    // Draw line
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(end.x, end.y);
+    ctx.stroke();
+    
+    // Draw arrowhead
+    const headLen = 15;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(end.x, end.y);
+    ctx.lineTo(end.x - headLen * Math.cos(angle - Math.PI/6), end.y - headLen * Math.sin(angle - Math.PI/6));
+    ctx.lineTo(end.x - headLen * Math.cos(angle + Math.PI/6), end.y - headLen * Math.sin(angle + Math.PI/6));
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.shadowBlur = 0;
+    
+    // Draw label or value - place on opposite side from where angle arc would be
+    if (showLabel || showValues) {
+        const midX = (start.x + end.x) / 2;
+        const midY = (start.y + end.y) / 2;
+        
+        // Perpendicular offset
+        let perpX = -Math.sin(angle) * 25;
+        let perpY = Math.cos(angle) * 25;
+        
+        // Flip to opposite side for consistency with other vectors
+        if (angle < 0) {
+            perpX *= -1;
+            perpY *= -1;
+        }
+        
+        const labelX = midX + perpX;
+        const labelY = midY + perpY;
+        
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillStyle = color;
+        
+        if (showValues) {
+            ctx.fillText(magnitude.toFixed(1), labelX - 15, labelY + 5);
+        } else if (showLabel) {
+            ctx.fillText(formulaLabel, labelX - 30, labelY + 5);
+        }
+    }
+    
+    // Draw angle arc for resultant with larger radius to avoid overlap with first vector
+    const showAngles = document.getElementById('showAngles').checked;
+    const rMagnitude = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
+    if (showAngles && rMagnitude > 0.5) {
+        const arcRadius = 55; // Larger radius than regular vectors (35)
+        const angleRad = Math.atan2(endY - startY, endX - startX);
+        
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath();
+        if (angleRad >= 0) {
+            ctx.arc(start.x, start.y, arcRadius, 0, -angleRad, true);
+        } else {
+            ctx.arc(start.x, start.y, arcRadius, 0, -angleRad, false);
+        }
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        
+        // Angle label
+        const labelAngle = -angleRad / 2;
+        ctx.font = '12px sans-serif';
+        const angleDeg = Math.abs(angleRad * 180 / Math.PI);
+        
+        const showValuesCheck = document.getElementById('showValues').checked;
+        let angleText;
+        if (showValuesCheck) {
+            angleText = `${angleDeg.toFixed(0)}°`;
+        } else {
+            angleText = `θᵣ`;
+        }
+        
+        const angleLabelX = start.x + Math.cos(labelAngle) * (arcRadius + 15);
+        const angleLabelY = start.y + Math.sin(labelAngle) * (arcRadius + 15);
+        
+        ctx.fillStyle = color;
+        ctx.fillText(angleText, angleLabelX, angleLabelY);
+    }
+}
+
+function drawComponents(v, highlight) {
+    // This function is now just a placeholder - actual component drawing
+    // is done in drawAllComponents() to align them properly
+}
+
+function drawAllComponents(highlightVector = null, showValues = false) {
+    if (vectors.length === 0) return;
+    
+    const showComponents = document.getElementById('showComponents').checked;
+    if (!showComponents) return;
+    
+    // Find the bounds of all vectors
+    let minX = 0, maxX = 0, minY = 0, maxY = 0;
+    for (let v of vectors) {
+        minX = Math.min(minX, v.startX, v.endX);
+        maxX = Math.max(maxX, v.startX, v.endX);
+        minY = Math.min(minY, v.startY, v.endY);
+        maxY = Math.max(maxY, v.startY, v.endY);
+    }
+    
+    // Calculate resultant endpoint for vertical line position
+    let rx = 0, ry = 0;
+    for (let v of vectors) {
+        rx += v.dx;
+        ry += v.dy;
+    }
+    
+    // Find the lowest point (highest canvas Y) of all vectors and resultant
+    let lowestY = ORIGIN_Y; // Start with origin
+    let cumulativeX = 0, cumulativeY = 0;
+    for (let v of vectors) {
+        cumulativeX += v.dx;
+        cumulativeY += v.dy;
+        // Check endpoint of this vector in head-to-tail chain
+        const endpointY = ORIGIN_Y - cumulativeY * SCALE;
+        lowestY = Math.max(lowestY, endpointY);
+    }
+    // Also check the resultant endpoint
+    const resultantEndY = ORIGIN_Y - ry * SCALE;
+    lowestY = Math.max(lowestY, resultantEndY);
+    
+    // Horizontal components - draw along lines below all vectors
+    const hLineYBase = lowestY + 40; // Below the lowest point
+    const hLineSpacing = 30; // Vertical spacing between overlapping components
+    
+    ctx.lineWidth = 2;
+    
+    // First, calculate all component positions
+    let hComponents = [];
+    let hCursorX = ORIGIN_X;
+    for (let i = 0; i < vectors.length; i++) {
+        const v = vectors[i];
+        const hStartX = hCursorX;
+        const hEndX = hCursorX + v.dx * SCALE;
+        hComponents.push({
+            vector: v,
+            startX: Math.min(hStartX, hEndX),
+            endX: Math.max(hStartX, hEndX),
+            drawStartX: hStartX,
+            drawEndX: hEndX,
+            row: 0 // Which row to draw in (0 = first, 1 = offset down, etc.)
+        });
+        hCursorX = hEndX;
+    }
+    
+    // Check for overlaps and assign rows
+    for (let i = 0; i < hComponents.length; i++) {
+        const comp = hComponents[i];
+        if (Math.abs(comp.drawEndX - comp.drawStartX) < 1) continue; // Skip tiny components
+        
+        // Check against all previous components to find the minimum row that doesn't overlap
+        let maxOverlapRow = -1;
+        for (let j = 0; j < i; j++) {
+            const other = hComponents[j];
+            if (Math.abs(other.drawEndX - other.drawStartX) < 1) continue;
+            
+            // Check if they overlap horizontally
+            const overlap = !(comp.endX <= other.startX || comp.startX >= other.endX);
+            if (overlap && other.row >= maxOverlapRow) {
+                maxOverlapRow = other.row;
+            }
+        }
+        comp.row = maxOverlapRow + 1;
+    }
+    
+    // Now draw the components
+    for (let i = 0; i < hComponents.length; i++) {
+        const comp = hComponents[i];
+        const v = comp.vector;
+        const hLineY = hLineYBase + comp.row * hLineSpacing;
+        const isHighlighted = (v === highlightVector);
+        
+        if (Math.abs(v.dx) > 0.5) {
+            // Apply glow effect if highlighted
+            if (isHighlighted) {
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = v.color;
+            }
+            
+            ctx.strokeStyle = v.color;
+            ctx.fillStyle = v.color;
+            ctx.globalAlpha = isHighlighted ? 1 : 0.8;
+            ctx.lineWidth = isHighlighted ? 3 : 2;
+            
+            // Draw the horizontal component line
+            ctx.beginPath();
+            ctx.moveTo(comp.drawStartX, hLineY);
+            ctx.lineTo(comp.drawEndX, hLineY);
+            ctx.stroke();
+            
+            // Single arrow at the end (direction of component)
+            const arrowSize = isHighlighted ? 8 : 6;
+            const dir = v.dx > 0 ? 1 : -1;
+            
+            ctx.beginPath();
+            ctx.moveTo(comp.drawEndX, hLineY);
+            ctx.lineTo(comp.drawEndX - dir * arrowSize, hLineY - arrowSize);
+            ctx.lineTo(comp.drawEndX - dir * arrowSize, hLineY + arrowSize);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.shadowBlur = 0;
+            
+            // Label below
+            ctx.globalAlpha = 1;
+            ctx.font = isHighlighted ? 'bold 13px sans-serif' : '12px sans-serif';
+            const hLabel = showValues ? `${Math.abs(v.dx).toFixed(1)}` : `${v.name.toLowerCase()}ₕ`;
+            const labelX = (comp.drawStartX + comp.drawEndX) / 2 - (showValues ? 12 : 10);
+            ctx.fillText(hLabel, labelX, hLineY + 18);
+            
+            // Draw dashed vertical lines to show the x-positions if offset
+            if (comp.row > 0) {
+                ctx.setLineDash([4, 4]);
+                ctx.globalAlpha = 0.3;
+                ctx.strokeStyle = v.color;
+                
+                ctx.beginPath();
+                ctx.moveTo(comp.drawStartX, hLineY);
+                ctx.lineTo(comp.drawStartX, hLineYBase - 5);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(comp.drawEndX, hLineY);
+                ctx.lineTo(comp.drawEndX, hLineYBase - 5);
+                ctx.stroke();
+                
+                ctx.setLineDash([]);
+            }
+            
+            ctx.lineWidth = 2;
+        }
+    }
+    
+    // Draw dashed lines connecting vector endpoints to horizontal component line
+    ctx.setLineDash([4, 4]);
+    ctx.globalAlpha = 0.4;
+    ctx.strokeStyle = '#888';
+    
+    // From origin down to component line
+    ctx.beginPath();
+    ctx.moveTo(ORIGIN_X, lowestY);
+    ctx.lineTo(ORIGIN_X, hLineYBase);
+    ctx.stroke();
+    
+    // From resultant endpoint down to component line
+    const resultantEndX = ORIGIN_X + rx * SCALE;
+    ctx.beginPath();
+    ctx.moveTo(resultantEndX, lowestY);
+    ctx.lineTo(resultantEndX, hLineYBase);
+    ctx.stroke();
+    
+    ctx.setLineDash([]);
+    
+    // Vertical components - draw along lines to the right, offset only if overlapping
+    // Find rightmost X position of all vector chain endpoints
+    let rightmostVectorX = ORIGIN_X;
+    let chainX = ORIGIN_X;
+    for (let v of vectors) {
+        chainX += v.dx * SCALE;
+        rightmostVectorX = Math.max(rightmostVectorX, chainX);
+    }
+    rightmostVectorX = Math.max(rightmostVectorX, resultantEndX);
+    
+    const vLineXBase = rightmostVectorX + 25; // To the right of all vectors
+    const vLineSpacing = 35; // Horizontal spacing between overlapping components
+    
+    // First, calculate all component positions
+    let vComponents = [];
+    let vCursorY = ORIGIN_Y;
+    for (let i = 0; i < vectors.length; i++) {
+        const v = vectors[i];
+        const vStartY = vCursorY;
+        const vEndY = vCursorY - v.dy * SCALE;
+        vComponents.push({
+            vector: v,
+            startY: Math.min(vStartY, vEndY),
+            endY: Math.max(vStartY, vEndY),
+            drawStartY: vStartY,
+            drawEndY: vEndY,
+            column: 0 // Which column to draw in (0 = first, 1 = offset, etc.)
+        });
+        vCursorY = vEndY;
+    }
+    
+    // Check for overlaps and assign columns
+    for (let i = 0; i < vComponents.length; i++) {
+        const comp = vComponents[i];
+        if (Math.abs(comp.drawEndY - comp.drawStartY) < 1) continue; // Skip tiny components
+        
+        // Check against all previous components to find the minimum column that doesn't overlap
+        let maxOverlapColumn = -1;
+        for (let j = 0; j < i; j++) {
+            const other = vComponents[j];
+            if (Math.abs(other.drawEndY - other.drawStartY) < 1) continue;
+            
+            // Check if they overlap vertically
+            const overlap = !(comp.endY <= other.startY || comp.startY >= other.endY);
+            if (overlap && other.column >= maxOverlapColumn) {
+                maxOverlapColumn = other.column;
+            }
+        }
+        comp.column = maxOverlapColumn + 1;
+    }
+    
+    // Now draw the components
+    for (let i = 0; i < vComponents.length; i++) {
+        const comp = vComponents[i];
+        const v = comp.vector;
+        const vLineX = vLineXBase + comp.column * vLineSpacing;
+        const isHighlighted = (v === highlightVector);
+        
+        if (Math.abs(v.dy) > 0.5) {
+            // Apply glow effect if highlighted
+            if (isHighlighted) {
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = v.color;
+            }
+            
+            ctx.strokeStyle = v.color;
+            ctx.fillStyle = v.color;
+            ctx.globalAlpha = isHighlighted ? 1 : 0.8;
+            ctx.lineWidth = isHighlighted ? 3 : 2;
+            
+            // Draw the vertical component line
+            ctx.beginPath();
+            ctx.moveTo(vLineX, comp.drawStartY);
+            ctx.lineTo(vLineX, comp.drawEndY);
+            ctx.stroke();
+            
+            // Single arrow at the end (direction of component)
+            const arrowSize = isHighlighted ? 8 : 6;
+            const dir = v.dy > 0 ? -1 : 1; // Inverted for canvas
+            
+            ctx.beginPath();
+            ctx.moveTo(vLineX, comp.drawEndY);
+            ctx.lineTo(vLineX - arrowSize, comp.drawEndY - dir * arrowSize);
+            ctx.lineTo(vLineX + arrowSize, comp.drawEndY - dir * arrowSize);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.shadowBlur = 0;
+            
+            // Label to the right
+            ctx.globalAlpha = 1;
+            ctx.font = isHighlighted ? 'bold 13px sans-serif' : '12px sans-serif';
+            const vLabel = showValues ? `${Math.abs(v.dy).toFixed(1)}` : `${v.name.toLowerCase()}ᵥ`;
+            const labelY = (comp.drawStartY + comp.drawEndY) / 2 + 4;
+            ctx.fillText(vLabel, vLineX + 8, labelY);
+            
+            // Draw dashed horizontal lines to show the y-levels if offset
+            if (comp.column > 0) {
+                ctx.setLineDash([4, 4]);
+                ctx.globalAlpha = 0.3;
+                ctx.strokeStyle = v.color;
+                
+                ctx.beginPath();
+                ctx.moveTo(vLineX, comp.drawStartY);
+                ctx.lineTo(vLineXBase - 5, comp.drawStartY);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(vLineX, comp.drawEndY);
+                ctx.lineTo(vLineXBase - 5, comp.drawEndY);
+                ctx.stroke();
+                
+                ctx.setLineDash([]);
+            }
+            
+            ctx.lineWidth = 2;
+        }
+    }
+    
+    // Draw dashed lines connecting to first vertical component line
+    ctx.setLineDash([4, 4]);
+    ctx.globalAlpha = 0.4;
+    ctx.strokeStyle = '#888';
+    
+    // From rightmost vector point across to first vertical component
+    ctx.beginPath();
+    ctx.moveTo(rightmostVectorX, ORIGIN_Y);
+    ctx.lineTo(vLineXBase, ORIGIN_Y);
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.moveTo(rightmostVectorX, resultantEndY);
+    ctx.lineTo(vLineXBase, resultantEndY);
+    ctx.stroke();
+    
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+    
+    // Draw resultant components with calculation breakdown
+    const showResultant = document.getElementById('showResultant').checked;
+    if (vectors.length > 1 && showResultant && mode === 'add') {
+        const resultantColor = '#2ecc71';
+        
+        // Find max row used for horizontal components
+        let maxHRow = 0;
+        for (let comp of hComponents) {
+            if (comp.row > maxHRow) maxHRow = comp.row;
+        }
+        
+        // Draw resultant horizontal component
+        const rHLineY = hLineYBase + (maxHRow + 1) * hLineSpacing + 15;
+        
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = resultantColor;
+        ctx.strokeStyle = resultantColor;
+        ctx.fillStyle = resultantColor;
+        ctx.globalAlpha = 0.9;
+        ctx.lineWidth = 3;
+        
+        // Draw the resultant horizontal component line
+        ctx.beginPath();
+        ctx.moveTo(ORIGIN_X, rHLineY);
+        ctx.lineTo(resultantEndX, rHLineY);
+        ctx.stroke();
+        
+        // Arrow at the end
+        const arrowSize = 7;
+        const hDir = rx > 0 ? 1 : -1;
+        if (Math.abs(rx) > 0.5) {
+            ctx.beginPath();
+            ctx.moveTo(resultantEndX, rHLineY);
+            ctx.lineTo(resultantEndX - hDir * arrowSize, rHLineY - arrowSize);
+            ctx.lineTo(resultantEndX - hDir * arrowSize, rHLineY + arrowSize);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        // Build calculation string for horizontal
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+        ctx.font = '12px sans-serif';
+        
+        if (showValues) {
+            // Show: rₕ = 5.2 + 3.1 + (-2.0) = 6.3
+            let calcParts = vectors.map(v => {
+                const val = v.dx;
+                return val < 0 ? `(${val.toFixed(1)})` : val.toFixed(1);
+            });
+            const calcStr = `rₕ = ${calcParts.join(' + ')} = ${rx.toFixed(1)}`;
+            ctx.fillText(calcStr, ORIGIN_X, rHLineY + 18);
+        } else {
+            // Show: rₕ = aₕ + bₕ + cₕ
+            let labelParts = vectors.map(v => `${v.name.toLowerCase()}ₕ`);
+            const labelStr = `rₕ = ${labelParts.join(' + ')}`;
+            ctx.fillText(labelStr, ORIGIN_X, rHLineY + 18);
+        }
+        
+        // Find max column used for vertical components
+        let maxVCol = 0;
+        for (let comp of vComponents) {
+            if (comp.column > maxVCol) maxVCol = comp.column;
+        }
+        
+        // Draw resultant vertical component
+        const rVLineX = vLineXBase + (maxVCol + 1) * vLineSpacing + 15;
+        
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = resultantColor;
+        ctx.strokeStyle = resultantColor;
+        ctx.fillStyle = resultantColor;
+        ctx.globalAlpha = 0.9;
+        ctx.lineWidth = 3;
+        
+        // Draw the resultant vertical component line
+        ctx.beginPath();
+        ctx.moveTo(rVLineX, ORIGIN_Y);
+        ctx.lineTo(rVLineX, resultantEndY);
+        ctx.stroke();
+        
+        // Arrow at the end
+        const vDir = ry > 0 ? -1 : 1;
+        if (Math.abs(ry) > 0.5) {
+            ctx.beginPath();
+            ctx.moveTo(rVLineX, resultantEndY);
+            ctx.lineTo(rVLineX - arrowSize, resultantEndY - vDir * arrowSize);
+            ctx.lineTo(rVLineX + arrowSize, resultantEndY - vDir * arrowSize);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        // Build calculation string for vertical
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+        ctx.font = '12px sans-serif';
+        
+        if (showValues) {
+            // Show: rᵥ = 5.2 + 3.1 + (-2.0) = 6.3
+            let calcParts = vectors.map(v => {
+                const val = v.dy;
+                return val < 0 ? `(${val.toFixed(1)})` : val.toFixed(1);
+            });
+            const calcStr = `rᵥ = ${calcParts.join(' + ')} = ${ry.toFixed(1)}`;
+            const labelY = (ORIGIN_Y + resultantEndY) / 2;
+            ctx.fillText(calcStr, rVLineX + 10, labelY);
+        } else {
+            // Show: rᵥ = aᵥ + bᵥ + cᵥ
+            let labelParts = vectors.map(v => `${v.name.toLowerCase()}ᵥ`);
+            const labelStr = `rᵥ = ${labelParts.join(' + ')}`;
+            const labelY = (ORIGIN_Y + resultantEndY) / 2;
+            ctx.fillText(labelStr, rVLineX + 10, labelY);
+        }
+        
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 0;
+    }
+}
+
+function drawForcesMode() {
+    const showResultant = document.getElementById('showForceResultant').checked;
+    const showMagnitudes = document.getElementById('showForceMagnitudes').checked;
+    
+    // Draw subtle background grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < canvas.width; x += 50) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += 50) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
+    
+    // Draw snap indicators (circles at force start and end points)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.lineWidth = 2;
+    for (let f of forces) {
+        // End (tip)
+        ctx.beginPath();
+        ctx.arc(f.endX, f.endY, 8, 0, Math.PI * 2);
+        ctx.stroke();
+        // Start (base)
+        ctx.beginPath();
+        ctx.arc(f.startX, f.startY, 8, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+    // Also at mass
+    ctx.beginPath();
+    ctx.arc(massPos.x, massPos.y, MASS_RADIUS + 5, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Draw quiz target (ghost vector)
+    if (quizMode && quizTarget) {
+        const targetEndX = massPos.x + quizTarget.dx;
+        const targetEndY = massPos.y + quizTarget.dy;
+        const angle = Math.atan2(quizTarget.dy, quizTarget.dx);
+        
+        // Draw dashed target vector
+        ctx.setLineDash([12, 8]);
+        ctx.strokeStyle = quizSolved ? '#2ecc71' : '#f39c12';
+        ctx.lineWidth = 4;
+        ctx.globalAlpha = quizSolved ? 1 : 0.6;
+        ctx.shadowBlur = quizSolved ? 20 : 10;
+        ctx.shadowColor = quizSolved ? '#2ecc71' : '#f39c12';
+        
+        ctx.beginPath();
+        ctx.moveTo(massPos.x, massPos.y);
+        ctx.lineTo(targetEndX, targetEndY);
+        ctx.stroke();
+        
+        // Target arrowhead
+        const headLen = 18;
+        ctx.setLineDash([]);
+        ctx.fillStyle = quizSolved ? '#2ecc71' : '#f39c12';
+        ctx.beginPath();
+        ctx.moveTo(targetEndX, targetEndY);
+        ctx.lineTo(targetEndX - headLen * Math.cos(angle - Math.PI/6), targetEndY - headLen * Math.sin(angle - Math.PI/6));
+        ctx.lineTo(targetEndX - headLen * Math.cos(angle + Math.PI/6), targetEndY - headLen * Math.sin(angle + Math.PI/6));
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+        
+        // Target label
+        ctx.fillStyle = quizSolved ? '#2ecc71' : '#f39c12';
+        ctx.font = 'bold 13px sans-serif';
+        const labelX = targetEndX + Math.cos(angle) * 25;
+        const labelY = targetEndY + Math.sin(angle) * 25;
+        ctx.fillText(quizSolved ? '✓ TARGET' : 'TARGET', labelX - 25, labelY + 5);
+        
+        // Draw target circle at endpoint
+        ctx.beginPath();
+        ctx.arc(targetEndX, targetEndY, 8, 0, Math.PI * 2);
+        ctx.strokeStyle = quizSolved ? '#2ecc71' : '#f39c12';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+    
+    // Draw forces
+    for (let i = 0; i < forces.length; i++) {
+        const f = forces[i];
+        const isSelected = selectedForces.includes(i);
+        drawForce(f, showMagnitudes, isSelected);
+    }
+    
+    // Draw parallelogram if 2 forces are selected
+    const showParallelogram = document.getElementById('showParallelogram').checked;
+    if (showParallelogram && selectedForces.length === 2) {
+        const f1 = forces[selectedForces[0]];
+        const f2 = forces[selectedForces[1]];
+        
+        // Both forces should start from mass - use mass position as common origin
+        const originX = massPos.x;
+        const originY = massPos.y;
+        
+        // The four corners of the parallelogram:
+        // 1. Origin (mass)
+        // 2. End of F1
+        // 3. End of F2
+        // 4. Diagonal corner (F1 + F2)
+        const corner1 = { x: originX, y: originY };
+        const corner2 = { x: originX + f1.dx, y: originY + f1.dy };
+        const corner3 = { x: originX + f2.dx, y: originY + f2.dy };
+        const corner4 = { x: originX + f1.dx + f2.dx, y: originY + f1.dy + f2.dy };
+        
+        // Draw the parallelogram edges (dashed lines for the "ghost" sides)
+        ctx.setLineDash([8, 6]);
+        ctx.lineWidth = 3;
+        ctx.globalAlpha = 0.7;
+        
+        // Ghost of F1 from tip of F2 to diagonal corner
+        ctx.strokeStyle = f1.color;
+        ctx.beginPath();
+        ctx.moveTo(corner3.x, corner3.y);
+        ctx.lineTo(corner4.x, corner4.y);
+        ctx.stroke();
+        
+        // Ghost of F2 from tip of F1 to diagonal corner
+        ctx.strokeStyle = f2.color;
+        ctx.beginPath();
+        ctx.moveTo(corner2.x, corner2.y);
+        ctx.lineTo(corner4.x, corner4.y);
+        ctx.stroke();
+        
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
+        
+        // Draw the resultant diagonal with glow
+        const rx = f1.dx + f2.dx;
+        const ry = f1.dy + f2.dy;
+        const rMag = Math.sqrt(rx * rx + ry * ry);
+        
+        if (rMag > 5) {
+            const angle = Math.atan2(ry, rx);
+            
+            ctx.strokeStyle = '#2ecc71';
+            ctx.lineWidth = 5;
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#2ecc71';
+            ctx.beginPath();
+            ctx.moveTo(corner1.x, corner1.y);
+            ctx.lineTo(corner4.x, corner4.y);
+            ctx.stroke();
+            
+            // Arrowhead for parallelogram resultant
+            const headLen = 18;
+            ctx.fillStyle = '#2ecc71';
+            ctx.beginPath();
+            ctx.moveTo(corner4.x, corner4.y);
+            ctx.lineTo(corner4.x - headLen * Math.cos(angle - Math.PI/6), corner4.y - headLen * Math.sin(angle - Math.PI/6));
+            ctx.lineTo(corner4.x - headLen * Math.cos(angle + Math.PI/6), corner4.y - headLen * Math.sin(angle + Math.PI/6));
+            ctx.closePath();
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            // Label
+            ctx.fillStyle = '#2ecc71';
+            ctx.font = 'bold 14px sans-serif';
+            const labelX = corner4.x + Math.cos(angle) * 20;
+            const labelY = corner4.y + Math.sin(angle) * 20;
+            if (showMagnitudes) {
+                ctx.fillText(`R = ${rMag.toFixed(0)} N`, labelX - 20, labelY + 5);
+            } else {
+                ctx.fillText('R', labelX - 5, labelY + 5);
+            }
+        }
+        
+        // Draw small circles at parallelogram corners
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        for (let corner of [corner2, corner3, corner4]) {
+            ctx.beginPath();
+            ctx.arc(corner.x, corner.y, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    
+    // Calculate and draw resultant (skip if showing parallelogram for just 2 selected forces)
+    const skipNormalResultant = showParallelogram && selectedForces.length === 2;
+    if (showResultant && forces.length >= 1 && !skipNormalResultant) {
+        let rx = 0, ry = 0;
+        for (let f of forces) {
+            rx += f.dx;
+            ry += f.dy;
+        }
+        
+        const rMag = Math.sqrt(rx * rx + ry * ry);
+        
+        // Create or update resultantForce object
+        if (!resultantForce) {
+            resultantForce = {
+                startX: massPos.x,
+                startY: massPos.y,
+                endX: massPos.x + rx,
+                endY: massPos.y + ry,
+                dx: rx,
+                dy: ry
+            };
+        } else {
+            // Always update the dx/dy to match calculated resultant
+            resultantForce.dx = rx;
+            resultantForce.dy = ry;
+            
+            // Only reset position if not manually moved
+            if (!resultantMoved) {
+                resultantForce.startX = massPos.x;
+                resultantForce.startY = massPos.y;
+                resultantForce.endX = massPos.x + rx;
+                resultantForce.endY = massPos.y + ry;
+            } else {
+                // Keep start position, update end to maintain correct magnitude/direction
+                resultantForce.endX = resultantForce.startX + rx;
+                resultantForce.endY = resultantForce.startY + ry;
+            }
+        }
+        
+        if (rMag > 5) {
+            const angle = Math.atan2(resultantForce.endY - resultantForce.startY, resultantForce.endX - resultantForce.startX);
+            
+            // Draw resultant
+            ctx.strokeStyle = '#2ecc71';
+            ctx.lineWidth = 5;
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#2ecc71';
+            ctx.beginPath();
+            ctx.moveTo(resultantForce.startX, resultantForce.startY);
+            ctx.lineTo(resultantForce.endX, resultantForce.endY);
+            ctx.stroke();
+            
+            // Arrowhead
+            const headLen = 18;
+            ctx.fillStyle = '#2ecc71';
+            ctx.beginPath();
+            ctx.moveTo(resultantForce.endX, resultantForce.endY);
+            ctx.lineTo(resultantForce.endX - headLen * Math.cos(angle - Math.PI/6), resultantForce.endY - headLen * Math.sin(angle - Math.PI/6));
+            ctx.lineTo(resultantForce.endX - headLen * Math.cos(angle + Math.PI/6), resultantForce.endY - headLen * Math.sin(angle + Math.PI/6));
+            ctx.closePath();
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            // Label at tip - always show "R = X N"
+            ctx.fillStyle = '#2ecc71';
+            ctx.font = 'bold 14px sans-serif';
+            const labelOffset = 20;
+            const labelX = resultantForce.endX + Math.cos(angle) * labelOffset;
+            const labelY = resultantForce.endY + Math.sin(angle) * labelOffset;
+            if (showMagnitudes) {
+                ctx.fillText(`R = ${rMag.toFixed(0)} N`, labelX - 20, labelY + 5);
+            } else {
+                ctx.fillText('R', labelX - 5, labelY + 5);
+            }
+        }
+    } else {
+        resultantForce = null;
+    }
+    
+    // Draw mass
+    ctx.beginPath();
+    ctx.arc(massPos.x, massPos.y, MASS_RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle = '#555';
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Mass label
+    ctx.fillStyle = '#ccc';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('m', massPos.x, massPos.y + 4);
+    ctx.textAlign = 'left';
+    
+    // Equilibrium indicator
+    const showEquilibrium = document.getElementById('showEquilibrium').checked;
+    if (showEquilibrium && forces.length >= 2) {
+        let rx = 0, ry = 0;
+        for (let f of forces) {
+            rx += f.dx;
+            ry += f.dy;
+        }
+        const rMag = Math.sqrt(rx * rx + ry * ry);
+        
+        if (rMag < 5) {
+            // Balanced! Draw pulsing indicator
+            const pulse = Math.sin(equilibriumPulse) * 0.3 + 0.7;
+            const pulseRadius = MASS_RADIUS + 15 + Math.sin(equilibriumPulse) * 5;
+            
+            // Glowing ring
+            ctx.beginPath();
+            ctx.arc(massPos.x, massPos.y, pulseRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(46, 204, 113, ${pulse})`;
+            ctx.lineWidth = 4;
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#2ecc71';
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            
+            // Second ring
+            ctx.beginPath();
+            ctx.arc(massPos.x, massPos.y, pulseRadius + 8, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(46, 204, 113, ${pulse * 0.5})`;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // "BALANCED" text
+            ctx.fillStyle = `rgba(46, 204, 113, ${pulse})`;
+            ctx.font = 'bold 14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('BALANCED', massPos.x, massPos.y - MASS_RADIUS - 25);
+            ctx.textAlign = 'left';
+            
+            // Keep animating
+            if (!equilibriumAnimating) {
+                equilibriumAnimating = true;
+                equilibriumPulse = 0;
+                animateEquilibrium();
+            }
+        } else {
+            equilibriumAnimating = false;
+        }
+    }
+    
+    // Quiz mode - check solution when forces change
+    if (quizMode) {
+        checkQuizSolution();
+    }
+    
+    // Draw preview while dragging
+    if (dragging) {
+        ctx.setLineDash([8, 8]);
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(massPos.x, massPos.y);
+        ctx.lineTo(dragEnd.x, dragEnd.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        // Preview magnitude
+        const dx = dragEnd.x - massPos.x;
+        const dy = dragEnd.y - massPos.y;
+        const mag = Math.sqrt(dx * dx + dy * dy);
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.font = '12px sans-serif';
+        ctx.fillText(`${mag.toFixed(0)} N`, dragEnd.x + 10, dragEnd.y - 10);
+    }
+    
+    // Draw particles
+    if (particles.length > 0) {
+        drawParticles();
+    }
+}
+
+function drawForce(f, showMagnitude, isSelected = false) {
+    const angle = Math.atan2(f.dy, f.dx);
+    
+    // Draw selection highlight ring if selected
+    if (isSelected) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = 12;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(f.startX, f.startY);
+        ctx.lineTo(f.endX, f.endY);
+        ctx.stroke();
+        ctx.lineCap = 'butt';
+    }
+    
+    // Draw force line
+    ctx.strokeStyle = f.color;
+    ctx.lineWidth = isSelected ? 6 : 4;
+    ctx.shadowBlur = isSelected ? 25 : 15;
+    ctx.shadowColor = f.color;
+    ctx.beginPath();
+    ctx.moveTo(f.startX, f.startY);
+    ctx.lineTo(f.endX, f.endY);
+    ctx.stroke();
+    
+    // Arrowhead
+    const headLen = isSelected ? 20 : 16;
+    ctx.fillStyle = f.color;
+    ctx.beginPath();
+    ctx.moveTo(f.endX, f.endY);
+    ctx.lineTo(f.endX - headLen * Math.cos(angle - Math.PI/6), f.endY - headLen * Math.sin(angle - Math.PI/6));
+    ctx.lineTo(f.endX - headLen * Math.cos(angle + Math.PI/6), f.endY - headLen * Math.sin(angle + Math.PI/6));
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    
+    // Label at tip
+    ctx.fillStyle = f.color;
+    ctx.font = isSelected ? 'bold 16px sans-serif' : 'bold 14px sans-serif';
+    
+    // Position label offset from arrow tip
+    const labelOffset = 20;
+    const labelX = f.endX + Math.cos(angle) * labelOffset;
+    const labelY = f.endY + Math.sin(angle) * labelOffset;
+    
+    if (showMagnitude) {
+        ctx.fillText(`${f.name} = ${f.magnitude.toFixed(0)} N`, labelX - 20, labelY + 5);
+    } else {
+        ctx.fillText(f.name, labelX - 5, labelY + 5);
+    }
+}
+
+// Quiz mode functions
+function startQuiz() {
+    quizMode = true;
+    quizSolved = false;
+    forces = [];
+    selectedForces = [];
+    resultantForce = null;
+    resultantMoved = false;
+    particles = []; // Clear any existing particles
+    
+    // Generate random target resultant
+    const magnitude = 80 + Math.random() * 120; // 80-200 N
+    const angle = Math.random() * 360; // Random direction
+    const rad = angle * Math.PI / 180;
+    
+    quizTarget = {
+        dx: Math.cos(rad) * magnitude,
+        dy: -Math.sin(rad) * magnitude, // Negative for canvas coords
+        magnitude: magnitude,
+        angle: angle
+    };
+    
+    document.getElementById('quizBtn').style.display = 'none';
+    document.getElementById('quizInfo').style.display = 'block';
+    document.getElementById('quizTarget').innerHTML = `
+        Create forces that produce a resultant of:<br>
+        <strong style="color: #f39c12;">|R| = ${magnitude.toFixed(1)} N at ${angle.toFixed(1)}°</strong>
+    `;
+    document.getElementById('quizFeedback').innerHTML = '<span style="color: #888;">Add forces to match the target exactly...</span>';
+    
+    // Start countdown timer
+    quizStartTime = Date.now();
+    quizDuration = 60;
+    updateQuizTimer();
+    quizTimerInterval = setInterval(updateQuizTimer, 100); // Update every 100ms for smooth animation
+    
+    updateForcesUI();
+    draw();
+}
+
+function endQuiz() {
+    quizMode = false;
+    quizTarget = null;
+    quizSolved = false;
+    
+    // Stop timer
+    if (quizTimerInterval) {
+        clearInterval(quizTimerInterval);
+        quizTimerInterval = null;
+    }
+    
+    document.getElementById('quizBtn').style.display = 'block';
+    document.getElementById('quizInfo').style.display = 'none';
+    
+    draw();
+}
+
+function updateQuizTimer() {
+    if (!quizMode || quizSolved) {
+        if (quizTimerInterval) {
+            clearInterval(quizTimerInterval);
+            quizTimerInterval = null;
+        }
+        return;
+    }
+    
+    const elapsed = (Date.now() - quizStartTime) / 1000;
+    const remaining = Math.max(0, quizDuration - elapsed);
+    
+    // Update circular progress
+    const circle = document.getElementById('quizTimerCircle');
+    const circumference = 2 * Math.PI * 26; // r=26
+    const progress = remaining / quizDuration;
+    const offset = circumference * (1 - progress);
+    circle.style.strokeDashoffset = offset;
+    
+    // Change color as time runs low
+    let color = '#f39c12'; // Orange
+    if (remaining <= 10) {
+        color = '#e74c3c'; // Red
+        circle.style.stroke = color;
+    } else if (remaining <= 20) {
+        color = '#e67e22'; // Dark orange
+        circle.style.stroke = color;
+    } else {
+        circle.style.stroke = '#f39c12';
+    }
+    
+    // Update text
+    const timerText = document.getElementById('quizTimerText');
+    timerText.textContent = Math.ceil(remaining);
+    timerText.style.color = color;
+    
+    // Time's up!
+    if (remaining <= 0) {
+        clearInterval(quizTimerInterval);
+        quizTimerInterval = null;
+        
+        document.getElementById('quizFeedback').innerHTML = `
+            <span style="color: #e74c3c; font-weight: bold;">⏱ Time's up!</span><br>
+            <span style="color: #888;">Click "Exit Quiz" to try again</span>
+        `;
+    }
+}
+
+function checkQuizSolution() {
+    if (!quizMode || !quizTarget || forces.length === 0) return;
+    
+    // Check if time has run out
+    const elapsed = (Date.now() - quizStartTime) / 1000;
+    if (elapsed >= quizDuration) return;
+    
+    let rx = 0, ry = 0;
+    for (let f of forces) {
+        rx += f.dx;
+        ry += f.dy;
+    }
+    
+    const rMag = Math.sqrt(rx * rx + ry * ry);
+    const targetMag = quizTarget.magnitude;
+    
+    // Check magnitude (within 10%)
+    const magError = Math.abs(rMag - targetMag) / targetMag;
+    
+    // Check direction - normalize both angles to 0-360
+    let rAngle = Math.atan2(-ry, rx) * 180 / Math.PI;
+    if (rAngle < 0) rAngle += 360; // Normalize to 0-360
+    let targetAngle = quizTarget.angle;
+    
+    // Calculate smallest angle difference
+    let angleDiff = Math.abs(rAngle - targetAngle);
+    if (angleDiff > 180) angleDiff = 360 - angleDiff;
+    
+    const feedback = document.getElementById('quizFeedback');
+    
+    if (magError < 0.10 && angleDiff < 8) {
+        const wasAlreadySolved = quizSolved;
+        quizSolved = true;
+        
+        // Stop timer
+        if (quizTimerInterval) {
+            clearInterval(quizTimerInterval);
+            quizTimerInterval = null;
+        }
+        
+        // Trigger particle effect only once
+        if (!wasAlreadySolved) {
+            triggerSuccessEffect();
+        }
+        
+        // Show success with time
+        const timeTaken = elapsed.toFixed(1);
+        feedback.innerHTML = `
+            <span style="color: #2ecc71; font-weight: bold;">✓ Correct!</span><br>
+            <span style="color: #aaa;">Your resultant: ${rMag.toFixed(1)} N at ${rAngle.toFixed(1)}°</span><br>
+            <span style="color: #2ecc71;">⏱ Time: ${timeTaken}s</span>
+        `;
+        
+        // Update timer circle to green
+        document.getElementById('quizTimerCircle').style.stroke = '#2ecc71';
+        document.getElementById('quizTimerText').style.color = '#2ecc71';
+    } else {
+        quizSolved = false;
+        let hints = [];
+        if (magError >= 0.10) {
+            hints.push(rMag < targetMag ? 'Need more force' : 'Too much force');
+        }
+        if (angleDiff >= 8) {
+            hints.push('Direction not quite right');
+        }
+        feedback.innerHTML = `
+            <span style="color: #e74c3c;">Not quite...</span><br>
+            <span style="color: #aaa;">Your resultant: ${rMag.toFixed(1)} N at ${rAngle.toFixed(1)}°</span><br>
+            <span style="color: #f39c12; font-size: 0.9em;">${hints.join(' • ')}</span>
+        `;
+    }
+}
+
+// Equilibrium animation
+function animateEquilibrium() {
+    if (!equilibriumAnimating) return;
+    
+    equilibriumPulse += 0.1;
+    if (equilibriumPulse > Math.PI * 2) equilibriumPulse = 0;
+    
+    draw();
+    requestAnimationFrame(animateEquilibrium);
+}
+
+function checkEquilibrium() {
+    if (forces.length < 2) {
+        equilibriumAnimating = false;
+        return false;
+    }
+    
+    let rx = 0, ry = 0;
+    for (let f of forces) {
+        rx += f.dx;
+        ry += f.dy;
+    }
+    
+    const rMag = Math.sqrt(rx * rx + ry * ry);
+    const isBalanced = rMag < 5; // Threshold for "balanced" (<5N)
+    
+    if (isBalanced && !equilibriumAnimating) {
+        equilibriumAnimating = true;
+        equilibriumPulse = 0;
+        animateEquilibrium();
+    } else if (!isBalanced) {
+        equilibriumAnimating = false;
+    }
+    
+    return isBalanced;
+}
+
+// Particle effects for quiz success
+function createParticles(x, y, count = 50) {
+    const colors = ['#2ecc71', '#f39c12', '#e74c3c', '#3498db', '#9b59b6', '#1abc9c', '#fff', '#ffeb3b'];
+    
+    for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i / count) + (Math.random() - 0.5) * 0.5;
+        const speed = 3 + Math.random() * 8;
+        const size = 4 + Math.random() * 8;
+        
+        particles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 2, // Slight upward bias
+            size: size,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            life: 1,
+            decay: 0.015 + Math.random() * 0.01,
+            gravity: 0.15,
+            rotation: Math.random() * Math.PI * 2,
+            rotationSpeed: (Math.random() - 0.5) * 0.3,
+            shape: Math.random() > 0.5 ? 'circle' : 'rect' // Mix of shapes
+        });
+    }
+    
+    if (!particleAnimating) {
+        particleAnimating = true;
+        animateParticles();
+    }
+}
+
+function animateParticles() {
+    if (particles.length === 0) {
+        particleAnimating = false;
+        return;
+    }
+    
+    // Update particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += p.gravity;
+        p.vx *= 0.99; // Air resistance
+        p.life -= p.decay;
+        p.rotation += p.rotationSpeed;
+        
+        if (p.life <= 0) {
+            particles.splice(i, 1);
+        }
+    }
+    
+    draw();
+    requestAnimationFrame(animateParticles);
+}
+
+function drawParticles() {
+    for (let p of particles) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = p.color;
+        
+        if (p.shape === 'circle') {
+            ctx.beginPath();
+            ctx.arc(0, 0, p.size * p.life, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            const size = p.size * p.life;
+            ctx.fillRect(-size/2, -size/2, size, size);
+        }
+        
+        ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+}
+
+function triggerSuccessEffect() {
+    // Get target endpoint position
+    const targetEndX = massPos.x + quizTarget.dx;
+    const targetEndY = massPos.y + quizTarget.dy;
+    
+    // Create particles at target
+    createParticles(targetEndX, targetEndY, 60);
+    
+    // Create particles at mass center too
+    createParticles(massPos.x, massPos.y, 30);
+}
+
+// ==================== HELP MODAL ====================
+// Two overlays: one per mode. The title-row button calls
+// toggleHelp(mode === 'add' ? 'Add' : 'Forces') so the right overlay opens
+// for the active tab. Toggling the same id closes it; toggling the other
+// id closes any open overlay and opens the chosen one - matches the
+// Projectiles / Moments pattern.
+function toggleHelp(tab) {
+    var ids = ['Add', 'Forces'];
+    for (var i = 0; i < ids.length; i++) {
+        var ov = document.getElementById('helpOverlay' + ids[i]);
+        if (!ov) continue;
+        if (ids[i] === tab) {
+            ov.style.display = (ov.style.display === 'none' || ov.style.display === '') ? 'flex' : 'none';
+        } else {
+            ov.style.display = 'none';
+        }
+    }
+}
+
+// ==================== iPad SLIDER POLYFILL ====================
+// On iPad, touchend on a range input sometimes commits the wrong value
+// (often the track origin), causing the thumb to snap back when the
+// finger or Pencil lifts. The community fix is to recompute the slider
+// value ourselves from the actual touch position and dispatch corrected
+// input/change events.
+//
+// Delegated at document level so it covers any current or future range
+// input - no per-element rebinding needed. Uses var throughout to match
+// the DC Construction Kit reference verbatim. Currently inert (no range
+// sliders in Vectors), but ready for any future slider addition.
+function _ipadSliderTouchEnd(e) {
+    var el = e.target;
+    if (!el || el.tagName !== 'INPUT' || el.type !== 'range') return;
+    if (el.disabled) return;
+    if (!e.changedTouches || e.changedTouches.length === 0) return;
+    var t = e.changedTouches[0];
+    var rect = el.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    var min = parseFloat(el.min);
+    var max = parseFloat(el.max);
+    if (isNaN(min)) min = 0;
+    if (isNaN(max)) max = 100;
+    var step = parseFloat(el.step);
+    if (isNaN(step) || step <= 0) step = 1;
+    // Fraction along the track (0 = left, 1 = right). Clamp so a touch
+    // that ends just outside the slider bounds still produces an
+    // in-range value rather than snapping wildly.
+    var frac = (t.clientX - rect.left) / rect.width;
+    if (frac < 0) frac = 0;
+    if (frac > 1) frac = 1;
+    var raw = min + frac * (max - min);
+    // Snap to nearest step from min.
+    var stepped = min + Math.round((raw - min) / step) * step;
+    if (stepped < min) stepped = min;
+    if (stepped > max) stepped = max;
+    // Avoid floating-point noise like 0.30000000000000004 for step="0.1".
+    // toFixed picks decimal places from step's exponent.
+    var stepStr = String(step);
+    var dotIdx = stepStr.indexOf('.');
+    var decimals = (dotIdx >= 0) ? (stepStr.length - dotIdx - 1) : 0;
+    var newVal = decimals > 0 ? parseFloat(stepped.toFixed(decimals)) : stepped;
+    var current = parseFloat(el.value);
+    if (newVal === current) return;  // Browser got it right; don't double-fire.
+    el.value = String(newVal);
+    // Fire input first (live-update handler) then change (commit handler),
+    // mirroring the order a real interaction would produce.
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+}
+document.addEventListener('touchend', _ipadSliderTouchEnd, { passive: true });
+document.addEventListener('touchcancel', _ipadSliderTouchEnd, { passive: true });
+
+init();
+</script>
+
+</body>
+</html>

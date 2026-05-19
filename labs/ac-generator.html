@@ -1,0 +1,2604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AC Generator</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+    min-height: 100vh;
+    padding: 15px;
+    display: flex;
+    justify-content: center;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.container {
+    background: rgba(0,0,0,0.4);
+    border-radius: 20px;
+    padding: 20px;
+    max-width: 1300px;
+    width: 100%;
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 0 60px rgba(100,100,255,0.15);
+}
+
+h1 {
+    text-align: center;
+    color: #fff;
+    font-size: 1.8em;
+    margin-bottom: 4px;
+    text-shadow: 0 0 30px rgba(100,200,255,0.8), 0 0 60px rgba(50,150,255,0.5);
+    letter-spacing: 2px;
+}
+
+.subtitle {
+    text-align: center;
+    color: #a0a0c0;
+    margin-bottom: 12px;
+    font-size: 0.9em;
+}
+
+.main-area {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.canvas-wrap {
+    width: 100%;
+    position: relative;
+}
+.gen-expand-btn {
+    position: absolute; top: 8px; left: 8px; z-index: 10;
+    background: rgba(79,195,247,0.15); border: 1px solid rgba(79,195,247,0.3);
+    color: #4fc3f7; border-radius: 6px; padding: 4px 8px;
+    font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 5px;
+}
+.gen-expand-btn:hover { background: rgba(79,195,247,0.3); }
+.gen-expand-help {
+    position: absolute; top: 10px; left: 122px; z-index: 10;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: rgba(79,195,247,0.15); border: 1px solid rgba(79,195,247,0.3);
+    color: #4fc3f7; font-size: 11px; font-weight: bold; cursor: pointer;
+}
+.gen-modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.82); z-index: 1002;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(6px);
+}
+.gen-modal-inner {
+    position: relative; border-radius: 16px; overflow: hidden;
+    border: 1px solid rgba(79,195,247,0.25);
+    box-shadow: 0 0 80px rgba(79,195,247,0.12), 0 20px 60px rgba(0,0,0,0.5);
+}
+.gen-modal-close {
+    position: absolute; top: 10px; right: 14px; z-index: 10;
+    background: rgba(79,195,247,0.2); border: 1px solid rgba(79,195,247,0.4);
+    color: #4fc3f7; border-radius: 8px; padding: 6px 16px;
+    font-size: 14px; cursor: pointer; font-family: inherit;
+}
+.gen-modal-close:hover { background: rgba(79,195,247,0.35); }
+
+.gen-expand-btn {
+    position: absolute; top: 8px; left: 8px; z-index: 10;
+    background: rgba(79,195,247,0.15); border: 1px solid rgba(79,195,247,0.3);
+    color: #4fc3f7; border-radius: 6px; padding: 4px 8px;
+    font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 5px;
+}
+.gen-expand-btn:hover { background: rgba(79,195,247,0.3); }
+.gen-expand-help {
+    position: absolute; top: 10px; left: 122px; z-index: 10;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: rgba(79,195,247,0.15); border: 1px solid rgba(79,195,247,0.3);
+    color: #4fc3f7; font-size: 11px; font-weight: bold; cursor: pointer;
+}
+.gen-modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.82); z-index: 1002;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(6px);
+}
+.gen-modal-inner {
+    position: relative; border-radius: 16px; overflow: hidden;
+    border: 1px solid rgba(79,195,247,0.25);
+    box-shadow: 0 0 80px rgba(79,195,247,0.12), 0 20px 60px rgba(0,0,0,0.5);
+}
+.gen-modal-close {
+    position: absolute; top: 10px; right: 14px; z-index: 10;
+    background: rgba(79,195,247,0.2); border: 1px solid rgba(79,195,247,0.4);
+    color: #4fc3f7; border-radius: 8px; padding: 6px 16px;
+    font-size: 14px; cursor: pointer; font-family: inherit;
+}
+.gen-modal-close:hover { background: rgba(79,195,247,0.35); }
+
+canvas {
+    background: linear-gradient(180deg, #0a0a1f 0%, #151530 100%);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    width: 100%;
+    position: relative;
+    cursor: default;
+}
+
+.controls-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+.panel {
+    background: rgba(255,255,255,0.04);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 14px;
+}
+
+.panel h3 {
+    color: #fff;
+    font-size: 0.95em;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.slider-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.slider-row label {
+    color: #bbb;
+    font-size: 0.82em;
+    min-width: 26px;
+    font-weight: bold;
+}
+
+.slider-row input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.15);
+    outline: none;
+}
+
+.slider-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #4fc3f7;
+    cursor: pointer;
+    border: 2px solid #fff;
+}
+
+.slider-row .val {
+    color: #4fc3f7;
+    font-size: 0.8em;
+    min-width: 58px;
+    text-align: right;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.2px;
+}
+
+.btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.btn {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.06);
+    color: #ccc;
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+.btn.active { background: rgba(79,195,247,0.2); border-color: #4fc3f7; color: #4fc3f7; }
+
+.reading {
+    color: #bbb;
+    font-size: 0.82em;
+    margin-bottom: 4px;
+}
+
+.reading span {
+    float: right;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.2px;
+}
+
+.reading .emf-col { color: #e74c3c; }
+.reading .flux-col { color: #3498db; }
+.reading .v-col { color: #2ecc71; }
+
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.checkbox-row input[type="checkbox"] {
+    accent-color: #4fc3f7;
+}
+
+.checkbox-row label {
+    color: #bbb;
+    font-size: 0.82em;
+    cursor: pointer;
+}
+
+/* iPad / Apple Pencil compliance: prevents Pencil being treated as a hover-only
+   pointer on form controls. Without this, sliders/checkboxes/buttons respond to
+   finger but not Pencil. Tapping checkbox text (label) works because labels
+   are excluded from the Pencil-as-hover treatment. */
+input,
+button,
+label,
+.tab-btn,
+.btn,
+.gen-expand-btn,
+.gen-expand-help,
+.gen-modal-close,
+.gen-help-close,
+.help-icon,
+.slider-row,
+.checkbox-row {
+    touch-action: manipulation;
+}
+
+.gen-val-hidden .val {
+    visibility: hidden;
+}
+
+/* Help icons (small ? circles) */
+.help-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(79,195,247,0.15); border: 1px solid rgba(79,195,247,0.4);
+    color: #4fc3f7; font-size: 10px; font-weight: bold;
+    cursor: pointer; margin-left: auto; flex-shrink: 0;
+    transition: all 0.2s;
+}
+.help-icon:hover {
+    background: rgba(79,195,247,0.35); color: #fff;
+    box-shadow: 0 0 8px rgba(79,195,247,0.4);
+}
+
+/* Help modal overlay */
+.gen-help-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 1001;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+}
+.gen-help-modal {
+    background: linear-gradient(135deg, #1a1a3e, #151530);
+    border-radius: 16px;
+    border: 1px solid rgba(79,195,247,0.3);
+    padding: 24px 28px;
+    max-width: 520px; width: 90%;
+    max-height: 85vh; overflow-y: auto;
+    box-shadow: 0 0 60px rgba(79,195,247,0.15), 0 20px 60px rgba(0,0,0,0.5);
+}
+.gen-help-modal h3 {
+    margin: 0 0 16px 0; color: #fff; font-size: 1.2em;
+    display: flex; align-items: center; gap: 10px;
+}
+.gen-help-modal h3 span { color: #4fc3f7; }
+.gen-help-section { margin-bottom: 14px; }
+.gen-help-section-title {
+    font-size: 0.7em; text-transform: uppercase;
+    letter-spacing: 1.5px; margin-bottom: 6px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.gen-help-text {
+    font-size: 0.85em; color: #ccc; line-height: 1.6; padding-left: 4px;
+}
+.gen-help-text strong { color: #fff; }
+.gen-help-text .blue { color: #3498db; }
+.gen-help-text .red { color: #e74c3c; }
+.gen-help-text .orange { color: #f39c12; }
+.gen-help-text .green { color: #2ecc71; }
+.gen-help-text .cyan { color: #0dd; }
+.gen-help-close {
+    display: block; margin: 18px auto 0; padding: 8px 32px;
+    background: rgba(79,195,247,0.2); border: 1px solid rgba(79,195,247,0.4);
+    border-radius: 8px; color: #4fc3f7; font-size: 0.9em;
+    cursor: pointer; transition: all 0.2s;
+}
+.gen-help-close:hover {
+    background: rgba(79,195,247,0.4); color: #fff;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>AC Generator</h1>
+    <div class="subtitle">Electromagnetic Induction &mdash; Rotating Coil in a Magnetic Field</div>
+
+    <div class="main-area">
+        <div class="canvas-wrap">
+            <button class="gen-expand-btn" onclick="openGenModal()" title="Enlarge generator diagram">&#x26F6; Enlarge</button><span class="gen-expand-help" onclick="showOptionHelp('enlarge')">?</span>
+            <canvas id="canvas" width="1200" height="420"></canvas>
+        </div>
+
+        <div class="controls-row">
+            <div class="panel" id="panelGenParams" style="display:none">
+                <h3>&#9881; Generator Parameters</h3>
+
+                <div class="slider-row">
+                    <label>B</label>
+                    <input type="range" id="sliderB" min="0.01" max="0.5" step="0.01" value="0.10">
+                    <div class="val" id="valB">0.10 T</div>
+                </div>
+
+                <div class="slider-row">
+                    <label>A</label>
+                    <input type="range" id="sliderA" min="0.001" max="0.1" step="0.001" value="0.040">
+                    <div class="val" id="valA">0.040 m&sup2;</div>
+                </div>
+
+                <div class="slider-row">
+                    <label>N</label>
+                    <input type="range" id="sliderN" min="1" max="500" step="1" value="100">
+                    <div class="val" id="valN">100</div>
+                </div>
+
+                <div class="slider-row">
+                    <label>f</label>
+                    <input type="range" id="sliderF" min="1" max="200" step="1" value="50">
+                    <div class="val" id="valF">50 Hz</div>
+                </div>
+            </div>
+
+            <div class="panel" id="panelAnimation">
+                <h3>&#9654; Animation</h3>
+                <div class="btn-row">
+                    <div class="btn active" id="btnPlay" onclick="togglePlay()">&#9646;&#9646; Pause</div>
+                    <div class="btn" id="btnReset" onclick="resetAngle()">&#8635; Reset</div>
+                </div>
+                <div class="slider-row" style="margin-top:10px;">
+                    <label style="min-width:42px">Speed</label>
+                    <input type="range" id="sliderSpeed" min="0.1" max="3.0" step="0.1" value="1.0">
+                    <div class="val" id="valSpeed">1.0x</div>
+                </div>
+                <div class="slider-row">
+                    <label style="min-width:42px">&theta;</label>
+                    <input type="range" id="sliderTheta" min="0" max="720" step="1" value="0">
+                    <div class="val" id="valTheta" style="min-width:120px;cursor:pointer" title="Click to type angle">0.00 rad (0&deg;)</div>
+                </div>
+                <div class="slider-row" id="thetaInputRow" style="display:none;margin-top:2px">
+                    <label style="min-width:42px"></label>
+                    <input type="number" id="thetaInput" min="0" max="720" step="1" style="width:60px;background:#1a1a2e;color:#4fc3f7;border:1px solid rgba(79,195,247,0.4);border-radius:4px;padding:3px 6px;font-size:0.8em;font-family:Segoe UI,Arial,sans-serif" placeholder="&deg;">
+                    <div class="val" style="min-width:40px;font-size:0.75em;color:#888">degrees</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>&#128200; Display</h3>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="chkFlux">
+                    <label for="chkFlux" style="color:#3498db">Flux N&phi; = BANcos(&omega;t)</label>
+                    <span class="help-icon" onclick="showOptionHelp('flux')" style="background:rgba(52,152,219,0.15);border-color:rgba(52,152,219,0.4);color:#3498db">?</span>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="chkEmf" checked>
+                    <label for="chkEmf" style="color:#e74c3c">emf = &omega;BANsin(&omega;t)</label>
+                    <span class="help-icon" onclick="showOptionHelp('emf')" style="background:rgba(231,76,60,0.15);border-color:rgba(231,76,60,0.4);color:#e74c3c">?</span>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="chkGradient">
+                    <label for="chkGradient" style="color:#f39c12">Gradient tangent on N&phi;</label>
+                    <span class="help-icon" onclick="showOptionHelp('gradient')" style="background:rgba(243,156,18,0.15);border-color:rgba(243,156,18,0.4);color:#f39c12">?</span>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="chkPositions" checked>
+                    <label for="chkPositions">Coil positions on graph</label>
+                    <span class="help-icon" onclick="showOptionHelp('positions')" style="background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.25);color:#bbb">?</span>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="chkBcomps">
+                    <label for="chkBcomps" style="color:#0dd">B components on coil</label>
+                    <span class="help-icon" onclick="showOptionHelp('bcomps')" style="background:rgba(0,221,221,0.15);border-color:rgba(0,221,221,0.4);color:#0dd">?</span>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="chkNormal">
+                    <label for="chkNormal" style="color:#e74c3c">Normal with angle (&omega;t)</label>
+                    <span class="help-icon" onclick="showOptionHelp('normal')" style="background:rgba(231,76,60,0.15);border-color:rgba(231,76,60,0.4);color:#e74c3c">?</span>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="chkData">
+                    <label for="chkData" style="color:#f39c12">Calculation mode</label>
+                    <span class="help-icon" onclick="showOptionHelp('data')" style="background:rgba(243,156,18,0.15);border-color:rgba(243,156,18,0.4);color:#f39c12">?</span>
+                </div>
+                <div class="checkbox-row" style="opacity:0.35">
+                    <input type="checkbox" id="chkMeanEmf" disabled>
+                    <label for="chkMeanEmf" style="color:#2ecc71">Mean EMF between two positions</label>
+                    <span class="help-icon" onclick="showOptionHelp('meanemf')" style="background:rgba(46,204,113,0.15);border-color:rgba(46,204,113,0.4);color:#2ecc71">?</span>
+                </div>
+            </div>
+
+            <div class="panel" id="panelInstValues" style="display:none">
+                <h3>&#128290; Instantaneous Values</h3>
+                <div class="checkbox-row" style="margin-bottom:4px">
+                    <input type="checkbox" id="chkHideInst">
+                    <label for="chkHideInst" style="font-size:0.8em;color:#888">Hide values</label>
+                </div>
+                <div id="instValuesBody">
+                <div class="reading">&omega;t <span id="readAngle">0.00 rad  (0.0&deg;)</span></div>
+                <div class="reading">N&phi; <span class="flux-col" id="readFlux">0.00 mWb</span></div>
+                <div class="reading">emf <span class="emf-col" id="readEmf">0.00 V</span></div>
+                </div>
+            </div>
+
+            <div class="panel" id="panelMeanEmf" style="display:none">
+                <h3 style="color:#2ecc71">&#916; Mean EMF</h3>
+                <div class="slider-row">
+                    <label style="color:#2ecc71">&theta;<sub>A</sub></label>
+                    <input type="range" id="sliderT1" min="0" max="360" step="1" value="0">
+                    <div class="val" id="valT1" style="min-width:88px">0.00 rad (0&deg;)</div>
+                </div>
+                <div class="slider-row">
+                    <label style="color:#f39c12">&theta;<sub>B</sub></label>
+                    <input type="range" id="sliderT2" min="0" max="360" step="1" value="90">
+                    <div class="val" id="valT2" style="min-width:88px">1.57 rad (90&deg;)</div>
+                </div>
+                <div class="checkbox-row" style="margin:4px 0">
+                    <input type="checkbox" id="chkHideMean">
+                    <label for="chkHideMean" style="font-size:0.8em;color:#888">Hide values</label>
+                </div>
+                <div id="meanValuesBody">
+                <div class="reading" style="margin-top:6px">N&phi;A <span class="flux-col" id="readFlux1">—</span></div>
+                <div class="reading">N&phi;B <span class="flux-col" id="readFlux2">—</span></div>
+                <div class="reading">&Delta;N&phi; <span class="flux-col" id="readDFlux">—</span></div>
+                <div class="reading">&Delta;t <span id="readDt">—</span></div>
+                <div class="reading" style="font-weight:bold">mean emf <span style="color:#2ecc71" id="readMeanEmf">—</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Help Modal Overlay -->
+<div id="optionHelpOverlay" class="gen-help-overlay" style="display:none" onclick="if(event.target===this)closeOptionHelp()">
+    <div class="gen-help-modal">
+        <h3><span id="helpIcon">&#10067;</span> <span id="helpTitle">Help</span></h3>
+        <div id="helpBody"></div>
+        <button class="gen-help-close" onclick="closeOptionHelp()">Got it</button>
+    </div>
+</div>
+
+<!-- Generator Enlarge Modal -->
+<div id="genModalOverlay" class="gen-modal-overlay" style="display:none" onclick="if(event.target===this)closeGenModal()">
+    <div class="gen-modal-inner">
+        <button class="gen-modal-close" onclick="closeGenModal()">&#10005; Close</button>
+        <canvas id="genModalCanvas" width="800" height="700"></canvas>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// AC Generator - Rotating Coil Visualisation
+// ES5 compatible - No template literals, no arrow functions
+// ============================================================
+
+var canvas = document.getElementById('canvas');
+var ctx = canvas.getContext('2d');
+
+// Polyfill roundRect
+if (!ctx.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+        if (typeof r === 'number') r = [r, r, r, r];
+        this.beginPath();
+        this.moveTo(x + r[0], y);
+        this.lineTo(x + w - r[1], y);
+        this.quadraticCurveTo(x + w, y, x + w, y + r[1]);
+        this.lineTo(x + w, y + h - r[2]);
+        this.quadraticCurveTo(x + w, y + h, x + w - r[2], y + h);
+        this.lineTo(x + r[3], y + h);
+        this.quadraticCurveTo(x, y + h, x, y + h - r[3]);
+        this.lineTo(x, y + r[0]);
+        this.quadraticCurveTo(x, y, x + r[0], y);
+        this.closePath();
+        return this;
+    };
+}
+
+// ---- State ----
+var state = {
+    angle: 0,           // current angle in radians (omega * t)
+    playing: true,
+    speed: 1.0,
+    B: 0.10,
+    A: 0.040,
+    N: 100,
+    freq: 50,
+    showFlux: false,
+    showEmf: true,
+    showGradient: false,
+    showPositions: true,
+    showBcomps: false,
+    showNormal: false,
+    showData: false,
+    showMeanEmf: false,
+    meanTheta1: 0,
+    meanTheta2: Math.PI / 2,
+    labelAOffset: { dx: 0, dy: 0 },
+    labelBOffset: { dx: 0, dy: 0 },
+    angleLabelOffset: { dx: 0, dy: 0 },
+    deltaAngleLabelOffset: { dx: 0, dy: 0 },
+    trailPoints: []      // waveform history
+};
+
+// ---- Slider bindings ----
+function bindSlider(id, valId, prop, fmt) {
+    var sl = document.getElementById(id);
+    var vl = document.getElementById(valId);
+    sl.addEventListener('input', function() {
+        state[prop] = parseFloat(sl.value);
+        vl.innerHTML = fmt(state[prop]);
+        draw();
+    });
+}
+
+bindSlider('sliderB', 'valB', 'B', function(v) { return v.toFixed(2) + ' T'; });
+bindSlider('sliderA', 'valA', 'A', function(v) { return v.toFixed(3) + ' m&sup2;'; });
+bindSlider('sliderN', 'valN', 'N', function(v) { return Math.round(v); });
+bindSlider('sliderF', 'valF', 'freq', function(v) { return Math.round(v) + ' Hz'; });
+
+document.getElementById('sliderSpeed').addEventListener('input', function() {
+    state.speed = parseFloat(this.value);
+    document.getElementById('valSpeed').textContent = state.speed.toFixed(1) + 'x';
+});
+
+// Checkbox bindings
+document.getElementById('chkFlux').addEventListener('change', function() { state.showFlux = this.checked; draw(); });
+document.getElementById('chkEmf').addEventListener('change', function() { state.showEmf = this.checked; draw(); });
+document.getElementById('chkGradient').addEventListener('change', function() { state.showGradient = this.checked; draw(); });
+document.getElementById('chkPositions').addEventListener('change', function() { state.showPositions = this.checked; draw(); });
+document.getElementById('chkBcomps').addEventListener('change', function() { state.showBcomps = this.checked; draw(); });
+document.getElementById('chkNormal').addEventListener('change', function() { state.showNormal = this.checked; draw(); });
+document.getElementById('chkData').addEventListener('change', function() {
+    state.showData = this.checked;
+    var gp = document.getElementById('panelGenParams');
+    var chkM = document.getElementById('chkMeanEmf');
+    if (this.checked) {
+        gp.style.display = '';
+        // Show inst values (unless mean EMF is active)
+        if (!state.showMeanEmf) {
+            document.getElementById('panelInstValues').style.display = '';
+        }
+        chkM.disabled = false;
+        chkM.parentNode.style.opacity = '';
+    } else {
+        gp.style.display = 'none';
+        document.getElementById('panelInstValues').style.display = 'none';
+        document.getElementById('panelMeanEmf').style.display = 'none';
+        // Force mean EMF off
+        if (state.showMeanEmf) {
+            chkM.checked = false;
+            chkM.dispatchEvent(new Event('change'));
+        }
+        chkM.disabled = true;
+        chkM.parentNode.style.opacity = '0.35';
+    }
+    draw();
+});
+
+// Help modal popup system
+var helpContent = {
+    flux: {
+        title: 'Flux Linkage N\u03D5',
+        icon: '\uD83D\uDD35',
+        sections: [
+            { title: 'What it shows', color: '#3498db',
+              text: 'Displays the <strong class="blue">flux linkage (N\u03D5) waveform</strong> on the graph as a blue cosine curve.' },
+            { title: 'The physics', color: '#3498db',
+              text: 'Flux linkage is the total magnetic flux through all N turns of the coil:<br><br><strong>N\u03D5 = BANcos(\u03C9t)</strong><br><br>It is <strong>maximum</strong> when the coil face is perpendicular to B (normal parallel to B), and <strong>zero</strong> when the coil is edge-on to B (normal perpendicular to B).' },
+            { title: 'Tip', color: '#3498db',
+              text: 'Enable both flux and emf curves to see that emf is zero when the rate of change of flux linkage is zero (at a peak or trough), and emf is greatest when the rate of change of flux linkage is greatest.' }
+        ]
+    },
+    emf: {
+        title: 'Induced EMF',
+        icon: '\uD83D\uDD34',
+        sections: [
+            { title: 'What it shows', color: '#e74c3c',
+              text: 'Displays the <strong class="red">induced emf waveform</strong> on the graph as a red sine curve.' },
+            { title: 'The physics', color: '#e74c3c',
+              text: 'By Faraday\'s law:<br><br><strong>emf = \u2212d(N\u03D5)/dt = \u03C9BANsin(\u03C9t)</strong><br><br>The emf is <strong>greatest</strong> when the rate of change of flux linkage is greatest (coil edge-on to B) and <strong>zero</strong> when the rate of change of flux linkage is zero (coil face perpendicular to B).' },
+            { title: 'Key relationship', color: '#e74c3c',
+              text: 'The emf curve is the <strong>negative gradient</strong> of the flux linkage curve. Enable the gradient tangent option to see this visually.' }
+        ]
+    },
+    gradient: {
+        title: 'Gradient Tangent on N\u03D5',
+        icon: '\uD83D\uDCCF',
+        sections: [
+            { title: 'What it shows', color: '#f39c12',
+              text: 'Draws an <strong class="orange">orange tangent line</strong> on the flux linkage curve at the current coil angle.' },
+            { title: 'The physics', color: '#f39c12',
+              text: 'The <strong>gradient of this tangent</strong> equals the rate of change of flux linkage, which by Faraday\'s law equals <strong>\u2212emf</strong> at that instant:<br><br><strong>gradient = d(N\u03D5)/dt = \u2212emf</strong><br><br>When the tangent is steep, the emf is large. When the tangent is horizontal, the emf is zero.' },
+            { title: 'Try this', color: '#f39c12',
+              text: 'Pause the animation and drag the \u03B8 slider. Watch the tangent steepness change and compare it to the emf value in the Instantaneous Values panel.' }
+        ]
+    },
+    positions: {
+        title: 'Coil Positions on Graph',
+        icon: '\uD83D\uDD04',
+        sections: [
+            { title: 'What it shows', color: '#4fc3f7',
+              text: 'Displays <strong>miniature coil diagrams</strong> at key positions along the time axis \u2014 one every 90\u00B0 (quarter turn).' },
+            { title: 'What the labels mean', color: '#4fc3f7',
+              text: 'Below each mini coil you will see labels indicating whether <strong class="red">emf</strong> and <strong class="blue">N\u03D5</strong> are at their maximum, minimum, or zero at that position. Labels only appear for curves currently shown on the graph.' },
+            { title: 'Why it matters', color: '#4fc3f7',
+              text: 'This connects the <strong>physical orientation</strong> of the coil in the magnetic field to the corresponding point on the waveform \u2014 a key exam skill.' }
+        ]
+    },
+    bcomps: {
+        title: 'B Components on Coil',
+        icon: '\uD83E\uDDED',
+        sections: [
+            { title: 'What it shows', color: '#0dd',
+              text: 'Resolves the <strong class="cyan">magnetic field B</strong> into two components relative to the coil face:<br>\u2022 <strong>B\u2225</strong> \u2014 parallel to the coil face<br>\u2022 <strong>B\u22A5</strong> \u2014 perpendicular to the coil face' },
+            { title: 'The physics', color: '#0dd',
+              text: 'Only the <strong>perpendicular component</strong> contributes to flux linkage:<br><br><strong>B\u22A5 = Bcos(\u03C9t)</strong><br><br>This is why N\u03D5 = BAN<strong>cos(\u03C9t)</strong> \u2014 the cosine comes from this perpendicular component.' },
+            { title: 'Watch for', color: '#0dd',
+              text: 'At 0\u00B0 and 180\u00B0, B\u22A5 = B (all flux through coil, maximum N\u03D5). At 90\u00B0 and 270\u00B0, B\u22A5 = 0 (no flux, N\u03D5 = 0).' }
+        ]
+    },
+    normal: {
+        title: 'Normal with Angle (\u03C9t)',
+        icon: '\uD83D\uDCD0',
+        sections: [
+            { title: 'What it shows', color: '#e74c3c',
+              text: 'Draws the <strong class="red">normal vector</strong> (a line perpendicular to the coil face) and an <strong>angle arc</strong> showing the angle \u03B8 between the normal and the B field direction.' },
+            { title: 'The physics', color: '#e74c3c',
+              text: 'The angle \u03B8 = \u03C9t is the <strong>same angle</strong> used in the flux linkage equation:<br><br><strong>N\u03D5 = BANcos(\u03B8)</strong><br><br>When \u03B8 = 0\u00B0, the normal is parallel to B and flux linkage is maximum. When \u03B8 = 90\u00B0, the normal is perpendicular to B and flux linkage is zero.' },
+            { title: 'In calculation mode', color: '#e74c3c',
+              text: 'The angle label shows the actual degree value instead of the symbol \u03C9t. This is the angle that appears in your calculations.' }
+        ]
+    },
+    data: {
+        title: 'Calculation Mode',
+        icon: '\uD83D\uDCCA',
+        sections: [
+            { title: 'What it does', color: '#f39c12',
+              text: 'Switches from <strong>symbolic mode</strong> to <strong class="orange">calculation mode</strong>. The graph axes gain numerical scales with proper SI units, and the generator shows calculated values.' },
+            { title: 'What appears', color: '#f39c12',
+              text: '\u2022 <strong>Generator Parameters panel</strong> \u2014 adjust B, A, N, and f with sliders<br>\u2022 <strong>Instantaneous Values panel</strong> \u2014 live readout of \u03C9t, N\u03D5, and emf<br>\u2022 <strong>Numerical axis labels</strong> with auto-scaling SI prefixes<br>\u2022 <strong>Angle in degrees</strong> shown on the generator' },
+            { title: 'Why use it', color: '#f39c12',
+              text: 'Essential for <strong>exam-style calculations</strong>. Pause the animation, set a specific angle, and verify your calculated values match the displayed ones. Also enables the Mean EMF option.' }
+        ]
+    },
+    meanemf: {
+        title: 'Mean EMF Between Two Positions',
+        icon: '\u0394',
+        sections: [
+            { title: 'What it does', color: '#2ecc71',
+              text: 'Sets two coil positions \u2014 <strong class="green">\u03B8A</strong> and <strong class="orange">\u03B8B</strong> \u2014 and calculates the <strong class="green">mean induced emf</strong> between them.' },
+            { title: 'The physics', color: '#2ecc71',
+              text: 'Mean emf is calculated from the change in flux linkage over the time interval:<br><br><strong>mean emf = \u2212\u0394(N\u03D5) / \u0394t</strong><br><br>The calculation panel shows N\u03D5 at each position, \u0394N\u03D5, \u0394t, and the resulting mean emf.' },
+            { title: 'How to use', color: '#2ecc71',
+              text: '\u2022 Requires <strong class="orange">Calculation mode</strong> to be enabled first<br>\u2022 Use the <strong>\u03B8A and \u03B8B sliders</strong> for fine control (1\u00B0 steps)<br>\u2022 Or <strong>drag the dots</strong> on the flux linkage graph (snaps to key angles every 45\u00B0)<br>\u2022 Tick <strong>Hide values</strong> to let students calculate the answer themselves' },
+            { title: 'Exam tip', color: '#2ecc71',
+              text: 'Common exam question: find the mean emf between 0\u00B0 and 90\u00B0, or between two quarter-cycle positions. Set the angles and check your working against the displayed answer.' }
+        ]
+    },
+    enlarge: {
+        title: 'Enlarge Generator View',
+        icon: '&#x26F6;',
+        sections: [
+            { title: 'What it does', color: '#4fc3f7',
+              text: 'Opens the generator diagram in a <strong>large modal window</strong> so you can see the coil, field components, and angles in much greater detail.' },
+            { title: 'When to use', color: '#4fc3f7',
+              text: 'Useful when studying <strong>B components</strong>, the <strong>normal vector</strong>, or the <strong>A/B positions</strong> in Mean EMF mode.' },
+            { title: 'Interaction', color: '#4fc3f7',
+              text: 'The slider and animation still work while enlarged. Click outside or press Close/Escape to return.' }
+        ]
+    }
+};
+
+function showOptionHelp(key) {
+    var h = helpContent[key];
+    if (!h) return;
+    document.getElementById('helpIcon').innerHTML = h.icon;
+    document.getElementById('helpTitle').textContent = h.title;
+    var body = '';
+    for (var i = 0; i < h.sections.length; i++) {
+        var s = h.sections[i];
+        body += '<div class="gen-help-section">';
+        body += '<div class="gen-help-section-title" style="color:' + s.color + ';">' + s.title + '</div>';
+        body += '<div class="gen-help-text">' + s.text + '</div>';
+        body += '</div>';
+    }
+    document.getElementById('helpBody').innerHTML = body;
+    document.getElementById('optionHelpOverlay').style.display = 'flex';
+}
+
+function closeOptionHelp() {
+    document.getElementById('optionHelpOverlay').style.display = 'none';
+}
+
+// Hide values checkboxes
+document.getElementById('chkHideInst').addEventListener('change', function() {
+    document.getElementById('instValuesBody').style.display = this.checked ? 'none' : '';
+});
+document.getElementById('chkHideMean').addEventListener('change', function() {
+    document.getElementById('meanValuesBody').style.display = this.checked ? 'none' : '';
+});
+
+// Mean EMF mode
+document.getElementById('chkMeanEmf').addEventListener('change', function() {
+    state.showMeanEmf = this.checked;
+    document.getElementById('panelInstValues').style.display = this.checked ? 'none' : '';
+    document.getElementById('panelMeanEmf').style.display = this.checked ? '' : 'none';
+    document.getElementById('panelAnimation').style.display = this.checked ? 'none' : '';
+    var chkB = document.getElementById('chkBcomps');
+    var chkN = document.getElementById('chkNormal');
+    var chkG = document.getElementById('chkGradient');
+    if (this.checked) {
+        if (state.playing) togglePlay();
+        state.labelAOffset = { dx: 0, dy: 0 };
+        state.labelBOffset = { dx: 0, dy: 0 };
+        state.deltaAngleLabelOffset = { dx: 0, dy: 0 };
+        // Force normal on, disable B components and gradient
+        state.showBcomps = false;
+        chkB.checked = false;
+        chkB.disabled = true;
+        chkB.parentNode.style.opacity = '0.35';
+        state.showGradient = false;
+        chkG.checked = false;
+        chkG.disabled = true;
+        chkG.parentNode.style.opacity = '0.35';
+        state.showNormal = true;
+        chkN.checked = true;
+        chkN.disabled = true;
+        chkN.parentNode.style.opacity = '0.35';
+    } else {
+        chkB.disabled = false;
+        chkB.parentNode.style.opacity = '';
+        chkG.disabled = false;
+        chkG.parentNode.style.opacity = '';
+        chkN.disabled = false;
+        chkN.parentNode.style.opacity = '';
+    }
+    draw();
+});
+
+function fmtMeanAngle(rad) {
+    var deg = Math.round(rad * 180 / Math.PI);
+    return rad.toFixed(2) + ' rad (' + deg + '\u00B0)';
+}
+
+var sliderT1 = document.getElementById('sliderT1');
+var sliderT2 = document.getElementById('sliderT2');
+var valT1 = document.getElementById('valT1');
+var valT2 = document.getElementById('valT2');
+
+function snapAngle(v) {
+    // Snap to nearest 45° (π/4) if within 5°
+    var step45 = Math.PI / 4;
+    var nearest = Math.round(v / step45) * step45;
+    if (Math.abs(v - nearest) < (5 * Math.PI / 180)) return nearest;
+    // Otherwise snap to nearest integer degree
+    var deg = Math.round(v * 180 / Math.PI);
+    return deg * Math.PI / 180;
+}
+
+sliderT1.addEventListener('input', function() {
+    var deg = parseInt(this.value, 10);
+    var maxDeg = Math.round(state.meanTheta2 * 180 / Math.PI) - 1;
+    if (deg > maxDeg) { deg = maxDeg; this.value = deg; }
+    if (deg < 0) { deg = 0; this.value = deg; }
+    state.meanTheta1 = deg * Math.PI / 180;
+    valT1.textContent = fmtMeanAngle(state.meanTheta1);
+    draw();
+});
+sliderT2.addEventListener('input', function() {
+    var deg = parseInt(this.value, 10);
+    var minDeg = Math.round(state.meanTheta1 * 180 / Math.PI) + 1;
+    if (deg < minDeg) { deg = minDeg; this.value = deg; }
+    if (deg > 360) { deg = 360; this.value = deg; }
+    state.meanTheta2 = deg * Math.PI / 180;
+    valT2.textContent = fmtMeanAngle(state.meanTheta2);
+    draw();
+});
+
+// ---- Controls ----
+function togglePlay() {
+    state.playing = !state.playing;
+    var btn = document.getElementById('btnPlay');
+    if (state.playing) {
+        btn.innerHTML = '&#9646;&#9646; Pause';
+        btn.className = 'btn active';
+    } else {
+        btn.innerHTML = '&#9654; Play';
+        btn.className = 'btn';
+    }
+}
+
+// Theta slider - pauses animation and sets angle manually
+var sliderTheta = document.getElementById('sliderTheta');
+var valTheta = document.getElementById('valTheta');
+var thetaSliderActive = false;
+
+sliderTheta.addEventListener('input', function() {
+    if (state.playing) {
+        togglePlay();
+    }
+    thetaSliderActive = true;
+    var deg = parseInt(sliderTheta.value, 10);
+    state.angle = deg * Math.PI / 180;
+    var normDeg = deg % 360;
+    if (normDeg < 0) normDeg += 360;
+    var normRad = normDeg * Math.PI / 180;
+    valTheta.textContent = normRad.toFixed(2) + ' rad (' + normDeg + '\u00B0)';
+    draw();
+});
+
+sliderTheta.addEventListener('mouseup', function() { thetaSliderActive = false; });
+sliderTheta.addEventListener('touchend', function() { thetaSliderActive = false; });
+
+function resetAngle() {
+    state.angle = 0;
+    state.trailPoints = [];
+    sliderTheta.value = 0;
+    valTheta.textContent = '0.00 rad (0\u00B0)';
+    document.getElementById('thetaInputRow').style.display = 'none';
+    draw();
+}
+
+// Click valTheta to toggle manual input
+valTheta.addEventListener('click', function() {
+    var row = document.getElementById('thetaInputRow');
+    var inp = document.getElementById('thetaInput');
+    if (row.style.display === 'none') {
+        row.style.display = '';
+        var normDeg = Math.round(((state.angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI) * 180 / Math.PI);
+        inp.value = normDeg;
+        inp.focus();
+        inp.select();
+    } else {
+        row.style.display = 'none';
+    }
+});
+
+// Manual angle input
+var thetaInputEl = document.getElementById('thetaInput');
+thetaInputEl.addEventListener('input', function() {
+    var deg = parseInt(this.value, 10);
+    if (isNaN(deg)) return;
+    if (deg < 0) deg = 0;
+    if (deg > 720) deg = 720;
+    state.angle = deg * Math.PI / 180;
+    sliderTheta.value = deg;
+    var normDeg = deg % 360;
+    var normRad = normDeg * Math.PI / 180;
+    valTheta.textContent = normRad.toFixed(2) + ' rad (' + normDeg + '\u00B0)';
+    if (state.playing) togglePlay();
+    draw();
+});
+thetaInputEl.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        document.getElementById('thetaInputRow').style.display = 'none';
+    }
+});
+
+// ---- Smart format ----
+function smartFormat(val, unit) {
+    var abs = Math.abs(val);
+    var prefix = '';
+    var scaled = abs;
+    if (abs >= 1e3) { scaled = abs / 1e3; prefix = 'k'; }
+    else if (abs >= 1) { scaled = abs; prefix = ''; }
+    else if (abs >= 1e-3) { scaled = abs * 1e3; prefix = 'm'; }
+    else if (abs >= 1e-6) { scaled = abs * 1e6; prefix = '\u00B5'; }
+    else if (abs >= 1e-9) { scaled = abs * 1e9; prefix = 'n'; }
+    else { return '0 ' + unit; }
+
+    var sign = val < 0 ? '\u2212' : '';
+    var str;
+    if (scaled >= 100) str = scaled.toFixed(1);
+    else if (scaled >= 10) str = scaled.toFixed(2);
+    else str = scaled.toFixed(3);
+    // Strip trailing zeros after decimal
+    if (str.indexOf('.') >= 0) {
+        str = str.replace(/0+$/, '').replace(/\.$/, '');
+    }
+    return sign + str + ' ' + prefix + unit;
+}
+
+// ---- Nice axis helpers (for data mode) ----
+function niceTickStep(range, maxTicks) {
+    if (range <= 0) return 1;
+    var rough = range / maxTicks;
+    var mag = Math.pow(10, Math.floor(Math.log(rough) / Math.LN10));
+    var norm = rough / mag;
+    var step;
+    if (norm <= 1.5) step = 1;
+    else if (norm <= 3.5) step = 2;
+    else if (norm <= 7.5) step = 5;
+    else step = 10;
+    return step * mag;
+}
+
+function axisPrefix(maxVal) {
+    var abs = Math.abs(maxVal);
+    if (abs >= 1e3) return { mult: 1e-3, prefix: 'k' };
+    if (abs >= 1) return { mult: 1, prefix: '' };
+    if (abs >= 1e-3) return { mult: 1e3, prefix: 'm' };
+    if (abs >= 1e-6) return { mult: 1e6, prefix: '\u00B5' };
+    if (abs >= 1e-9) return { mult: 1e9, prefix: 'n' };
+    return { mult: 1, prefix: '' };
+}
+
+function tickDecimals(step, mult) {
+    var scaled = Math.abs(step * mult);
+    if (scaled < 1e-9) return 1;
+    var frac = scaled - Math.floor(scaled);
+    if (frac < 0.001) return 0;
+    if (Math.abs(frac * 10 - Math.round(frac * 10)) < 0.001) return 1;
+    return 2;
+}
+
+function axisLabel(val, mult, decimals) {
+    var s = (val * mult).toFixed(decimals);
+    if (s.indexOf('.') >= 0) {
+        s = s.replace(/0+$/, '').replace(/\.$/, '');
+    }
+    return s;
+}
+
+// ---- Drawing ----
+function draw() {
+    var W = canvas.width;
+    var H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    // Clear stored label positions (may not be drawn every frame)
+    state._angleLabel = null;
+    state._deltaAngleLabel = null;
+    state._labelA = null;
+    state._labelB = null;
+
+    var omega = 2 * Math.PI * state.freq;
+    var BAN = state.B * state.A * state.N;
+    var emfPeak = omega * BAN;
+    var theta = state.showMeanEmf ? state.meanTheta1 : state.angle;
+
+    // Instantaneous values
+    var fluxNow = BAN * Math.cos(theta);
+    var emfNow = emfPeak * Math.sin(theta);
+
+    // Layout: generator on left (larger), waveform on right
+    var genCX = 240;  // generator centre x
+    var genCY = 220;  // generator centre y
+
+    var graphX = 500;
+    var graphY = 40;
+    var graphW = W - graphX - 30;
+    var graphH = 280;
+
+    // ========== DRAW GENERATOR (side view) ==========
+    drawGeneratorSideView(genCX, genCY, theta, BAN, emfPeak, fluxNow, emfNow);
+
+    // ========== WAVEFORM GRAPH ==========
+    drawWaveformGraph(graphX, graphY, graphW, graphH, theta, BAN, emfPeak);
+
+    // ========== MEAN EMF OVERLAY ==========
+    if (state.showMeanEmf) {
+        drawMeanEmfOverlay(genCX, genCY, graphX, graphY, graphW, graphH, BAN, emfPeak);
+    }
+
+    // ========== UPDATE READINGS ==========
+    updateReadings(theta, fluxNow, emfNow, emfPeak);
+}
+
+// ---- Side-view generator ----
+function drawGeneratorSideView(cx, cy, theta, BAN, emfPeak, fluxNow, emfNow) {
+    var poleW = 100;  // wider so N/S fit neatly
+    var gapW = 115;   // gap between pole faces
+    var nLines = 5;
+    var lineSpacing = 26;
+    var poleH = (nLines - 1) * lineSpacing + 18;
+    var curveDepth = 52;
+    var coilR = Math.round(curveDepth * 0.90); // snug fit inside concave poles
+
+    // Helper: x-offset of concave curve at a given y
+    // Parabolic approximation of quadratic bezier scoop
+    function curveXOffset(lyy) {
+        var f = (lyy - cy) / (poleH / 2); // -1 to 1
+        return curveDepth / 2 * (1 - f * f);
+    }
+
+    // ---- Magnet pole pieces (concave inner faces) ----
+    // North pole (left)
+    var nRight = cx - gapW / 2;
+    var nLeft = nRight - poleW;
+    var nTop = cy - poleH / 2;
+    var gradN = ctx.createLinearGradient(nLeft, nTop, nRight, nTop);
+    gradN.addColorStop(0, '#8b1a1a');
+    gradN.addColorStop(0.5, '#dc3545');
+    gradN.addColorStop(1, '#ff6b6b');
+    ctx.fillStyle = gradN;
+    ctx.beginPath();
+    ctx.moveTo(nLeft + 6, nTop);
+    ctx.lineTo(nRight, nTop);
+    ctx.quadraticCurveTo(nRight - curveDepth, cy, nRight, nTop + poleH);
+    ctx.lineTo(nLeft + 6, nTop + poleH);
+    ctx.quadraticCurveTo(nLeft, nTop + poleH, nLeft, nTop + poleH - 6);
+    ctx.lineTo(nLeft, nTop + 6);
+    ctx.quadraticCurveTo(nLeft, nTop, nLeft + 6, nTop);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.font = 'bold 38px Segoe UI, Arial';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('N', nLeft + poleW * 0.38, cy);
+
+    // South pole (right)
+    var sLeft = cx + gapW / 2;
+    var sRight = sLeft + poleW;
+    var sTop = cy - poleH / 2;
+    var gradS = ctx.createLinearGradient(sLeft, sTop, sRight, sTop);
+    gradS.addColorStop(0, '#4a8eff');
+    gradS.addColorStop(0.5, '#2266dd');
+    gradS.addColorStop(1, '#1a3a8b');
+    ctx.fillStyle = gradS;
+    ctx.beginPath();
+    ctx.moveTo(sLeft, sTop);
+    ctx.lineTo(sRight - 6, sTop);
+    ctx.quadraticCurveTo(sRight, sTop, sRight, sTop + 6);
+    ctx.lineTo(sRight, sTop + poleH - 6);
+    ctx.quadraticCurveTo(sRight, sTop + poleH, sRight - 6, sTop + poleH);
+    ctx.lineTo(sLeft, sTop + poleH);
+    ctx.quadraticCurveTo(sLeft + curveDepth, cy, sLeft, sTop);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.font = 'bold 38px Segoe UI, Arial';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('S', sLeft + poleW * 0.62, cy);
+
+    // ---- Magnetic field lines (start/end at curve surface) ----
+    for (var li = 0; li < nLines; li++) {
+        var lyy = cy + (li - (nLines - 1) / 2) * lineSpacing;
+        var scoop = curveXOffset(lyy);
+        var lineStart = nRight - scoop; // N pole curve surface
+        var lineEnd = sLeft + scoop;    // S pole curve surface
+        ctx.strokeStyle = 'rgba(100,180,255,0.25)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(lineStart, lyy);
+        ctx.lineTo(lineEnd, lyy);
+        ctx.stroke();
+        // Arrow head
+        ctx.fillStyle = 'rgba(100,180,255,0.35)';
+        ctx.beginPath();
+        ctx.moveTo(lineEnd - 10, lyy - 4);
+        ctx.lineTo(lineEnd, lyy);
+        ctx.lineTo(lineEnd - 10, lyy + 4);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // "Magnetic field, B" label below magnets
+    ctx.font = 'italic 13px Segoe UI, Arial';
+    ctx.fillStyle = 'rgba(100,180,255,0.6)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('Magnetic field, B', cx, cy + poleH / 2 + 8);
+
+    // ---- Rotating coil (line) ----
+    // ACW rotation: negate sin for canvas y-down coords
+    var cosT = Math.cos(theta);
+    var sinT = Math.sin(theta);
+    // Coil line perpendicular to normal
+    var lineAngle = theta + Math.PI / 2;
+    var lx1 = cx + Math.cos(lineAngle) * coilR;
+    var ly1 = cy - Math.sin(lineAngle) * coilR;
+    var lx2 = cx - Math.cos(lineAngle) * coilR;
+    var ly2 = cy + Math.sin(lineAngle) * coilR;
+
+    // Coil line (thick, gold)
+    ctx.strokeStyle = '#e6b432';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(lx1, ly1);
+    ctx.lineTo(lx2, ly2);
+    ctx.stroke();
+
+    // Centre pivot dot
+    ctx.fillStyle = '#333';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#888';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ---- Normal vector (red, from centre outward) ----
+    var normLen = 52;
+    if (state.showNormal) {
+    var nx2 = cx + cosT * normLen;
+    var ny2 = cy - sinT * normLen;
+    ctx.strokeStyle = '#e74c3c';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(nx2, ny2);
+    ctx.stroke();
+    // Arrow head
+    var aSize = 8;
+    var aAngle = Math.atan2(-(ny2 - cy), nx2 - cx);
+    ctx.fillStyle = '#e74c3c';
+    ctx.beginPath();
+    ctx.moveTo(nx2, ny2);
+    ctx.lineTo(nx2 - aSize * Math.cos(aAngle - 0.4), ny2 + aSize * Math.sin(aAngle - 0.4));
+    ctx.lineTo(nx2 - aSize * Math.cos(aAngle + 0.4), ny2 + aSize * Math.sin(aAngle + 0.4));
+    ctx.closePath();
+    ctx.fill();
+
+    // ---- Angle arc (ωt) - ACW from horizontal ----
+    var normTheta = ((theta % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    if (normTheta > 0.1) {
+        var arcR = 32;
+        ctx.strokeStyle = 'rgba(255,200,100,0.6)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        // ACW: from 0 to -normTheta (canvas coords)
+        ctx.arc(cx, cy, arcR, 0, -normTheta, true);
+        ctx.stroke();
+
+        // Angle label (actual value in degrees) — draggable
+        var midA = normTheta / 2;
+        var labR = arcR + 16;
+        var angleBaseX = cx + Math.cos(midA) * labR;
+        var angleBaseY = cy - Math.sin(midA) * labR;
+        var angleLX = angleBaseX + state.angleLabelOffset.dx;
+        var angleLY = angleBaseY + state.angleLabelOffset.dy;
+        var angLabelDeg = Math.round(normTheta * 180 / Math.PI);
+        var degStr = state.showData ? angLabelDeg + '\u00B0' : '\u03C9t';
+        ctx.font = state.showData ? 'bold 13px Segoe UI, Arial' : 'italic 14px Segoe UI, Arial';
+        // Leader line if dragged
+        var aDist = Math.sqrt(state.angleLabelOffset.dx * state.angleLabelOffset.dx + state.angleLabelOffset.dy * state.angleLabelOffset.dy);
+        if (aDist > 5) {
+            ctx.strokeStyle = 'rgba(255,200,100,0.3)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(angleBaseX, angleBaseY);
+            ctx.lineTo(angleLX, angleLY);
+            ctx.stroke();
+        }
+        ctx.fillStyle = 'rgba(255,200,100,0.8)';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(degStr, angleLX, angleLY);
+        state._angleLabel = { x: angleLX, y: angleLY, baseX: angleBaseX, baseY: angleBaseY };
+    }
+    } // end showNormal
+
+    // ---- B vector decomposition ----
+    if (state.showBcomps) {
+        var bLen = 56;
+
+        // Decompose B (horizontal) into components relative to coil
+        // B⊥ (along normal) = Bcos(ωt), B∥ (along coil) = Bsin(ωt)
+        // Normal direction in canvas (ACW): (cosT, -sinT)
+        var nDirX = cosT;
+        var nDirY = -sinT;
+
+        // B∥ = B - B⊥ computed directly
+        var bpX = bLen * cosT * cosT;   // B⊥ x-component
+        var bpY = -bLen * cosT * sinT;  // B⊥ y-component (canvas)
+        var blX = bLen - bpX;           // B∥ x = B - B⊥x
+        var blY = -bpY;                 // B∥ y = 0 - B⊥y
+
+        // B vector (always horizontal, pointing right toward S)
+        var bCol = 'rgba(30,120,220,0.9)';
+        ctx.strokeStyle = bCol;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + bLen, cy);
+        ctx.stroke();
+        // B arrow head
+        ctx.fillStyle = bCol;
+        ctx.beginPath();
+        ctx.moveTo(cx + bLen, cy);
+        ctx.lineTo(cx + bLen - 8, cy - 4);
+        ctx.lineTo(cx + bLen - 8, cy + 4);
+        ctx.closePath();
+        ctx.fill();
+        // B label
+        ctx.font = 'bold italic 16px Segoe UI, Arial';
+        ctx.fillStyle = bCol;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('B', cx + bLen + 4, cy - 2);
+
+        // B-perp: component along normal (darker blue)
+        var bpEndX = cx + bpX;
+        var bpEndY = cy + bpY;
+        if (Math.abs(cosT) > 0.04) {
+            ctx.strokeStyle = bCol;
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(bpEndX, bpEndY);
+            ctx.stroke();
+            var bpAngle = Math.atan2(bpY, bpX);
+            ctx.fillStyle = bCol;
+            ctx.beginPath();
+            ctx.moveTo(bpEndX, bpEndY);
+            ctx.lineTo(bpEndX - 7 * Math.cos(bpAngle - 0.4), bpEndY - 7 * Math.sin(bpAngle - 0.4));
+            ctx.lineTo(bpEndX - 7 * Math.cos(bpAngle + 0.4), bpEndY - 7 * Math.sin(bpAngle + 0.4));
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // B-parallel: component along coil line (same blue)
+        var blEndX = cx + blX;
+        var blEndY = cy + blY;
+        if (Math.abs(sinT) > 0.04) {
+            ctx.strokeStyle = bCol;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(blEndX, blEndY);
+            ctx.stroke();
+            var blAngle = Math.atan2(blY, blX);
+            ctx.fillStyle = bCol;
+            ctx.beginPath();
+            ctx.moveTo(blEndX, blEndY);
+            ctx.lineTo(blEndX - 8 * Math.cos(blAngle - 0.4), blEndY - 8 * Math.sin(blAngle - 0.4));
+            ctx.lineTo(blEndX - 8 * Math.cos(blAngle + 0.4), blEndY - 8 * Math.sin(blAngle + 0.4));
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Right angle marker between components
+        if (Math.abs(cosT) > 0.15 && Math.abs(sinT) > 0.15) {
+            var sqSize = 6;
+            // Unit vectors for each component
+            var bpMag = Math.sqrt(bpX * bpX + bpY * bpY);
+            var blMag = Math.sqrt(blX * blX + blY * blY);
+            if (bpMag > 1 && blMag > 1) {
+                var upX = bpX / bpMag * sqSize;
+                var upY = bpY / bpMag * sqSize;
+                var ulX = blX / blMag * sqSize;
+                var ulY = blY / blMag * sqSize;
+                ctx.strokeStyle = 'rgba(30,120,220,0.5)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(cx + upX, cy + upY);
+                ctx.lineTo(cx + upX + ulX, cy + upY + ulY);
+                ctx.lineTo(cx + ulX, cy + ulY);
+                ctx.stroke();
+            }
+        }
+        // B-perpendicular label above magnets
+        ctx.font = '11px Segoe UI, Arial';
+        ctx.fillStyle = 'rgba(30,120,220,0.9)';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        if (state.showData) {
+            var normAng = ((theta % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+            var angDeg = Math.round(normAng * 180 / Math.PI);
+            if (angDeg >= 360) angDeg = 0;
+            var bPerpVal = state.B * Math.cos(angDeg * Math.PI / 180);
+            // Clean zero at exact 90° multiples
+            if (Math.abs(bPerpVal) < 1e-10) bPerpVal = 0;
+            var bPerpStr = bPerpVal === 0 ? '0 T' : smartFormat(bPerpVal, 'T');
+            var bPerpText = 'B\u22A5 to coil = Bcos(' + angDeg + '\u00B0) = ' + bPerpStr;
+            ctx.fillText(bPerpText, cx, cy - poleH / 2 - 8);
+        } else {
+            ctx.fillText('B\u22A5 to coil = Bcos(\u03C9t)', cx, cy - poleH / 2 - 8);
+        }
+    }
+
+    // ---- Title & info ----
+    ctx.font = 'bold 16px Segoe UI, Arial';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('Rotating Coil (side view)', cx, 16);
+
+    if (state.showData) {
+        ctx.font = '12px Segoe UI, Arial';
+        ctx.fillStyle = 'rgba(255,255,255,0.45)';
+        ctx.fillText('N = ' + state.N + ' turns, A = ' + (state.A * 1e4).toFixed(1) + ' cm\u00B2', cx, 34);
+        ctx.fillText('Magnetic field strength = ' + state.B.toFixed(2) + ' T,  Frequency = ' + state.freq.toFixed(1) + ' Hz', cx, 50);
+    }
+
+    // ---- Key formulae ----
+    var fy = cy + poleH / 2 + 28;
+    ctx.font = 'bold 15px Segoe UI, Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+
+    ctx.fillStyle = 'rgba(52,152,219,0.85)';
+    ctx.fillText('N\u03D5 = BANcos(\u03C9t)', cx, fy);
+
+    ctx.fillStyle = 'rgba(231,76,60,0.85)';
+    ctx.fillText('emf = \u2212d(N\u03D5)/dt = \u03C9BANsin(\u03C9t)', cx, fy + 20);
+}
+
+// ---- Waveform graph ----
+function drawWaveformGraph(gx, gy, gw, gh, theta, BAN, emfPeak) {
+    // Background
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.roundRect(gx - 10, gy - 10, gw + 20, gh + 80, 10);
+    ctx.fill();
+
+    // Title
+    ctx.font = 'bold 15px Segoe UI, Arial';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('Flux Linkage & Induced EMF vs Time' + (state.showData ? '  (Calculation Mode)' : ''), gx, gy - 6);
+
+    var leftMargin = state.showData ? 82 : 70;
+    var rightMargin = state.showData ? 78 : 20;
+    var plotX = gx + leftMargin;
+    var plotY = gy + 28;
+    var plotW = gw - leftMargin - rightMargin;
+    var plotH = state.showData ? gh - 70 : gh - 55;
+    var centreY = plotY + plotH / 2;
+
+    // Two full cycles shown
+    var totalAngle = 4 * Math.PI;
+    var numPts = 400;
+
+    // Y-axis: EMF uses full scale, flux gets its own visual scale at 80% height
+    var fluxMax = BAN;
+    var emfMax = emfPeak;
+    if (emfMax < 1e-9) emfMax = 1;
+    if (fluxMax < 1e-9) fluxMax = 1;
+    var emfScale = (plotH / 2 * 0.90) / emfMax;
+    var fluxVisualScale = (plotH / 2 * 0.80) / fluxMax;
+
+    if (state.showData) {
+    // =============== DATA MODE: Numerical scaled axes ===============
+    var T = 1 / state.freq;
+    var tMax = 2 * T;  // 2 full periods shown
+
+    // Nice tick steps
+    var eTickStep = niceTickStep(emfMax, 4);
+    var fTickStep = niceTickStep(fluxMax, 4);
+    var tTickStep = niceTickStep(tMax, 8);
+
+    // Round up axis maxima to next tick multiple so peaks are always covered
+    var emfAxisMax = Math.ceil(emfMax / eTickStep) * eTickStep;
+    var fluxAxisMax = Math.ceil(fluxMax / fTickStep) * fTickStep;
+
+    // Recalculate scales to use the rounded-up axis range
+    emfScale = (plotH / 2 * 0.98) / emfAxisMax;
+    fluxVisualScale = (plotH / 2 * 0.98) / fluxAxisMax;
+
+    // SI prefixes for each axis
+    var tPfx = axisPrefix(tMax);
+    var ePfx = axisPrefix(emfAxisMax);
+    var fPfx = axisPrefix(fluxAxisMax);
+
+    // Decimal places
+    var tDec = tickDecimals(tTickStep, tPfx.mult);
+    var eDec = tickDecimals(eTickStep, ePfx.mult);
+    var fDec = tickDecimals(fTickStep, fPfx.mult);
+
+    // ---- Vertical grid lines at time ticks ----
+    ctx.lineWidth = 1;
+    for (var tg = tTickStep; tg < tMax + tTickStep * 0.01; tg += tTickStep) {
+        var tgx = plotX + (tg / tMax) * plotW;
+        if (tgx > plotX + 1 && tgx < plotX + plotW - 1) {
+            ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+            ctx.beginPath();
+            ctx.moveTo(tgx, plotY);
+            ctx.lineTo(tgx, plotY + plotH);
+            ctx.stroke();
+        }
+    }
+
+    // ---- Horizontal grid lines at EMF ticks ----
+    if (state.showEmf) {
+    for (var eg = eTickStep; eg <= emfAxisMax * 1.01; eg += eTickStep) {
+        ctx.strokeStyle = 'rgba(231,76,60,0.05)';
+        ctx.lineWidth = 1;
+        var egy1 = centreY - eg * emfScale;
+        var egy2 = centreY + eg * emfScale;
+        if (egy1 >= plotY) {
+            ctx.beginPath(); ctx.moveTo(plotX, egy1); ctx.lineTo(plotX + plotW, egy1); ctx.stroke();
+        }
+        if (egy2 <= plotY + plotH) {
+            ctx.beginPath(); ctx.moveTo(plotX, egy2); ctx.lineTo(plotX + plotW, egy2); ctx.stroke();
+        }
+    }
+    } // end showEmf grid
+
+    // ---- Time axis (zero line) ----
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(plotX, centreY);
+    ctx.lineTo(plotX + plotW, centreY);
+    ctx.stroke();
+
+    // ---- Left Y-axis (EMF, red) ----
+    if (state.showEmf) {
+    ctx.strokeStyle = 'rgba(231,76,60,0.7)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(plotX, plotY);
+    ctx.lineTo(plotX, plotY + plotH);
+    ctx.stroke();
+    // Arrow
+    ctx.fillStyle = 'rgba(231,76,60,0.7)';
+    ctx.beginPath();
+    ctx.moveTo(plotX, plotY - 2);
+    ctx.lineTo(plotX - 5, plotY + 8);
+    ctx.lineTo(plotX + 5, plotY + 8);
+    ctx.closePath();
+    ctx.fill();
+
+    // EMF tick marks and labels
+    ctx.font = '11px Segoe UI, Arial';
+    ctx.fillStyle = 'rgba(231,76,60,0.85)';
+    for (var ev = eTickStep; ev <= emfAxisMax * 1.01; ev += eTickStep) {
+        // Positive
+        var eyp = centreY - ev * emfScale;
+        if (eyp >= plotY - 1 && eyp <= plotY + plotH + 1) {
+            ctx.strokeStyle = 'rgba(231,76,60,0.4)';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(plotX - 4, eyp); ctx.lineTo(plotX, eyp); ctx.stroke();
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(231,76,60,0.85)';
+            ctx.fillText(axisLabel(ev, ePfx.mult, eDec), plotX - 6, eyp);
+        }
+        // Negative
+        var eyn = centreY + ev * emfScale;
+        if (eyn >= plotY - 1 && eyn <= plotY + plotH + 1) {
+            ctx.strokeStyle = 'rgba(231,76,60,0.4)';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(plotX - 4, eyn); ctx.lineTo(plotX, eyn); ctx.stroke();
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(231,76,60,0.85)';
+            ctx.fillText('\u2212' + axisLabel(ev, ePfx.mult, eDec), plotX - 6, eyn);
+        }
+    }
+
+    // EMF axis title (rotated)
+    ctx.save();
+    ctx.translate(gx + 8, centreY);
+    ctx.rotate(-Math.PI / 2);
+    ctx.font = 'bold 12px Segoe UI, Arial';
+    ctx.fillStyle = 'rgba(231,76,60,0.9)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('emf (' + ePfx.prefix + 'V)', 0, 0);
+    ctx.restore();
+    } // end showEmf left axis
+
+    // ---- Right Y-axis (Flux, blue) — or Left if EMF hidden ----
+    var rightX = plotX + plotW;
+    var fluxOnLeft = state.showFlux && !state.showEmf;
+    var fluxAxisX = fluxOnLeft ? plotX : rightX;
+    if (state.showFlux) {
+    ctx.strokeStyle = 'rgba(52,152,219,0.7)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(fluxAxisX, plotY);
+    ctx.lineTo(fluxAxisX, plotY + plotH);
+    ctx.stroke();
+    // Arrow
+    ctx.fillStyle = 'rgba(52,152,219,0.7)';
+    ctx.beginPath();
+    ctx.moveTo(fluxAxisX, plotY - 2);
+    ctx.lineTo(fluxAxisX - 5, plotY + 8);
+    ctx.lineTo(fluxAxisX + 5, plotY + 8);
+    ctx.closePath();
+    ctx.fill();
+
+    // Flux tick marks and labels
+    ctx.font = '11px Segoe UI, Arial';
+    var fluxTickDir = fluxOnLeft ? -1 : 1;
+    for (var fv = fTickStep; fv <= fluxAxisMax * 1.01; fv += fTickStep) {
+        // Positive
+        var fyp = centreY - fv * fluxVisualScale;
+        if (fyp >= plotY - 1 && fyp <= plotY + plotH + 1) {
+            ctx.strokeStyle = 'rgba(52,152,219,0.4)';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(fluxAxisX, fyp); ctx.lineTo(fluxAxisX + 4 * fluxTickDir, fyp); ctx.stroke();
+            ctx.textAlign = fluxOnLeft ? 'right' : 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(52,152,219,0.85)';
+            ctx.fillText(axisLabel(fv, fPfx.mult, fDec), fluxAxisX + 6 * fluxTickDir, fyp);
+        }
+        // Negative
+        var fyn = centreY + fv * fluxVisualScale;
+        if (fyn >= plotY - 1 && fyn <= plotY + plotH + 1) {
+            ctx.strokeStyle = 'rgba(52,152,219,0.4)';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(fluxAxisX, fyn); ctx.lineTo(fluxAxisX + 4 * fluxTickDir, fyn); ctx.stroke();
+            ctx.textAlign = fluxOnLeft ? 'right' : 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(52,152,219,0.85)';
+            ctx.fillText('\u2212' + axisLabel(fv, fPfx.mult, fDec), fluxAxisX + 6 * fluxTickDir, fyn);
+        }
+    }
+
+    // Flux axis title (rotated)
+    ctx.save();
+    if (fluxOnLeft) {
+        ctx.translate(gx + 8, centreY);
+        ctx.rotate(-Math.PI / 2);
+    } else {
+        ctx.translate(gx + gw - 4, centreY);
+        ctx.rotate(Math.PI / 2);
+    }
+    ctx.font = 'bold 12px Segoe UI, Arial';
+    ctx.fillStyle = 'rgba(52,152,219,0.9)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('N\u03D5 (' + fPfx.prefix + 'Wb)', 0, 0);
+    ctx.restore();
+    } // end showFlux axis
+
+    // ---- Time axis tick marks and labels ----
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.font = '11px Segoe UI, Arial';
+    for (var tt = 0; tt <= tMax + tTickStep * 0.01; tt += tTickStep) {
+        var ttx = plotX + (tt / tMax) * plotW;
+        // Tick on zero line
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        ctx.beginPath();
+        ctx.moveTo(ttx, centreY - 4);
+        ctx.lineTo(ttx, centreY + 4);
+        ctx.stroke();
+        // Label below plot
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(axisLabel(tt, tPfx.mult, tDec), ttx, plotY + plotH + 4);
+    }
+
+    // Time axis title
+    ctx.font = 'bold 12px Segoe UI, Arial';
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('Time (' + tPfx.prefix + 's)', plotX + plotW / 2, plotY + plotH + 19);
+
+    // Zero label at left axis
+    if (state.showEmf) {
+    ctx.font = '11px Segoe UI, Arial';
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('0', plotX - 6, centreY);
+    }
+    // Zero on flux axis (right or left)
+    if (state.showFlux) {
+    ctx.font = '11px Segoe UI, Arial';
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.textAlign = fluxOnLeft ? 'right' : 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('0', fluxAxisX + (fluxOnLeft ? -6 : 6), centreY);
+    }
+
+    } else {
+    // =============== SYMBOLIC MODE: original axes ===============
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    // Quarter markers (vertical)
+    for (var q = 0; q <= 8; q++) {
+        var qx = plotX + (q / 8) * plotW;
+        ctx.beginPath();
+        ctx.moveTo(qx, plotY);
+        ctx.lineTo(qx, plotY + plotH);
+        ctx.stroke();
+    }
+    // Half amplitude lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    ctx.beginPath();
+    ctx.moveTo(plotX, centreY - plotH / 4);
+    ctx.lineTo(plotX + plotW, centreY - plotH / 4);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(plotX, centreY + plotH / 4);
+    ctx.lineTo(plotX + plotW, centreY + plotH / 4);
+    ctx.stroke();
+
+    // ---- Time axis (zero line) ----
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(plotX, centreY);
+    ctx.lineTo(plotX + plotW, centreY);
+    ctx.stroke();
+    // Arrow head at end
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.beginPath();
+    ctx.moveTo(plotX + plotW + 2, centreY);
+    ctx.lineTo(plotX + plotW - 8, centreY - 5);
+    ctx.lineTo(plotX + plotW - 8, centreY + 5);
+    ctx.closePath();
+    ctx.fill();
+    // "Time, t" label
+    ctx.font = 'bold italic 13px Segoe UI, Arial';
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('Time, t', plotX + plotW - 2, centreY - 6);
+    // Tick marks at quarter periods
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 1.5;
+    for (var qt = 0; qt <= 8; qt++) {
+        var tx = plotX + (qt / 8) * plotW;
+        ctx.beginPath();
+        ctx.moveTo(tx, centreY - 5);
+        ctx.lineTo(tx, centreY + 5);
+        ctx.stroke();
+    }
+
+    // ---- Y axis ----
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(plotX, plotY);
+    ctx.lineTo(plotX, plotY + plotH);
+    ctx.stroke();
+    // Arrow head at top
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.beginPath();
+    ctx.moveTo(plotX, plotY - 2);
+    ctx.lineTo(plotX - 5, plotY + 8);
+    ctx.lineTo(plotX + 5, plotY + 8);
+    ctx.closePath();
+    ctx.fill();
+
+    // X-axis labels
+    ctx.font = '12px Segoe UI, Arial';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    var xLabels = ['0', 'T/4', 'T/2', '3T/4', 'T', '5T/4', '3T/2', '7T/4', '2T'];
+    for (var xi = 0; xi <= 8; xi++) {
+        ctx.fillText(xLabels[xi], plotX + (xi / 8) * plotW, plotY + plotH + 5);
+    }
+
+    // Y-axis labels at actual amplitudes
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+
+    if (state.showEmf && emfMax > 0) {
+        var emfLabelY = centreY - emfMax * emfScale;
+        ctx.font = 'bold 12px Segoe UI, Arial';
+        ctx.fillStyle = 'rgba(231,76,60,0.85)';
+        ctx.fillText('+\u03C9BAN', plotX - 6, emfLabelY);
+        ctx.fillText('\u2212\u03C9BAN', plotX - 6, centreY + emfMax * emfScale);
+    }
+
+    if (state.showFlux && fluxMax > 0) {
+        var fluxLabelY = centreY - fluxMax * fluxVisualScale;
+        ctx.font = 'bold 12px Segoe UI, Arial';
+        ctx.fillStyle = 'rgba(52,152,219,0.85)';
+        // Offset if too close to emf label
+        var fluxOffset = 0;
+        if (state.showEmf && emfMax > 0) {
+            var emfLabelYPos = centreY - emfMax * emfScale;
+            if (Math.abs(fluxLabelY - emfLabelYPos) < 18) fluxOffset = 16;
+        }
+        ctx.fillText('+BAN', plotX - 6, fluxLabelY + fluxOffset);
+        ctx.fillText('\u2212BAN', plotX - 6, centreY + fluxMax * fluxVisualScale - fluxOffset);
+        // Tick marks at flux amplitude
+        ctx.strokeStyle = 'rgba(52,152,219,0.3)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 4]);
+        ctx.beginPath();
+        ctx.moveTo(plotX, fluxLabelY);
+        ctx.lineTo(plotX + plotW, fluxLabelY);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(plotX, centreY + fluxMax * fluxVisualScale);
+        ctx.lineTo(plotX + plotW, centreY + fluxMax * fluxVisualScale);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    // Zero label
+    ctx.font = '12px Segoe UI, Arial';
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillText('0', plotX - 6, centreY);
+
+    } // end symbolic mode
+
+    // ---- Draw flux linkage curve ----
+    if (state.showFlux && fluxMax > 0) {
+        ctx.strokeStyle = 'rgba(52,152,219,0.7)';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        for (var i = 0; i <= numPts; i++) {
+            var a = (i / numPts) * totalAngle;
+            var px = plotX + (i / numPts) * plotW;
+            var py = centreY - BAN * Math.cos(a) * fluxVisualScale;
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+    }
+
+    // ---- Draw EMF curve ----
+    if (state.showEmf && emfMax > 0) {
+        ctx.strokeStyle = 'rgba(231,76,60,0.7)';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        for (var j = 0; j <= numPts; j++) {
+            var a2 = (j / numPts) * totalAngle;
+            var px2 = plotX + (j / numPts) * plotW;
+            var py2 = centreY - emfPeak * Math.sin(a2) * emfScale;
+            if (j === 0) ctx.moveTo(px2, py2); else ctx.lineTo(px2, py2);
+        }
+        ctx.stroke();
+    }
+
+    // ---- Current position marker ----
+    var normAngle = ((theta % totalAngle) + totalAngle) % totalAngle;
+    var markerX = plotX + (normAngle / totalAngle) * plotW;
+
+    // Vertical dashed line at current position
+    ctx.strokeStyle = 'rgba(255,200,100,0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    ctx.moveTo(markerX, plotY);
+    ctx.lineTo(markerX, plotY + plotH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Dot on flux curve
+    if (state.showFlux && fluxMax > 0) {
+        var fluxNow = BAN * Math.cos(normAngle);
+        var fdy = centreY - fluxNow * fluxVisualScale;
+        ctx.fillStyle = '#3498db';
+        ctx.shadowColor = '#3498db';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(markerX, fdy, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(markerX, fdy, 2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Dot on EMF curve
+    if (state.showEmf && emfMax > 0) {
+        var emfNow = emfPeak * Math.sin(normAngle);
+        var edy = centreY - emfNow * emfScale;
+        ctx.fillStyle = '#e74c3c';
+        ctx.shadowColor = '#e74c3c';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(markerX, edy, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(markerX, edy, 2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // ---- Gradient tangent on flux curve ----
+    if (state.showGradient && state.showFlux && fluxMax > 0) {
+        var slope = -BAN * Math.sin(normAngle);
+        var dFluxPerRad = slope * fluxVisualScale;
+        var dxPerRad = plotW / totalAngle;
+        var pixSlope = -dFluxPerRad / dxPerRad;
+
+        var tangLen = 60;
+        var fluxAtMark = BAN * Math.cos(normAngle);
+        var tangY = centreY - fluxAtMark * fluxVisualScale;
+
+        ctx.strokeStyle = 'rgba(243,156,18,0.8)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(markerX - tangLen, tangY - pixSlope * tangLen);
+        ctx.lineTo(markerX + tangLen, tangY + pixSlope * tangLen);
+        ctx.stroke();
+
+        ctx.font = 'bold 12px Segoe UI, Arial';
+        ctx.fillStyle = 'rgba(243,156,18,0.8)';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('gradient = \u2212emf', markerX + tangLen + 4, tangY + pixSlope * tangLen - 2);
+    }
+
+    // ---- Coil position markers (side view - rotating line) ----
+    if (state.showPositions) {
+        var positions = [0, Math.PI / 2, Math.PI, 3 * Math.PI / 2,
+                         2 * Math.PI, 5 * Math.PI / 2, 3 * Math.PI, 7 * Math.PI / 2,
+                         4 * Math.PI];
+        var miniR = 12;
+
+        for (var pi = 0; pi < positions.length; pi++) {
+            var pa = positions[pi];
+            var ppx = plotX + (pa / totalAngle) * plotW;
+            var ppy = plotY + plotH + (state.showData ? 52 : 32);
+
+            // Mini circle representing pole gap
+            ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(ppx, ppy, miniR, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Mini coil line at this angle (ACW: negate sin for y)
+            var mLineAngle = pa + Math.PI / 2;
+            var mx1 = ppx + Math.cos(mLineAngle) * miniR * 0.85;
+            var my1 = ppy - Math.sin(mLineAngle) * miniR * 0.85;
+            var mx2 = ppx - Math.cos(mLineAngle) * miniR * 0.85;
+            var my2 = ppy + Math.sin(mLineAngle) * miniR * 0.85;
+
+            ctx.strokeStyle = 'rgba(230,180,50,0.6)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(mx1, my1);
+            ctx.lineTo(mx2, my2);
+            ctx.stroke();
+
+            // ---- Status labels below each coil position ----
+            // Cycle index: 0=0, 1=π/2, 2=π, 3=3π/2, repeats
+            var qi = pi % 4;
+            var labelY1 = ppy + miniR + 10;
+            var labelY2 = labelY1 + 11;
+            ctx.font = '9px Segoe UI, Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+
+            // EMF status (red) — only if EMF graph shown
+            if (state.showEmf) {
+            ctx.fillStyle = 'rgba(231,76,60,0.75)';
+            if (qi === 0 || qi === 2) {
+                ctx.fillText('emf = 0', ppx, labelY1);
+            } else if (qi === 1) {
+                ctx.fillText('max emf', ppx, labelY1);
+            } else {
+                ctx.fillText('min emf', ppx, labelY1);
+            }
+            }
+
+            // Flux status (blue) — only if flux graph shown
+            if (state.showFlux) {
+            var fluxLabelY = state.showEmf ? labelY2 : labelY1;
+            ctx.fillStyle = 'rgba(52,152,219,0.75)';
+            if (qi === 1 || qi === 3) {
+                ctx.fillText('N\u03D5 = 0', ppx, fluxLabelY);
+            } else if (qi === 0) {
+                ctx.fillText('max N\u03D5', ppx, fluxLabelY);
+            } else {
+                ctx.fillText('min N\u03D5', ppx, fluxLabelY);
+            }
+            }
+        }
+    }
+
+    // ---- Legend (above plot, right-justified) ----
+    var legRightEdge = plotX + plotW;
+    var legY = gy - 4;
+
+    if (state.showFlux) {
+        ctx.font = 'bold 13px Segoe UI, Arial';
+        ctx.fillStyle = 'rgba(52,152,219,0.9)';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('N\u03D5 = BANcos(\u03C9t)', legRightEdge, legY);
+        var fluxTextW = ctx.measureText('N\u03D5 = BANcos(\u03C9t)').width;
+        ctx.strokeStyle = 'rgba(52,152,219,0.7)';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(legRightEdge - fluxTextW - 8, legY);
+        ctx.lineTo(legRightEdge - fluxTextW - 30, legY);
+        ctx.stroke();
+    }
+
+    if (state.showEmf) {
+        var legY2 = legY + (state.showFlux ? 20 : 0);
+        ctx.font = 'bold 13px Segoe UI, Arial';
+        ctx.fillStyle = 'rgba(231,76,60,0.9)';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('emf = \u03C9BANsin(\u03C9t)', legRightEdge, legY2);
+        var emfTextW = ctx.measureText('emf = \u03C9BANsin(\u03C9t)').width;
+        ctx.strokeStyle = 'rgba(231,76,60,0.7)';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(legRightEdge - emfTextW - 8, legY2);
+        ctx.lineTo(legRightEdge - emfTextW - 30, legY2);
+        ctx.stroke();
+    }
+}
+
+// ---- Mean EMF overlay ----
+function drawMeanEmfOverlay(cx, cy, gx, gy, gw, gh, BAN, emfPeak) {
+    var t1 = state.meanTheta1;
+    var t2 = state.meanTheta2;
+    var omega = 2 * Math.PI * state.freq;
+    var coilR = Math.round(52 * 0.90);
+    var normLen = 52;
+    var poleH = (5 - 1) * 26 + 18;
+
+    // Ensure t1 < t2 for display
+    var tA = Math.min(t1, t2);
+    var tB = Math.max(t1, t2);
+
+    // ========== GENERATOR OVERLAY ==========
+
+    // -- Second coil at θ₂ (dashed, lighter gold) --
+    var cosT2 = Math.cos(t2);
+    var sinT2 = Math.sin(t2);
+    var lineAng2 = t2 + Math.PI / 2;
+    var lx1b = cx + Math.cos(lineAng2) * coilR;
+    var ly1b = cy - Math.sin(lineAng2) * coilR;
+    var lx2b = cx - Math.cos(lineAng2) * coilR;
+    var ly2b = cy + Math.sin(lineAng2) * coilR;
+
+    ctx.strokeStyle = '#f39c12';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(lx1b, ly1b);
+    ctx.lineTo(lx2b, ly2b);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Normal at θ₂ (dashed orange)
+    if (state.showNormal) {
+        var nx2b = cx + cosT2 * normLen;
+        var ny2b = cy - sinT2 * normLen;
+        ctx.strokeStyle = 'rgba(243,156,18,0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(nx2b, ny2b);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        // Arrow head
+        var a2Ang = Math.atan2(-(ny2b - cy), nx2b - cx);
+        ctx.fillStyle = 'rgba(243,156,18,0.7)';
+        ctx.beginPath();
+        ctx.moveTo(nx2b, ny2b);
+        ctx.lineTo(nx2b - 6 * Math.cos(a2Ang - 0.4), ny2b + 6 * Math.sin(a2Ang - 0.4));
+        ctx.lineTo(nx2b - 6 * Math.cos(a2Ang + 0.4), ny2b + 6 * Math.sin(a2Ang + 0.4));
+        ctx.closePath();
+        ctx.fill();
+
+        // Angle arc for θ₂ from horizontal
+        var normT2 = ((t2 % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+        if (normT2 > 0.1) {
+            var arcR2 = 28;
+            ctx.strokeStyle = 'rgba(243,156,18,0.4)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.arc(cx, cy, arcR2, 0, -normT2, true);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+    }
+
+    // -- Angle arc between θ₁ and θ₂ (prominent green) --
+    var normT1 = ((t1 % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    var normT2d = ((t2 % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    var arcRd = 40;
+    ctx.strokeStyle = 'rgba(46,204,113,0.8)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    // Draw arc from θ₁ to θ₂ (ACW in canvas = negative angles)
+    ctx.arc(cx, cy, arcRd, -normT1, -normT2d, true);
+    ctx.stroke();
+
+    // Δθ label at midpoint of arc — show actual angle in degrees — draggable
+    var deltaTheta = Math.abs(normT2d - normT1);
+    var deltaDeg = deltaTheta * 180 / Math.PI;
+    var midAngle = (normT1 + normT2d) / 2;
+    var labRd = arcRd + 16;
+    var dAngBaseX = cx + Math.cos(midAngle) * labRd;
+    var dAngBaseY = cy - Math.sin(midAngle) * labRd;
+    var dAngLX = dAngBaseX + state.deltaAngleLabelOffset.dx;
+    var dAngLY = dAngBaseY + state.deltaAngleLabelOffset.dy;
+    ctx.font = 'bold 13px Segoe UI, Arial';
+    // Leader line if dragged
+    var daDist = Math.sqrt(state.deltaAngleLabelOffset.dx * state.deltaAngleLabelOffset.dx + state.deltaAngleLabelOffset.dy * state.deltaAngleLabelOffset.dy);
+    if (daDist > 5) {
+        ctx.strokeStyle = 'rgba(46,204,113,0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(dAngBaseX, dAngBaseY);
+        ctx.lineTo(dAngLX, dAngLY);
+        ctx.stroke();
+    }
+    ctx.fillStyle = '#2ecc71';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(deltaDeg.toFixed(0) + '\u00B0', dAngLX, dAngLY);
+    state._deltaAngleLabel = { x: dAngLX, y: dAngLY, baseX: dAngBaseX, baseY: dAngBaseY };
+
+    // -- Curved rotation arrow from A to B --
+    if (deltaTheta > 0.05) {
+        var arrowR = coilR + 8;
+        var arcStartAng = -(tA + Math.PI / 2);
+        var arcEndAng = -(tB + Math.PI / 2);
+        ctx.strokeStyle = 'rgba(255,200,60,0.6)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, arrowR, arcStartAng, arcEndAng, true);
+        ctx.stroke();
+
+        // Arrowhead at midpoint of arc
+        var arcMidAng = (arcStartAng + arcEndAng) / 2;
+        var midX = cx + arrowR * Math.cos(arcMidAng);
+        var midY = cy + arrowR * Math.sin(arcMidAng);
+        // Tangent direction (anticlockwise = towards B)
+        var tangentAng = arcMidAng - Math.PI / 2;
+        var headLen = 8;
+        ctx.fillStyle = 'rgba(255,200,60,0.7)';
+        ctx.beginPath();
+        ctx.moveTo(midX + headLen * Math.cos(tangentAng), midY + headLen * Math.sin(tangentAng));
+        ctx.lineTo(midX - headLen * Math.cos(tangentAng - 0.5), midY - headLen * Math.sin(tangentAng - 0.5));
+        ctx.lineTo(midX - headLen * Math.cos(tangentAng + 0.5), midY - headLen * Math.sin(tangentAng + 0.5));
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // -- Labels "A" and "B" at coil tips --
+    var cosT1 = Math.cos(t1);
+    var sinT1 = Math.sin(t1);
+    var lineAng1 = t1 + Math.PI / 2;
+    var baseAx = cx + Math.cos(lineAng1) * (coilR + 12);
+    var baseAy = cy - Math.sin(lineAng1) * (coilR + 12);
+    var baseBx = cx + Math.cos(lineAng2) * (coilR + 12);
+    var baseBy = cy - Math.sin(lineAng2) * (coilR + 12);
+
+    var labelAx = baseAx + state.labelAOffset.dx;
+    var labelAy = baseAy + state.labelAOffset.dy;
+    var labelBx = baseBx + state.labelBOffset.dx;
+    var labelBy = baseBy + state.labelBOffset.dy;
+
+    ctx.font = 'bold 14px Segoe UI, Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Leader lines from base to label (if dragged away)
+    var distA = Math.sqrt(state.labelAOffset.dx * state.labelAOffset.dx + state.labelAOffset.dy * state.labelAOffset.dy);
+    if (distA > 5) {
+        ctx.strokeStyle = 'rgba(46,204,113,0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(baseAx, baseAy);
+        ctx.lineTo(labelAx, labelAy);
+        ctx.stroke();
+    }
+    var distB = Math.sqrt(state.labelBOffset.dx * state.labelBOffset.dx + state.labelBOffset.dy * state.labelBOffset.dy);
+    if (distB > 5) {
+        ctx.strokeStyle = 'rgba(243,156,18,0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(baseBx, baseBy);
+        ctx.lineTo(labelBx, labelBy);
+        ctx.stroke();
+    }
+
+    ctx.fillStyle = '#2ecc71';
+    ctx.fillText('A', labelAx, labelAy);
+    ctx.fillStyle = '#f39c12';
+    ctx.fillText('B', labelBx, labelBy);
+
+    // Store label bounds for hit testing
+    state._labelA = { x: labelAx, y: labelAy, baseX: baseAx, baseY: baseAy };
+    state._labelB = { x: labelBx, y: labelBy, baseX: baseBx, baseY: baseBy };
+
+    // ========== WAVEFORM OVERLAY ==========
+    var leftMargin = state.showData ? 82 : 70;
+    var rightMargin = state.showData ? 78 : 20;
+    var plotX = gx + leftMargin;
+    var plotY = gy + 28;
+    var plotW = gw - leftMargin - rightMargin;
+    var plotH = state.showData ? gh - 70 : gh - 55;
+    var centreY = plotY + plotH / 2;
+    var totalAngle = 4 * Math.PI;
+
+    var fluxMax = BAN;
+    if (fluxMax < 1e-9) fluxMax = 1;
+
+    // Recalculate scale to match the waveform graph
+    var fluxVisualScale = (plotH / 2 * 0.80) / fluxMax;
+    if (state.showData) {
+        var fTickStep = niceTickStep(fluxMax, 4);
+        var fluxAxisMax = Math.ceil(fluxMax / fTickStep) * fTickStep;
+        fluxVisualScale = (plotH / 2 * 0.98) / fluxAxisMax;
+    }
+
+    // Flux values at both angles
+    var flux1 = BAN * Math.cos(tA);
+    var flux2 = BAN * Math.cos(tB);
+    var deltaFlux = flux2 - flux1;
+    var deltaT = (tB - tA) / omega;
+    var meanEmf = deltaT > 1e-15 ? -deltaFlux / deltaT : 0;
+
+    // X positions on plot (use tA and tB within first cycle 0..2π mapped to full plot)
+    var x1 = plotX + (tA / totalAngle) * plotW;
+    var x2 = plotX + (tB / totalAngle) * plotW;
+    var y1 = centreY - flux1 * fluxVisualScale;
+    var y2 = centreY - flux2 * fluxVisualScale;
+
+    // Shaded region between markers
+    // Store dot positions for drag (always, even if not drawn)
+    state._dotA = { x: x1, y: y1, plotX: plotX, plotW: plotW, plotY: plotY, plotH: plotH, totalAngle: totalAngle };
+    state._dotB = { x: x2, y: y2 };
+
+    if (state.showFlux) {
+    ctx.fillStyle = 'rgba(46,204,113,0.08)';
+    ctx.fillRect(x1, plotY, x2 - x1, plotH);
+
+    // Vertical dashed markers
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    // θA marker (green)
+    ctx.strokeStyle = 'rgba(46,204,113,0.6)';
+    ctx.beginPath();
+    ctx.moveTo(x1, plotY);
+    ctx.lineTo(x1, plotY + plotH);
+    ctx.stroke();
+    // θB marker (orange)
+    ctx.strokeStyle = 'rgba(243,156,18,0.6)';
+    ctx.beginPath();
+    ctx.moveTo(x2, plotY);
+    ctx.lineTo(x2, plotY + plotH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Dot A
+    ctx.fillStyle = '#2ecc71';
+    ctx.shadowColor = '#2ecc71';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(x1, y1, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(x1, y1, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Dot B
+        ctx.fillStyle = '#f39c12';
+        ctx.shadowColor = '#f39c12';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(x2, y2, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(x2, y2, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Flux value labels to the right of each dot
+        ctx.font = 'bold 10px Segoe UI, Arial';
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'left';
+        // Label A
+        var labAx = x1 + 10;
+        var labAside = 'left';
+        if (labAx + 60 > plotX + plotW) { labAx = x1 - 10; labAside = 'right'; }
+        ctx.textAlign = labAside;
+        ctx.fillStyle = 'rgba(46,204,113,0.9)';
+        ctx.fillText(smartFormat(flux1, 'Wb'), labAx, y1);
+        // Label B
+        var labBx = x2 + 10;
+        var labBside = 'left';
+        if (labBx + 60 > plotX + plotW) { labBx = x2 - 10; labBside = 'right'; }
+        ctx.textAlign = labBside;
+        ctx.fillStyle = 'rgba(243,156,18,0.9)';
+        var labBy = y2;
+        if (Math.abs(labBy - y1) < 14 && Math.abs(x2 - x1) < 80) labBy = y2 + 14;
+        ctx.fillText(smartFormat(flux2, 'Wb'), labBx, labBy);
+
+    // "A" and "B" labels above markers
+    ctx.font = 'bold 12px Segoe UI, Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle = '#2ecc71';
+    ctx.fillText('A', x1, plotY - 2);
+    ctx.fillStyle = '#f39c12';
+    ctx.fillText('B', x2, plotY - 2);
+    } // end showFlux waveform overlay
+
+    // ========== UPDATE MEAN EMF READOUT ==========
+    var t1Time = tA / omega;
+    var t2Time = tB / omega;
+    document.getElementById('readFlux1').textContent = smartFormat(flux1, 'Wb');
+    document.getElementById('readFlux2').textContent = smartFormat(flux2, 'Wb');
+    document.getElementById('readDFlux').textContent = smartFormat(deltaFlux, 'Wb');
+    document.getElementById('readDt').textContent = smartFormat(deltaT, 's');
+    document.getElementById('readMeanEmf').textContent = smartFormat(meanEmf, 'V');
+}
+
+// ---- Update readings panel ----
+function updateReadings(theta, fluxNow, emfNow, emfPeak) {
+    var normAngle = ((theta % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    var degrees = normAngle * 180 / Math.PI;
+    document.getElementById('readAngle').textContent = normAngle.toFixed(2) + ' rad  (' + Math.round(degrees) + '\u00B0)';
+    document.getElementById('readFlux').textContent = smartFormat(fluxNow, 'Wb');
+    document.getElementById('readEmf').textContent = smartFormat(emfNow, 'V');
+
+    // Sync theta slider with full 720 degree range
+    if (!thetaSliderActive) {
+        var graphAngle = ((theta % (4 * Math.PI)) + 4 * Math.PI) % (4 * Math.PI);
+        var graphDeg = Math.round(graphAngle * 180 / Math.PI);
+        sliderTheta.value = graphDeg;
+        valTheta.textContent = normAngle.toFixed(2) + ' rad (' + Math.round(degrees) + '\u00B0)';
+    }
+}
+
+// ---- Draggable mean EMF dots and labels ----
+var draggingDot = null; // 'A', 'B', or null
+var draggingLabel = null; // 'A', 'B', 'angle', 'deltaAngle', or null
+var labelDragOffset = { dx: 0, dy: 0 };
+
+function canvasXY(e) {
+    var rect = canvas.getBoundingClientRect();
+    var scaleX = canvas.width / rect.width;
+    var scaleY = canvas.height / rect.height;
+    var cx, cy;
+    if (e.touches && e.touches.length > 0) {
+        cx = e.touches[0].clientX;
+        cy = e.touches[0].clientY;
+    } else {
+        cx = e.clientX;
+        cy = e.clientY;
+    }
+    return { x: (cx - rect.left) * scaleX, y: (cy - rect.top) * scaleY };
+}
+
+function labelHitTest(mx, my) {
+    var hitR = 14;
+    var best = null;
+    var bestDist = hitR;
+    // Check all draggable labels on generator
+    var labels = [];
+    if (state.showMeanEmf && state._labelA) {
+        labels.push({ id: 'A', x: state._labelA.x, y: state._labelA.y });
+        labels.push({ id: 'B', x: state._labelB.x, y: state._labelB.y });
+    }
+    if (state.showMeanEmf && state._deltaAngleLabel) {
+        labels.push({ id: 'deltaAngle', x: state._deltaAngleLabel.x, y: state._deltaAngleLabel.y });
+    }
+    if (state._angleLabel) {
+        labels.push({ id: 'angle', x: state._angleLabel.x, y: state._angleLabel.y });
+    }
+    for (var i = 0; i < labels.length; i++) {
+        var d = Math.sqrt((mx - labels[i].x) * (mx - labels[i].x) + (my - labels[i].y) * (my - labels[i].y));
+        if (d < bestDist) {
+            bestDist = d;
+            best = labels[i].id;
+        }
+    }
+    return best;
+}
+
+function getLabelRef(id) {
+    if (id === 'A' && state._labelA) return { stored: state._labelA, offset: state.labelAOffset };
+    if (id === 'B' && state._labelB) return { stored: state._labelB, offset: state.labelBOffset };
+    if (id === 'angle' && state._angleLabel) return { stored: state._angleLabel, offset: state.angleLabelOffset };
+    if (id === 'deltaAngle' && state._deltaAngleLabel) return { stored: state._deltaAngleLabel, offset: state.deltaAngleLabelOffset };
+    return null;
+}
+
+function dotHitTest(mx, my) {
+    if (!state.showMeanEmf || !state.showFlux || !state._dotA) return null;
+    var dA = state._dotA;
+    var dB = state._dotB;
+    var distA = Math.sqrt((mx - dA.x) * (mx - dA.x) + (my - dA.y) * (my - dA.y));
+    var distB = Math.sqrt((mx - dB.x) * (mx - dB.x) + (my - dB.y) * (my - dB.y));
+    var hitR = 14;
+    if (distA < hitR && distA <= distB) return 'A';
+    if (distB < hitR) return 'B';
+    return null;
+}
+
+function xToAngle(mx) {
+    var d = state._dotA;
+    if (!d) return 0;
+    var frac = (mx - d.plotX) / d.plotW;
+    if (frac < 0) frac = 0;
+    if (frac > 0.5) frac = 0.5;
+    return frac * d.totalAngle;
+}
+
+canvas.addEventListener('mousedown', function(e) {
+    var pt = canvasXY(e);
+    // Check labels first (on generator)
+    var labHit = labelHitTest(pt.x, pt.y);
+    if (labHit) {
+        var ref = getLabelRef(labHit);
+        if (ref) {
+            draggingLabel = labHit;
+            labelDragOffset.dx = pt.x - ref.stored.x;
+            labelDragOffset.dy = pt.y - ref.stored.y;
+            canvas.style.cursor = 'grabbing';
+            e.preventDefault();
+            return;
+        }
+    }
+    // Then check dots (on graph)
+    var hit = dotHitTest(pt.x, pt.y);
+    if (hit) {
+        draggingDot = hit;
+        canvas.style.cursor = 'grabbing';
+        e.preventDefault();
+    }
+});
+
+canvas.addEventListener('mousemove', function(e) {
+    // Label dragging
+    if (draggingLabel) {
+        var pt = canvasXY(e);
+        var ref = getLabelRef(draggingLabel);
+        if (ref) {
+            ref.offset.dx = (pt.x - labelDragOffset.dx) - ref.stored.baseX;
+            ref.offset.dy = (pt.y - labelDragOffset.dy) - ref.stored.baseY;
+        }
+        draw();
+        e.preventDefault();
+        return;
+    }
+    // Dot dragging
+    if (draggingDot) {
+        var pt = canvasXY(e);
+        var angle = snapAngle(xToAngle(pt.x));
+        var angleDeg = Math.round(angle * 180 / Math.PI);
+        if (draggingDot === 'A') {
+            // A cannot pass B
+            if (angle >= state.meanTheta2) angle = state.meanTheta2 - Math.PI / 180;
+            if (angle < 0) angle = 0;
+            angleDeg = Math.round(angle * 180 / Math.PI);
+            state.meanTheta1 = angle;
+            sliderT1.value = angleDeg;
+            valT1.textContent = fmtMeanAngle(angle);
+        } else {
+            // B cannot go before A
+            if (angle <= state.meanTheta1) angle = state.meanTheta1 + Math.PI / 180;
+            if (angle > 2 * Math.PI) angle = 2 * Math.PI;
+            angleDeg = Math.round(angle * 180 / Math.PI);
+            state.meanTheta2 = angle;
+            sliderT2.value = angleDeg;
+            valT2.textContent = fmtMeanAngle(angle);
+        }
+        draw();
+        e.preventDefault();
+    } else if (state.showMeanEmf || state.showNormal) {
+        var pt2 = canvasXY(e);
+        var hover = labelHitTest(pt2.x, pt2.y) || dotHitTest(pt2.x, pt2.y);
+        canvas.style.cursor = hover ? 'grab' : '';
+    }
+});
+
+canvas.addEventListener('mouseup', function() {
+    draggingDot = null;
+    draggingLabel = null;
+    canvas.style.cursor = '';
+});
+
+canvas.addEventListener('mouseleave', function() {
+    draggingDot = null;
+    draggingLabel = null;
+    canvas.style.cursor = '';
+});
+
+// Touch support
+canvas.addEventListener('touchstart', function(e) {
+    var pt = canvasXY(e);
+    var labHit = labelHitTest(pt.x, pt.y);
+    if (labHit) {
+        var ref = getLabelRef(labHit);
+        if (ref) {
+            draggingLabel = labHit;
+            labelDragOffset.dx = pt.x - ref.stored.x;
+            labelDragOffset.dy = pt.y - ref.stored.y;
+            e.preventDefault();
+            return;
+        }
+    }
+    var hit = dotHitTest(pt.x, pt.y);
+    if (hit) {
+        draggingDot = hit;
+        e.preventDefault();
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', function(e) {
+    if (draggingLabel) {
+        var pt = canvasXY(e);
+        var ref = getLabelRef(draggingLabel);
+        if (ref) {
+            ref.offset.dx = (pt.x - labelDragOffset.dx) - ref.stored.baseX;
+            ref.offset.dy = (pt.y - labelDragOffset.dy) - ref.stored.baseY;
+        }
+        draw();
+        e.preventDefault();
+        return;
+    }
+    if (draggingDot) {
+        var pt = canvasXY(e);
+        var angle = snapAngle(xToAngle(pt.x));
+        var angleDeg = Math.round(angle * 180 / Math.PI);
+        if (draggingDot === 'A') {
+            if (angle >= state.meanTheta2) angle = state.meanTheta2 - Math.PI / 180;
+            if (angle < 0) angle = 0;
+            angleDeg = Math.round(angle * 180 / Math.PI);
+            state.meanTheta1 = angle;
+            sliderT1.value = angleDeg;
+            valT1.textContent = fmtMeanAngle(angle);
+        } else {
+            if (angle <= state.meanTheta1) angle = state.meanTheta1 + Math.PI / 180;
+            if (angle > 2 * Math.PI) angle = 2 * Math.PI;
+            angleDeg = Math.round(angle * 180 / Math.PI);
+            state.meanTheta2 = angle;
+            sliderT2.value = angleDeg;
+            valT2.textContent = fmtMeanAngle(angle);
+        }
+        draw();
+        e.preventDefault();
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchend', function() {
+    draggingDot = null;
+    draggingLabel = null;
+});
+
+// ---- Animation loop ----
+var lastTime = null;
+
+function animate(ts) {
+    if (!lastTime) lastTime = ts;
+    var dt = (ts - lastTime) / 1000;
+    lastTime = ts;
+
+    if (state.playing) {
+        // Advance angle based on actual frequency but at visual speed
+        // Use a visual speed factor so the animation is watchable
+        var omega = 2 * Math.PI * state.freq;
+        state.angle += omega * dt * state.speed * 0.02; // slow down for visibility
+        if (state.angle > Math.PI * 200) state.angle -= Math.PI * 200;
+    }
+
+    draw();
+    requestAnimationFrame(animate);
+}
+
+// ---- Resize ----
+function resizeCanvas() {
+    var wrap = document.querySelector('.canvas-wrap');
+    var w = wrap.clientWidth;
+    var aspect = canvas.width / canvas.height;
+    canvas.style.width = w + 'px';
+    canvas.style.height = (w / aspect) + 'px';
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// ---- Start ----
+requestAnimationFrame(animate);
+// ============ ENLARGED GENERATOR MODAL ============
+var genModalCanvas = document.getElementById('genModalCanvas');
+var genModalCtx = genModalCanvas.getContext('2d');
+genModalCanvas.style.background = 'linear-gradient(180deg, #0a0a1f 0%, #151530 100%)';
+var genModalOpen = false;
+
+function openGenModal() {
+    document.getElementById('genModalOverlay').style.display = 'flex';
+    genModalOpen = true;
+    drawGenModal();
+}
+
+function closeGenModal() {
+    document.getElementById('genModalOverlay').style.display = 'none';
+    genModalOpen = false;
+}
+
+function drawGenModal() {
+    if (!genModalOpen) return;
+    var mW = genModalCanvas.width;
+    var mH = genModalCanvas.height;
+    var mcx = mW / 2;
+    var mcy = mH / 2 - 20;
+
+    var mainCtx = ctx;
+    ctx = genModalCtx;
+    ctx.clearRect(0, 0, mW, mH);
+
+    var scale = 1.7;
+    ctx.save();
+    ctx.translate(mcx, mcy);
+    ctx.scale(scale, scale);
+    ctx.translate(-240, -190);
+
+    var omega = 2 * Math.PI * state.freq;
+    var BAN = state.B * state.A * state.N;
+    var emfPeak = omega * BAN;
+    var theta = state.showMeanEmf ? state.meanTheta1 : state.angle;
+    var fluxNow = BAN * Math.cos(theta);
+    var emfNow = emfPeak * Math.sin(theta);
+
+    drawGeneratorSideView(240, 220, theta, BAN, emfPeak, fluxNow, emfNow);
+
+    if (state.showMeanEmf) {
+        drawMeanEmfOverlay(240, 220, 9999, 9999, 0, 0, BAN, emfPeak);
+    }
+
+    ctx.restore();
+    ctx = mainCtx;
+}
+
+var _origDraw = draw;
+draw = function() {
+    _origDraw();
+    if (genModalOpen) drawGenModal();
+};
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && genModalOpen) closeGenModal();
+});
+
+</script>
+</body>
+</html>

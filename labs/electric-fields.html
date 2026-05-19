@@ -1,0 +1,3570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Electric Field Lines</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+    min-height: 100vh;
+    padding: 15px;
+    display: flex;
+    justify-content: center;
+}
+
+.container {
+    background: rgba(0,0,0,0.4);
+    border-radius: 20px;
+    padding: 20px;
+    max-width: 1400px;
+    width: 100%;
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 0 60px rgba(100,100,255,0.15);
+}
+
+h1 {
+    text-align: center;
+    color: #fff;
+    font-size: 2em;
+    margin-bottom: 5px;
+    text-shadow: 0 0 30px rgba(150,100,255,0.8), 0 0 60px rgba(100,150,255,0.5);
+    letter-spacing: 2px;
+}
+
+.subtitle {
+    text-align: center;
+    color: #a0a0c0;
+    margin-bottom: 15px;
+    font-size: 0.95em;
+}
+
+.main-area {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.canvas-column {
+    flex: 1;
+    min-width: 700px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+canvas {
+    background: linear-gradient(180deg, #0a0a1f 0%, #151530 100%);
+    border-radius: 15px;
+    display: block;
+    border: 2px solid rgba(100,150,255,0.4);
+    box-shadow: inset 0 0 50px rgba(0,0,0,0.5), 0 0 30px rgba(100,100,255,0.2);
+}
+
+.display-options {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 12px 15px;
+    background: linear-gradient(135deg, rgba(30,30,60,0.6), rgba(20,20,40,0.7));
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.controls {
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.panel {
+    background: linear-gradient(135deg, rgba(30,30,60,0.8), rgba(20,20,40,0.9));
+    border-radius: 12px;
+    padding: 15px;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+}
+
+.panel h3 {
+    color: #8888cc;
+    font-size: 0.75em;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+}
+
+.instructions-panel {
+    background: linear-gradient(135deg, rgba(40,40,60,0.6), rgba(30,30,50,0.7));
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 15px;
+}
+
+.instructions-panel h3 {
+    color: #f1c40f;
+    font-size: 0.75em;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+}
+
+.instructions-panel p {
+    color: #aaa;
+    font-size: 0.85em;
+    line-height: 1.5;
+}
+
+.slider-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0;
+}
+
+.slider-label {
+    color: #888;
+    font-size: 0.85em;
+    width: 110px;
+}
+
+.slider-value {
+    color: #00d4ff;
+    font-size: 0.9em;
+    font-weight: 700;
+    width: 50px;
+    text-align: right;
+    text-shadow: 0 0 10px rgba(0,212,255,0.5);
+}
+
+input[type="range"] {
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.1);
+    -webkit-appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00d4ff, #0099cc);
+    cursor: pointer;
+    box-shadow: 0 0 15px rgba(0,212,255,0.6);
+}
+
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0;
+    cursor: pointer;
+}
+
+.checkbox-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #4ecdc4;
+    cursor: pointer;
+}
+
+.checkbox-row label {
+    color: #aaa;
+    font-size: 0.85em;
+    cursor: pointer;
+    user-select: none;
+}
+
+.btn {
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 0.9em;
+    width: 100%;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-add-pos {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: #fff;
+    box-shadow: 0 3px 15px rgba(231,76,60,0.4);
+}
+
+.btn-add-pos:hover {
+    box-shadow: 0 5px 25px rgba(231,76,60,0.6);
+    transform: translateY(-2px);
+}
+
+.btn-add-neg {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: #fff;
+    box-shadow: 0 3px 15px rgba(52,152,219,0.4);
+}
+
+.btn-add-neg:hover {
+    box-shadow: 0 5px 25px rgba(52,152,219,0.6);
+    transform: translateY(-2px);
+}
+
+.btn-clear {
+    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+    color: #fff;
+    box-shadow: 0 3px 15px rgba(149,165,166,0.4);
+}
+
+.btn-clear:hover {
+    box-shadow: 0 5px 25px rgba(149,165,166,0.6);
+    transform: translateY(-2px);
+}
+
+.btn-preset {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+    color: #fff;
+    box-shadow: 0 3px 15px rgba(155,89,182,0.4);
+    padding: 10px;
+    font-size: 0.8em;
+}
+
+.btn-preset:hover {
+    box-shadow: 0 5px 25px rgba(155,89,182,0.6);
+    transform: translateY(-2px);
+}
+
+.drag-charges-row {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin: 15px 0;
+}
+
+.drag-charge {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.drag-charge:active {
+    cursor: grabbing;
+}
+
+.drag-charge.positive {
+    background: radial-gradient(circle at 30% 30%, #ff8a80, #e74c3c);
+    box-shadow: 0 4px 20px rgba(231,76,60,0.5), inset 0 -2px 10px rgba(0,0,0,0.2);
+}
+
+.drag-charge.negative {
+    background: radial-gradient(circle at 30% 30%, #64b5f6, #3498db);
+    box-shadow: 0 4px 20px rgba(52,152,219,0.5), inset 0 -2px 10px rgba(0,0,0,0.2);
+}
+
+.drag-charge:hover {
+    transform: scale(1.1);
+}
+
+.drag-charge.positive:hover {
+    box-shadow: 0 6px 30px rgba(231,76,60,0.7), inset 0 -2px 10px rgba(0,0,0,0.2);
+}
+
+.drag-charge.negative:hover {
+    box-shadow: 0 6px 30px rgba(52,152,219,0.7), inset 0 -2px 10px rgba(0,0,0,0.2);
+}
+
+.drag-charge span {
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.drag-label {
+    position: absolute;
+    bottom: -20px;
+    font-size: 0.7em;
+    color: #aaa;
+    white-space: nowrap;
+}
+
+.probe-instrument {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: transparent;
+    border: 4px solid #9b59b6;
+    box-shadow: 0 4px 20px rgba(155,89,182,0.5), 0 0 15px rgba(155,89,182,0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    transition: all 0.3s ease;
+    position: relative;
+    margin: 0 auto;
+}
+
+.probe-instrument:hover {
+    transform: scale(1.1);
+    border-color: #bb77dd;
+    box-shadow: 0 6px 30px rgba(155,89,182,0.7), 0 0 20px rgba(155,89,182,0.5);
+}
+
+.probe-instrument:active {
+    cursor: grabbing;
+}
+
+.probe-instrument::before,
+.probe-instrument::after {
+    content: '';
+    position: absolute;
+    background: #bb77dd;
+}
+
+.probe-instrument::before {
+    width: 24px;
+    height: 3px;
+    border-radius: 2px;
+}
+
+.probe-instrument::after {
+    width: 3px;
+    height: 24px;
+    border-radius: 2px;
+}
+
+.probe-instrument span {
+    display: none;
+}
+
+.efield-instrument {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: transparent;
+    border: 4px solid #e67e22;
+    box-shadow: 0 4px 20px rgba(230,126,34,0.5), 0 0 15px rgba(230,126,34,0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    transition: all 0.3s ease;
+    position: relative;
+    margin: 0 auto;
+}
+
+.efield-instrument:hover {
+    transform: scale(1.1);
+    border-color: #f39c12;
+    box-shadow: 0 6px 30px rgba(230,126,34,0.7), 0 0 20px rgba(230,126,34,0.5);
+}
+
+.efield-instrument:active {
+    cursor: grabbing;
+}
+
+.efield-instrument::before {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 4px;
+    background: #f39c12;
+    border-radius: 2px;
+}
+
+.efield-instrument::after {
+    content: '';
+    position: absolute;
+    right: 14px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid #f39c12;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+}
+
+.probe-label {
+    position: absolute;
+    bottom: -20px;
+    font-size: 0.7em;
+    color: #aaa;
+    white-space: nowrap;
+}
+
+.ruler-instrument {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: transparent;
+    border: 4px solid #27ae60;
+    box-shadow: 0 4px 20px rgba(39,174,96,0.5), 0 0 15px rgba(39,174,96,0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    transition: all 0.3s ease;
+    position: relative;
+    margin: 0 auto;
+}
+
+.ruler-instrument:hover {
+    transform: scale(1.1);
+    border-color: #2ecc71;
+    box-shadow: 0 6px 30px rgba(39,174,96,0.7), 0 0 20px rgba(39,174,96,0.5);
+}
+
+.ruler-instrument:active {
+    cursor: grabbing;
+}
+
+.ruler-instrument::before {
+    content: '';
+    position: absolute;
+    width: 28px;
+    height: 3px;
+    background: #2ecc71;
+    border-radius: 2px;
+}
+
+.ruler-instrument::after {
+    content: '';
+    position: absolute;
+    width: 3px;
+    height: 10px;
+    background: #2ecc71;
+    left: 16px;
+}
+
+.marker-instrument {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: transparent;
+    border: 4px solid #e91e63;
+    box-shadow: 0 4px 20px rgba(233,30,99,0.5), 0 0 15px rgba(233,30,99,0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    transition: all 0.3s ease;
+    position: relative;
+    margin: 0 auto;
+}
+
+.marker-instrument:hover {
+    transform: scale(1.1);
+    border-color: #f48fb1;
+    box-shadow: 0 6px 30px rgba(233,30,99,0.7), 0 0 20px rgba(233,30,99,0.5);
+}
+
+.marker-instrument:active {
+    cursor: grabbing;
+}
+
+.marker-instrument::before {
+    content: '?';
+    position: absolute;
+    font-size: 24px;
+    font-weight: bold;
+    color: #e91e63;
+}
+
+.button-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.preset-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.instruments-panel {
+    background: linear-gradient(135deg, rgba(40,30,60,0.6), rgba(30,20,50,0.7));
+    border: 1px solid rgba(155,89,182,0.3);
+    border-radius: 12px;
+    padding: 12px 15px;
+    margin-top: 10px;
+}
+
+.instruments-panel h3 {
+    color: #bb99dd;
+    font-weight: 700;
+    font-size: 0.8em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.instruments-row {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin: 10px 0;
+}
+
+.instrument-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.instrument-label {
+    font-size: 0.75em;
+    color: #aaa;
+}
+
+/* === iPad / Apple Pencil compliance === */
+/* Block A: manipulation on form controls so taps register without 300ms delay
+   and the Apple Pencil treats them as buttons rather than scroll surfaces */
+input, button, label,
+.checkbox-row, .slider-row,
+.btn, .btn-add-pos, .btn-add-neg, .btn-clear, .btn-preset,
+.drag-charge, .probe-instrument, .efield-instrument,
+.ruler-instrument, .marker-instrument {
+    touch-action: manipulation;
+}
+
+/* Block B: sliders need touch-action: none for Pencil drag to work.
+   This MUST come after Block A so it overrides the manipulation rule. */
+input[type="range"] {
+    touch-action: none;
+}
+
+/* Block C: suppress text selection and the iOS long-press callout on
+   palette items. Without this, long-pressing a charge on iPad selects the
+   "+" or "-" glyph (or the "P" / "?" on instrument tiles) and may pop the
+   Copy/Define menu. The drag still works, but it looks broken. */
+.drag-charge, .drag-charge span,
+.probe-instrument, .probe-instrument span,
+.efield-instrument, .efield-instrument span,
+.ruler-instrument, .ruler-instrument span,
+.marker-instrument, .marker-instrument span,
+.drag-label, .probe-label {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>Electric Field Lines</h1>
+    <p class="subtitle">Visualize electric fields from point charges</p>
+    
+    <div class="main-area">
+        <div class="canvas-column">
+            <canvas id="canvas" width="900" height="650"></canvas>
+            
+            <div class="display-options">
+                <div class="checkbox-row">
+                    <input type="checkbox" id="showFieldLinesCheck">
+                    <label for="showFieldLinesCheck">Show Field Lines</label>
+                </div>
+                <div class="checkbox-row" style="margin-left: 20px;">
+                    <input type="checkbox" id="showArrowsCheck" checked>
+                    <label for="showArrowsCheck">Show Arrows</label>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="showVectorFieldCheck">
+                    <label for="showVectorFieldCheck">Show Vector Field</label>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="showEquipotentialCheck">
+                    <label for="showEquipotentialCheck">Show Equipotentials</label>
+                </div>
+                <div class="equip-slider-row" id="deltaVRow" style="display: none; margin-left: 25px; margin-top: 5px;">
+                    <label style="color: #00ff88; font-size: 0.85em;">ΔV: <span id="deltaVValue" style="color: #fff;">0.02</span></label>
+                    <input type="range" id="deltaVSlider" min="0.005" max="0.1" step="0.005" value="0.02" style="width: 100px; margin-left: 10px;">
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="showLabelsCheck" checked>
+                    <label for="showLabelsCheck">Show Charge Labels</label>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="showGridCheck" checked>
+                    <label for="showGridCheck">Show Snap Grid</label>
+                </div>
+                <div class="equip-slider-row" id="gridSizeRow" style="margin-left: 25px; margin-top: 5px;">
+                    <label style="color: #3498db; font-size: 0.85em;">Grid: <span id="gridSizeValue" style="color: #fff;">50</span> px</label>
+                    <input type="range" id="gridSizeSlider" min="20" max="100" step="10" value="50" style="width: 100px; margin-left: 10px;">
+                </div>
+            </div>
+            
+            <!-- Instruments Panel - moved under options -->
+            <div class="instruments-panel">
+                <h3>Measurement Instruments</h3>
+                <p style="font-size: 0.8em; color: #888; margin-bottom: 10px;">Drag onto canvas (multiple allowed):</p>
+                <div class="instruments-row">
+                    <div class="instrument-item">
+                        <div class="probe-instrument" id="dragProbe" draggable="true">
+                            <span>V</span>
+                        </div>
+                        <div class="instrument-label">Voltmeter</div>
+                    </div>
+                    <div class="instrument-item">
+                        <div class="efield-instrument" id="dragEProbe" draggable="true">
+                        </div>
+                        <div class="instrument-label">E Field</div>
+                        <div class="checkbox-row" style="margin-top: 5px;">
+                            <input type="checkbox" id="showEComponentsCheck">
+                            <label for="showEComponentsCheck" style="font-size: 0.75em;">Components</label>
+                        </div>
+                    </div>
+                    <div class="instrument-item">
+                        <div class="ruler-instrument" id="dragRuler" draggable="true">
+                        </div>
+                        <div class="instrument-label">Ruler</div>
+                    </div>
+                    <div class="instrument-item">
+                        <div class="marker-instrument" id="dragMarker" draggable="true">
+                        </div>
+                        <div class="instrument-label">Marker</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="instructions-panel">
+                <h3>Instructions</h3>
+                <p>
+                    Drag charges from the panel onto the canvas.<br><br>
+                    <span style="color: #e74c3c;">Red = positive</span>, 
+                    <span style="color: #3498db;">Blue = negative</span><br><br>
+                    Drag charges on canvas to reposition.<br><br>
+                    Field lines flow from <span style="color: #e74c3c;">+</span> to <span style="color: #3498db;">−</span><br><br>
+                    <span style="color: #f1c40f;">Tip:</span> right-click (or long-press on iPad) any charge or instrument to delete it.
+                </p>
+            </div>
+            
+            <div class="panel">
+                <h3>Add Charges</h3>
+                <p style="font-size: 0.8em; color: #888; margin-bottom: 10px;">Drag onto canvas:</p>
+                <div class="drag-charges-row">
+                    <div class="drag-charge positive" id="dragPosCharge" draggable="true">
+                        <span>+</span>
+                        <div class="drag-label">+1 nC</div>
+                    </div>
+                    <div class="drag-charge negative" id="dragNegCharge" draggable="true">
+                        <span>−</span>
+                        <div class="drag-label">−1 nC</div>
+                    </div>
+                </div>
+                
+                <div class="slider-row">
+                    <span class="slider-label">Charge magnitude</span>
+                    <input type="range" id="magnitudeSlider" min="1" max="5" step="1" value="1">
+                    <span class="slider-value" id="magnitudeValue">1</span><span style="color:#888; font-size:0.8em;"> nC</span>
+                </div>
+                
+                <div class="slider-row">
+                    <span class="slider-label">Lines per charge</span>
+                    <input type="range" id="linesSlider" min="8" max="24" step="4" value="12">
+                    <span class="slider-value" id="linesValue">12</span>
+                </div>
+                
+                <div class="physics-note" style="margin-top: 15px; padding: 10px; background: rgba(0,255,136,0.1); border-radius: 8px; border-left: 3px solid #00ff88;">
+                    <p style="font-size: 0.75em; color: #aaa; margin: 0;">
+                        <strong style="color: #00ff88;">Scale:</strong> 1 pixel ≈ 1 cm<br>
+                        At 10 cm from 1 nC: V ≈ 90 V
+                    </p>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>Presets</h3>
+                <div class="preset-grid">
+                    <button class="btn btn-preset" onclick="loadPreset('dipole')">Dipole</button>
+                    <button class="btn btn-preset" onclick="loadPreset('twoPositive')">Two +ve</button>
+                    <button class="btn btn-preset" onclick="loadPreset('twoNegative')">Two −ve</button>
+                    <button class="btn btn-preset" onclick="loadPreset('quadrupole')">Quadrupole</button>
+                    <button class="btn btn-preset" onclick="loadPreset('line')">Linear Array</button>
+                    <button class="btn btn-preset" onclick="loadPreset('triangle')">Triangle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+// State
+const state = {
+    charges: [],
+    linesPerCharge: 12,
+    chargeMagnitude: 1,
+    
+    // Display options
+    showFieldLines: false,
+    showArrows: true,
+    showVectorField: false,
+    showEquipotential: false,
+    showLabels: true,
+    showGrid: true,
+    showEComponents: false,
+    gridSize: 50,
+    deltaV: 0.02,
+    
+    // Component window
+    componentWindowPos: { x: 20, y: 20 },
+    componentWindowSize: { width: 280, height: 260 },
+    draggingComponentWindow: false,
+    componentWindowDragOffset: { x: 0, y: 0 },
+    
+    // Interaction
+    draggingCharge: null,
+    hoveredCharge: null,
+    
+    // Probes (arrays for multiple)
+    probes: [], // Array of {x, y, id}
+    eProbes: [], // Array of {x, y, id}
+    rulers: [], // Array of {x1, y1, x2, y2, id}
+    markers: [], // Array of {x, y, id, label}
+    draggingProbeId: null,
+    draggingEProbeId: null,
+    draggingRulerId: null,
+    draggingMarkerId: null,
+    draggingRulerEnd: null, // 'start', 'end', or 'both'
+    nextProbeId: 1,
+    nextEProbeId: 1,
+    nextRulerId: 1,
+    nextMarkerId: 1,
+    
+    // Equipotential interaction
+    equipotentialPaths: [], // Store paths with their potential values
+    hoveredEquipotential: null, // {potential}
+    selectedEquipotentials: [], // Array of {potential, x, y} for multiple selections
+    
+    // Field line parameters
+    stepSize: 1,
+    maxSteps: 15000,
+    minDistToCharge: 18,
+    chargeRadius: 20
+};
+
+// DOM elements
+const dragPosCharge = document.getElementById('dragPosCharge');
+const dragNegCharge = document.getElementById('dragNegCharge');
+const magnitudeSlider = document.getElementById('magnitudeSlider');
+const magnitudeValue = document.getElementById('magnitudeValue');
+const linesSlider = document.getElementById('linesSlider');
+const linesValue = document.getElementById('linesValue');
+const showFieldLinesCheck = document.getElementById('showFieldLinesCheck');
+const showArrowsCheck = document.getElementById('showArrowsCheck');
+const showVectorFieldCheck = document.getElementById('showVectorFieldCheck');
+const showEquipotentialCheck = document.getElementById('showEquipotentialCheck');
+const showLabelsCheck = document.getElementById('showLabelsCheck');
+const deltaVSlider = document.getElementById('deltaVSlider');
+const deltaVValue = document.getElementById('deltaVValue');
+const deltaVRow = document.getElementById('deltaVRow');
+const dragProbe = document.getElementById('dragProbe');
+const dragEProbe = document.getElementById('dragEProbe');
+const dragRuler = document.getElementById('dragRuler');
+const showGridCheck = document.getElementById('showGridCheck');
+const gridSizeSlider = document.getElementById('gridSizeSlider');
+const gridSizeValue = document.getElementById('gridSizeValue');
+const gridSizeRow = document.getElementById('gridSizeRow');
+const showEComponentsCheck = document.getElementById('showEComponentsCheck');
+
+// Drag and drop for charges
+let draggedChargeType = null;
+
+dragPosCharge.addEventListener('dragstart', (e) => {
+    draggedChargeType = 'positive';
+    e.dataTransfer.setData('text/plain', 'positive');
+    e.target.style.opacity = '0.5';
+});
+
+dragPosCharge.addEventListener('dragend', (e) => {
+    e.target.style.opacity = '1';
+});
+
+dragNegCharge.addEventListener('dragstart', (e) => {
+    draggedChargeType = 'negative';
+    e.dataTransfer.setData('text/plain', 'negative');
+    e.target.style.opacity = '0.5';
+});
+
+dragNegCharge.addEventListener('dragend', (e) => {
+    e.target.style.opacity = '1';
+});
+
+// Probe drag handlers
+let draggingProbeFromPanel = false;
+let draggingEProbeFromPanel = false;
+let draggingRulerFromPanel = false;
+
+dragProbe.addEventListener('dragstart', (e) => {
+    draggingProbeFromPanel = true;
+    e.dataTransfer.setData('text/plain', 'probe');
+    e.target.style.opacity = '0.5';
+});
+
+dragProbe.addEventListener('dragend', (e) => {
+    e.target.style.opacity = '1';
+    draggingProbeFromPanel = false;
+});
+
+// E Probe drag handlers
+dragEProbe.addEventListener('dragstart', (e) => {
+    draggingEProbeFromPanel = true;
+    e.dataTransfer.setData('text/plain', 'eprobe');
+    e.target.style.opacity = '0.5';
+});
+
+dragEProbe.addEventListener('dragend', (e) => {
+    e.target.style.opacity = '1';
+    draggingEProbeFromPanel = false;
+});
+
+// Ruler drag handlers
+dragRuler.addEventListener('dragstart', (e) => {
+    draggingRulerFromPanel = true;
+    e.dataTransfer.setData('text/plain', 'ruler');
+    e.target.style.opacity = '0.5';
+});
+
+dragRuler.addEventListener('dragend', (e) => {
+    e.target.style.opacity = '1';
+    draggingRulerFromPanel = false;
+});
+
+// Marker drag handlers
+let draggingMarkerFromPanel = false;
+const dragMarker = document.getElementById('dragMarker');
+
+dragMarker.addEventListener('dragstart', (e) => {
+    draggingMarkerFromPanel = true;
+    e.dataTransfer.setData('text/plain', 'marker');
+    e.target.style.opacity = '0.5';
+});
+
+dragMarker.addEventListener('dragend', (e) => {
+    e.target.style.opacity = '1';
+    draggingMarkerFromPanel = false;
+});
+
+// ===========================================================================
+// iPad palette tap-to-select pattern (mirrors DC Circuit Builder).
+// HTML5 drag-drop doesn't fire on iOS, so for touch users we need:
+//   1. Tap a palette item -> remember the type, outline the element.
+//   2. Tap the canvas    -> place that item at the tap position.
+// Tap vs scroll is decided at touchend by total movement (>10px = scroll).
+// The canvas-side consumer lives at the top of the canvas touchstart handler
+// (added in the canvas-touch patch).
+// ===========================================================================
+var selectedPaletteType = null;
+var selectedPaletteEl = null;
+var paletteTouchStartPos = null;
+var paletteTouchScrolled = false;
+
+// Map from palette element id -> type string used by the existing drop handler.
+// We use this rather than dataTransfer (which doesn't exist on touch).
+var _paletteIdToType = {
+    'dragPosCharge': 'positive',
+    'dragNegCharge': 'negative',
+    'dragProbe':     'probe',
+    'dragEProbe':    'eprobe',
+    'dragRuler':     'ruler',
+    'dragMarker':    'marker'
+};
+
+// Helper used by the canvas-tap consumer (Patch 4) and by the touchend
+// fallback below. Mirrors the dispatch in the existing canvas drop handler
+// exactly — same snap behaviour, same id counters, same draw call.
+function _placePaletteItemAt(type, x, y) {
+    var snapped = snapToGrid(x, y);
+    var snapX = snapped.x;
+    var snapY = snapped.y;
+
+    if (type === 'probe') {
+        state.probes.push({ x: snapX, y: snapY, id: state.nextProbeId++ });
+    } else if (type === 'eprobe') {
+        state.eProbes.push({ x: snapX, y: snapY, id: state.nextEProbeId++ });
+    } else if (type === 'ruler') {
+        var snap1 = snapToGrid(x - 40, y);
+        var snap2 = snapToGrid(x + 40, y);
+        state.rulers.push({
+            x1: snap1.x, y1: snap1.y,
+            x2: snap2.x, y2: snap2.y,
+            id: state.nextRulerId++
+        });
+    } else if (type === 'marker') {
+        var label = 'P' + state.nextMarkerId;
+        state.markers.push({ x: snapX, y: snapY, id: state.nextMarkerId++, label: label });
+    } else if (type === 'positive' || type === 'negative') {
+        state.charges.push({
+            x: snapX,
+            y: snapY,
+            q: type === 'positive' ? state.chargeMagnitude : -state.chargeMagnitude
+        });
+    }
+    draw();
+}
+
+// Bind tap-to-select on each palette element. Touchstart and touchmove stay
+// passive so Safari can scroll the surrounding panel; touchend is the only
+// non-passive listener and uses preventDefault to suppress the synthetic
+// mousedown/mouseup sequence iOS otherwise dispatches ~300ms later (which
+// would fire the existing dragstart and break the selection).
+['dragPosCharge', 'dragNegCharge', 'dragProbe', 'dragEProbe', 'dragRuler', 'dragMarker'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+
+    // Suppress long-press context menu on iOS (the Save Image / Copy popup).
+    el.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+
+    el.addEventListener('touchstart', function(e) {
+        if (e.touches.length !== 1) return;
+        paletteTouchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        paletteTouchScrolled = false;
+    }, { passive: true });
+
+    el.addEventListener('touchmove', function(e) {
+        if (!paletteTouchStartPos || paletteTouchScrolled) return;
+        if (e.touches.length !== 1) return;
+        var t = e.touches[0];
+        var dist = Math.hypot(t.clientX - paletteTouchStartPos.x,
+                              t.clientY - paletteTouchStartPos.y);
+        if (dist > 10) {
+            // User is scrolling, not tapping -- abandon select intent.
+            paletteTouchScrolled = true;
+        }
+    }, { passive: true });
+
+    el.addEventListener('touchend', function(e) {
+        if (!paletteTouchStartPos) return;
+        var wasScroll = paletteTouchScrolled;
+        paletteTouchStartPos = null;
+        paletteTouchScrolled = false;
+        if (wasScroll) return;
+
+        // Suppress the synthetic mouse sequence -- see block comment above.
+        if (e.cancelable) e.preventDefault();
+
+        var type = _paletteIdToType[id];
+        if (!type) return;
+
+        // Clear previous selection outline.
+        if (selectedPaletteEl && selectedPaletteEl !== el) {
+            selectedPaletteEl.style.outline = '';
+        }
+        // Tapping the already-selected item deselects it.
+        if (selectedPaletteType === type) {
+            selectedPaletteType = null;
+            selectedPaletteEl = null;
+            el.style.outline = '';
+            return;
+        }
+        // Otherwise select.
+        selectedPaletteType = type;
+        selectedPaletteEl = el;
+        el.style.outline = '3px solid #fff';
+    }, { passive: false });
+});
+
+// If the touch is interrupted (call comes in, finger lifted off-screen, etc.)
+// reset all palette state so we don't end up with a stale selection.
+document.addEventListener('touchcancel', function() {
+    paletteTouchStartPos = null;
+    paletteTouchScrolled = false;
+    if (selectedPaletteEl) selectedPaletteEl.style.outline = '';
+    selectedPaletteType = null;
+    selectedPaletteEl = null;
+});
+
+canvas.addEventListener('dragover', (e) => {
+    e.preventDefault();
+});
+
+canvas.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    // Scale mouse coordinates to canvas coordinate system
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    
+    const dataType = e.dataTransfer.getData('text/plain');
+    
+    // Snap position to grid if enabled
+    const snapped = snapToGrid(x, y);
+    const snapX = snapped.x;
+    const snapY = snapped.y;
+    
+    // Check if dropping a V probe
+    if (dataType === 'probe' || draggingProbeFromPanel) {
+        state.probes.push({ x: snapX, y: snapY, id: state.nextProbeId++ });
+        draw();
+        draggingProbeFromPanel = false;
+        return;
+    }
+    
+    // Check if dropping an E probe
+    if (dataType === 'eprobe' || draggingEProbeFromPanel) {
+        state.eProbes.push({ x: snapX, y: snapY, id: state.nextEProbeId++ });
+        draw();
+        draggingEProbeFromPanel = false;
+        return;
+    }
+    
+    // Check if dropping a ruler
+    if (dataType === 'ruler' || draggingRulerFromPanel) {
+        // Create ruler with two endpoints, initially 80px apart horizontally
+        // Snap both endpoints
+        const snap1 = snapToGrid(x - 40, y);
+        const snap2 = snapToGrid(x + 40, y);
+        state.rulers.push({ 
+            x1: snap1.x, y1: snap1.y, 
+            x2: snap2.x, y2: snap2.y, 
+            id: state.nextRulerId++ 
+        });
+        draw();
+        draggingRulerFromPanel = false;
+        return;
+    }
+    
+    // Check if dropping a marker
+    if (dataType === 'marker' || draggingMarkerFromPanel) {
+        // Generate label (P1, P2, P3, etc.)
+        const label = 'P' + state.nextMarkerId;
+        state.markers.push({ x: snapX, y: snapY, id: state.nextMarkerId++, label: label });
+        draw();
+        draggingMarkerFromPanel = false;
+        return;
+    }
+    
+    const chargeType = dataType || draggedChargeType;
+    if (chargeType && chargeType !== 'probe' && chargeType !== 'eprobe' && chargeType !== 'ruler' && chargeType !== 'marker') {
+        // Snap to grid if enabled
+        state.charges.push({
+            x: snapX,
+            y: snapY,
+            q: chargeType === 'positive' ? state.chargeMagnitude : -state.chargeMagnitude
+        });
+        draw();
+    }
+    draggedChargeType = null;
+});
+
+// Event listeners
+
+// ===========================================================================
+// Reset everything to initial defaults: charges cleared, all instruments
+// (V probes, E probes, rulers, markers) removed from canvas, every display
+// option set back to the value it had when the page loaded, all DOM
+// controls (checkboxes, sliders, conditional rows, value displays) synced
+// to match. Used by:
+//   - Clear All Charges button (so the canvas truly resets, not just charges)
+//   - loadPreset() (so loading a preset doesn't inherit the previous
+//     session's instruments and toggles, which would clutter the new layout)
+// "Clear All Probes" button is intentionally NOT routed through here -- it
+// remains a narrower utility for clearing instruments without losing the
+// charge layout or display preferences.
+// ===========================================================================
+function _resetToDefaults() {
+    // --- Canvas contents ---
+    state.charges = [];
+    state.probes = [];
+    state.eProbes = [];
+    state.rulers = [];
+    state.markers = [];
+
+    // --- Equipotential interaction state ---
+    state.selectedEquipotentials = [];
+    state.equipotentialPaths = [];
+    state.hoveredEquipotential = null;
+
+    // --- ID counters back to 1 so labels (P1, P2, ...) restart ---
+    state.nextProbeId = 1;
+    state.nextEProbeId = 1;
+    state.nextRulerId = 1;
+    state.nextMarkerId = 1;
+
+    // --- Drag state (in case reset happens mid-interaction) ---
+    state.draggingCharge = null;
+    state.draggingProbeId = null;
+    state.draggingEProbeId = null;
+    state.draggingRulerId = null;
+    state.draggingRulerEnd = null;
+    state.rulerDragOffset = null;
+    state.draggingMarkerId = null;
+    state.draggingComponentWindow = false;
+    state.hoveredCharge = null;
+
+    // --- Display options: match the values set in the initial state object ---
+    state.showFieldLines = false;
+    state.showArrows = true;
+    state.showVectorField = false;
+    state.showEquipotential = false;
+    state.showLabels = true;
+    state.showGrid = true;
+    state.showEComponents = false;
+    state.gridSize = 50;
+    state.deltaV = 0.02;
+    state.chargeMagnitude = 1;
+    state.linesPerCharge = 12;
+
+    // --- Component window position (in case it was dragged off-screen) ---
+    state.componentWindowPos = { x: 20, y: 20 };
+
+    // --- Sync DOM controls to the reset state ---
+    showFieldLinesCheck.checked   = false;
+    showArrowsCheck.checked       = true;
+    showVectorFieldCheck.checked  = false;
+    showEquipotentialCheck.checked = false;
+    showLabelsCheck.checked       = true;
+    showGridCheck.checked         = true;
+    showEComponentsCheck.checked  = false;
+
+    deltaVSlider.value      = '0.02';
+    deltaVValue.textContent = '0.020';
+    gridSizeSlider.value      = '50';
+    gridSizeValue.textContent = '50';
+    magnitudeSlider.value      = '1';
+    magnitudeValue.textContent = '1';
+    linesSlider.value      = '12';
+    linesValue.textContent = '12';
+
+    // --- Conditional rows: ΔV row hidden when equipotentials off, grid row
+    // shown when grid is on (matching the initial render). ---
+    deltaVRow.style.display   = 'none';
+    gridSizeRow.style.display = 'block';
+
+    // --- Cursor back to default in case we were mid-drag ---
+    canvas.style.cursor = 'default';
+}
+
+magnitudeSlider.addEventListener('input', (e) => {
+    state.chargeMagnitude = parseInt(e.target.value);
+    magnitudeValue.textContent = state.chargeMagnitude;
+});
+
+linesSlider.addEventListener('input', (e) => {
+    state.linesPerCharge = parseInt(e.target.value);
+    linesValue.textContent = state.linesPerCharge;
+    draw();
+});
+
+showFieldLinesCheck.addEventListener('change', (e) => {
+    state.showFieldLines = e.target.checked;
+    draw();
+});
+
+showArrowsCheck.addEventListener('change', (e) => {
+    state.showArrows = e.target.checked;
+    draw();
+});
+
+showVectorFieldCheck.addEventListener('change', (e) => {
+    state.showVectorField = e.target.checked;
+    draw();
+});
+
+showEquipotentialCheck.addEventListener('change', (e) => {
+    state.showEquipotential = e.target.checked;
+    deltaVRow.style.display = e.target.checked ? 'block' : 'none';
+    draw();
+});
+
+showLabelsCheck.addEventListener('change', (e) => {
+    state.showLabels = e.target.checked;
+    draw();
+});
+
+showGridCheck.addEventListener('change', (e) => {
+    state.showGrid = e.target.checked;
+    gridSizeRow.style.display = e.target.checked ? 'block' : 'none';
+    draw();
+});
+
+gridSizeSlider.addEventListener('input', (e) => {
+    state.gridSize = parseInt(e.target.value);
+    gridSizeValue.textContent = state.gridSize;
+    draw();
+});
+
+showEComponentsCheck.addEventListener('change', (e) => {
+    state.showEComponents = e.target.checked;
+    draw();
+});
+
+deltaVSlider.addEventListener('input', (e) => {
+    state.deltaV = parseFloat(e.target.value);
+    deltaVValue.textContent = state.deltaV.toFixed(3);
+    draw();
+});
+
+// Canvas events
+canvas.addEventListener('mousedown', onMouseDown);
+canvas.addEventListener('mousemove', onMouseMove);
+canvas.addEventListener('mouseup', onMouseUp);
+canvas.addEventListener('mouseleave', onMouseUp);
+canvas.addEventListener('contextmenu', onRightClick);
+
+// ===========================================================================
+// iPad / touch support for the canvas. Mirrors the DC Circuit Builder
+// pattern exactly:
+//   - Each canvas touch listener is { passive: false } and calls
+//     preventDefault() so iOS doesn't try to scroll/zoom the page when the
+//     user drags inside the canvas.
+//   - Single-touch only (multi-touch is left to the browser).
+//   - touchstart records position so touchmove can cancel a pending
+//     long-press on movement, and so we can suppress drags on Apple Pencil
+//     micro-jitter.
+//   - touchend uses e.changedTouches[0] (NOT e.touches[0]) because by the
+//     time touchend fires, e.touches is empty.
+//   - Long-press = 600ms with no movement >10px. On fire, we synthesise a
+//     right-click via onRightClick which deletes whatever's under the
+//     finger (charge / probe / E-probe / ruler / marker).
+//   - selectedPaletteType (set by the palette tap handlers) is consumed
+//     here at the top of touchstart: if a palette item is selected, the
+//     next canvas tap places it instead of starting a drag.
+// ===========================================================================
+var touchLongPressTimer = null;
+var touchStartPos = null;
+var touchDidLongPress = false;
+var lastCanvasTouchPlaceTime = 0; // debounce against double-fire
+
+// Build a mouse-event-shaped object from a Touch so we can pass it to the
+// existing mouse handlers without rewriting them.
+function getTouchMouseEvent(touch, e) {
+    return {
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        button: 0,
+        preventDefault: function() { e.preventDefault(); },
+        stopPropagation: function() { e.stopPropagation(); }
+    };
+}
+
+// Clear all canvas drag state. Called from touchcancel and after a
+// long-press fires (which deletes the item under the finger and so should
+// abort any pending drag). Mirrors the cleanup that onMouseUp does, but
+// without firing snap-to-grid logic for an interaction that's been
+// cancelled.
+function _clearAllCanvasDragState() {
+    state.draggingCharge = null;
+    state.draggingProbeId = null;
+    state.draggingEProbeId = null;
+    state.draggingRulerId = null;
+    state.draggingRulerEnd = null;
+    state.rulerDragOffset = null;
+    state.draggingMarkerId = null;
+    state.draggingComponentWindow = false;
+    canvas.style.cursor = 'default';
+}
+
+canvas.addEventListener('touchstart', function(e) {
+    e.preventDefault(); // suppress synthetic mouse events + page scroll/zoom
+    if (e.touches.length !== 1) return;
+
+    var touch = e.touches[0];
+
+    // ---- Palette-tap consumer ----
+    // If the user just tapped a palette item, this canvas tap places it.
+    if (selectedPaletteType) {
+        var rect = canvas.getBoundingClientRect();
+        var scaleX = canvas.width / rect.width;
+        var scaleY = canvas.height / rect.height;
+        var x = (touch.clientX - rect.left) * scaleX;
+        var y = (touch.clientY - rect.top) * scaleY;
+
+        var now = Date.now();
+        if (now - lastCanvasTouchPlaceTime >= 100) {
+            lastCanvasTouchPlaceTime = now;
+            _placePaletteItemAt(selectedPaletteType, x, y);
+        }
+        // Clear the palette selection (single-shot).
+        if (selectedPaletteEl) selectedPaletteEl.style.outline = '';
+        selectedPaletteType = null;
+        selectedPaletteEl = null;
+        return;
+    }
+
+    // ---- Normal touch -> mouse routing ----
+    touchStartPos = { x: touch.clientX, y: touch.clientY };
+    touchDidLongPress = false;
+
+    // Long-press timer: 600ms with no significant movement triggers a
+    // right-click at the touch position, which deletes the item under it.
+    touchLongPressTimer = setTimeout(function() {
+        touchDidLongPress = true;
+        onRightClick({
+            preventDefault: function() {},
+            clientX: touch.clientX,
+            clientY: touch.clientY
+        });
+        // After deletion, abandon any drag that touchstart began.
+        _clearAllCanvasDragState();
+        draw();
+    }, 600);
+
+    // Hand off to the existing mousedown handler.
+    onMouseDown(getTouchMouseEvent(touch, e));
+}, { passive: false });
+
+canvas.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+    if (e.touches.length !== 1) return;
+
+    var touch = e.touches[0];
+
+    // Cancel pending long-press if the finger has moved too far.
+    if (touchStartPos && touchLongPressTimer) {
+        var dist = Math.hypot(touch.clientX - touchStartPos.x,
+                              touch.clientY - touchStartPos.y);
+        if (dist > 10) {
+            clearTimeout(touchLongPressTimer);
+            touchLongPressTimer = null;
+        }
+    }
+
+    onMouseMove(getTouchMouseEvent(touch, e));
+}, { passive: false });
+
+canvas.addEventListener('touchend', function(e) {
+    e.preventDefault();
+
+    // Always clear the long-press timer first so it can't fire after release.
+    if (touchLongPressTimer) {
+        clearTimeout(touchLongPressTimer);
+        touchLongPressTimer = null;
+    }
+
+    // If a long-press already fired, the item's been deleted and drag state
+    // is already clear. Don't run onMouseUp -- it would try to snap-to-grid
+    // an item that no longer exists.
+    if (touchDidLongPress) {
+        touchDidLongPress = false;
+        touchStartPos = null;
+        return;
+    }
+
+    touchStartPos = null;
+
+    // Use changedTouches because by touchend, e.touches is empty.
+    if (!e.changedTouches || e.changedTouches.length === 0) return;
+    var touch = e.changedTouches[0];
+    onMouseUp(getTouchMouseEvent(touch, e));
+}, { passive: false });
+
+canvas.addEventListener('touchcancel', function(e) {
+    if (touchLongPressTimer) {
+        clearTimeout(touchLongPressTimer);
+        touchLongPressTimer = null;
+    }
+    touchDidLongPress = false;
+    touchStartPos = null;
+    _clearAllCanvasDragState();
+}, { passive: false });
+
+// ===========================================================================
+// Right-click / long-press handler. Deletes whatever's under the cursor in
+// priority order: charge -> V probe -> E probe -> ruler -> marker.
+// Triggered by desktop right-click (contextmenu) and by iPad long-press
+// (synthesised in the touchstart handler above).
+// ===========================================================================
+function onRightClick(e) {
+    e.preventDefault();
+    var rect = canvas.getBoundingClientRect();
+    var scaleX = canvas.width / rect.width;
+    var scaleY = canvas.height / rect.height;
+    var mx = (e.clientX - rect.left) * scaleX;
+    var my = (e.clientY - rect.top) * scaleY;
+
+    // Charges (use existing hit-test for radius parity with mousedown).
+    var chargeIdx = getChargeAt(mx, my);
+    if (chargeIdx >= 0) {
+        state.charges.splice(chargeIdx, 1);
+        // Reset hover state if it pointed at the deleted charge or beyond.
+        state.hoveredCharge = null;
+        draw();
+        return;
+    }
+
+    // V probes (radius 25, matches onMouseDown).
+    for (var i = state.probes.length - 1; i >= 0; i--) {
+        var p = state.probes[i];
+        if (Math.hypot(mx - p.x, my - p.y) < 25) {
+            state.probes.splice(i, 1);
+            draw();
+            return;
+        }
+    }
+
+    // E probes.
+    for (var j = state.eProbes.length - 1; j >= 0; j--) {
+        var ep = state.eProbes[j];
+        if (Math.hypot(mx - ep.x, my - ep.y) < 25) {
+            state.eProbes.splice(j, 1);
+            draw();
+            return;
+        }
+    }
+
+    // Rulers: hit-test endpoints (radius 15) OR the line itself (within 10px).
+    for (var k = state.rulers.length - 1; k >= 0; k--) {
+        var r = state.rulers[k];
+        var d1 = Math.hypot(mx - r.x1, my - r.y1);
+        var d2 = Math.hypot(mx - r.x2, my - r.y2);
+        if (d1 < 15 || d2 < 15) {
+            state.rulers.splice(k, 1);
+            draw();
+            return;
+        }
+        // Line body hit -- reuse the existing point-to-segment helper.
+        var lineLen = Math.hypot(r.x2 - r.x1, r.y2 - r.y1);
+        if (lineLen > 0) {
+            var dLine = pointToSegmentDistance(mx, my, r.x1, r.y1, r.x2, r.y2);
+            if (dLine < 10) {
+                state.rulers.splice(k, 1);
+                draw();
+                return;
+            }
+        }
+    }
+
+    // Markers (radius 15, matches onMouseDown).
+    for (var m = state.markers.length - 1; m >= 0; m--) {
+        var mk = state.markers[m];
+        if (Math.hypot(mx - mk.x, my - mk.y) < 15) {
+            state.markers.splice(m, 1);
+            draw();
+            return;
+        }
+    }
+}
+
+function getChargeAt(x, y) {
+    // Check all charges, return the closest one within hit radius
+    let closestIdx = -1;
+    let closestDist = Infinity;
+    
+    for (let i = 0; i < state.charges.length; i++) {
+        const c = state.charges[i];
+        const dist = Math.hypot(x - c.x, y - c.y);
+        // Account for larger visual radius with higher magnitude charges
+        const visualRadius = state.chargeRadius + (Math.abs(c.q) - 1) * 5;
+        const hitRadius = visualRadius + 15; // Generous hit area
+        
+        if (dist < hitRadius && dist < closestDist) {
+            closestDist = dist;
+            closestIdx = i;
+        }
+    }
+    return closestIdx;
+}
+
+// Snap point to charge center if within snap radius
+function snapToChargeCenter(x, y) {
+    const snapRadius = 35; // Distance to trigger snap
+    
+    for (const c of state.charges) {
+        const dist = Math.hypot(x - c.x, y - c.y);
+        if (dist < snapRadius) {
+            return { x: c.x, y: c.y, snapped: true };
+        }
+    }
+    
+    return { x, y, snapped: false };
+}
+
+// Snap point to grid if grid is enabled
+function snapToGrid(x, y) {
+    if (!state.showGrid) {
+        return { x, y };
+    }
+    
+    const gridSize = state.gridSize;
+    const snappedX = Math.round(x / gridSize) * gridSize;
+    const snappedY = Math.round(y / gridSize) * gridSize;
+    
+    return { x: snappedX, y: snappedY };
+}
+
+function onMouseDown(e) {
+    const rect = canvas.getBoundingClientRect();
+    // Scale mouse coordinates to canvas coordinate system
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
+    
+    // Check component window interactions
+    if (state.showEComponents && state.eProbes.length > 0) {
+        const wx = state.componentWindowPos.x;
+        const wy = state.componentWindowPos.y;
+        const windowWidth = state.componentWindowSize.width;
+        const windowHeight = state.componentWindowSize.height;
+        const titleHeight = 28;
+        
+        // Check title bar for dragging
+        if (mx >= wx && mx <= wx + windowWidth && my >= wy && my <= wy + titleHeight) {
+            state.draggingComponentWindow = true;
+            state.componentWindowDragOffset = { x: mx - wx, y: my - wy };
+            canvas.style.cursor = 'grabbing';
+            e.preventDefault();
+            return;
+        }
+    }
+    
+    const chargeIdx = getChargeAt(mx, my);
+    
+    if (chargeIdx >= 0) {
+        // Start dragging existing charge
+        state.draggingCharge = chargeIdx;
+        canvas.style.cursor = 'grabbing';
+        e.preventDefault();
+        return;
+    }
+    
+    // Check if clicking on any V probe
+    for (const probe of state.probes) {
+        if (Math.hypot(mx - probe.x, my - probe.y) < 25) {
+            state.draggingProbeId = probe.id;
+            canvas.style.cursor = 'grabbing';
+            e.preventDefault();
+            return;
+        }
+    }
+    
+    // Check if clicking on any E probe
+    for (const eprobe of state.eProbes) {
+        if (Math.hypot(mx - eprobe.x, my - eprobe.y) < 25) {
+            state.draggingEProbeId = eprobe.id;
+            canvas.style.cursor = 'grabbing';
+            e.preventDefault();
+            return;
+        }
+    }
+    
+    // Check if clicking on any ruler endpoint or line
+    for (const ruler of state.rulers) {
+        const distToStart = Math.hypot(mx - ruler.x1, my - ruler.y1);
+        const distToEnd = Math.hypot(mx - ruler.x2, my - ruler.y2);
+        
+        // Check endpoints first (smaller hit area)
+        if (distToStart < 15) {
+            state.draggingRulerId = ruler.id;
+            state.draggingRulerEnd = 'start';
+            canvas.style.cursor = 'grabbing';
+            e.preventDefault();
+            return;
+        }
+        if (distToEnd < 15) {
+            state.draggingRulerId = ruler.id;
+            state.draggingRulerEnd = 'end';
+            canvas.style.cursor = 'grabbing';
+            e.preventDefault();
+            return;
+        }
+        
+        // Check if clicking on the line itself (to drag whole ruler)
+        const lineLen = Math.hypot(ruler.x2 - ruler.x1, ruler.y2 - ruler.y1);
+        if (lineLen > 0) {
+            // Point to line distance
+            const t = Math.max(0, Math.min(1, 
+                ((mx - ruler.x1) * (ruler.x2 - ruler.x1) + (my - ruler.y1) * (ruler.y2 - ruler.y1)) / (lineLen * lineLen)
+            ));
+            const closestX = ruler.x1 + t * (ruler.x2 - ruler.x1);
+            const closestY = ruler.y1 + t * (ruler.y2 - ruler.y1);
+            const distToLine = Math.hypot(mx - closestX, my - closestY);
+            
+            if (distToLine < 10 && t > 0.1 && t < 0.9) {
+                state.draggingRulerId = ruler.id;
+                state.draggingRulerEnd = 'both';
+                state.rulerDragOffset = { 
+                    dx1: ruler.x1 - mx, dy1: ruler.y1 - my,
+                    dx2: ruler.x2 - mx, dy2: ruler.y2 - my
+                };
+                canvas.style.cursor = 'grabbing';
+                e.preventDefault();
+                return;
+            }
+        }
+    }
+    
+    // Check if clicking on any marker
+    for (const marker of state.markers) {
+        if (Math.hypot(mx - marker.x, my - marker.y) < 15) {
+            state.draggingMarkerId = marker.id;
+            canvas.style.cursor = 'grabbing';
+            e.preventDefault();
+            return;
+        }
+    }
+    
+    // Check if clicking on an equipotential
+    if (state.hoveredEquipotential) {
+        const potential = state.hoveredEquipotential.potential;
+        // Check if already selected
+        const existingIdx = state.selectedEquipotentials.findIndex(
+            s => Math.abs(s.potential - potential) < 0.0001
+        );
+        
+        if (existingIdx >= 0) {
+            // Already selected - remove it (deselect)
+            state.selectedEquipotentials.splice(existingIdx, 1);
+        } else {
+            // Not selected - add it
+            state.selectedEquipotentials.push({
+                potential: potential,
+                x: mx,
+                y: my
+            });
+        }
+        draw();
+        return;
+    }
+    
+    // Clicking on empty space - keep selections (don't clear)
+    draw();
+}
+
+function onMouseMove(e) {
+    const rect = canvas.getBoundingClientRect();
+    // Scale mouse coordinates to canvas coordinate system
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
+    
+    if (state.draggingCharge !== null) {
+        // Snap to grid if enabled
+        const snapped = snapToGrid(mx, my);
+        state.charges[state.draggingCharge].x = snapped.x;
+        state.charges[state.draggingCharge].y = snapped.y;
+        draw();
+        return;
+    }
+    
+    
+    // Dragging component window
+    if (state.draggingComponentWindow) {
+        state.componentWindowPos.x = mx - state.componentWindowDragOffset.x;
+        state.componentWindowPos.y = my - state.componentWindowDragOffset.y;
+        const w = state.componentWindowSize.width;
+        const h = state.componentWindowSize.height;
+        state.componentWindowPos.x = Math.max(0, Math.min(canvas.width - w, state.componentWindowPos.x));
+        state.componentWindowPos.y = Math.max(0, Math.min(canvas.height - h, state.componentWindowPos.y));
+        draw();
+        return;
+    }
+    
+    // Dragging V probe - follow mouse (snap on release)
+    if (state.draggingProbeId !== null) {
+        const probe = state.probes.find(p => p.id === state.draggingProbeId);
+        if (probe) {
+            probe.x = mx;
+            probe.y = my;
+            draw();
+        }
+        return;
+    }
+    
+    // Dragging E probe - follow mouse (snap on release)
+    if (state.draggingEProbeId !== null) {
+        const eprobe = state.eProbes.find(p => p.id === state.draggingEProbeId);
+        if (eprobe) {
+            eprobe.x = mx;
+            eprobe.y = my;
+            draw();
+        }
+        return;
+    }
+    
+    // Dragging ruler - follow mouse (snap on release, except charge snap which is immediate)
+    if (state.draggingRulerId !== null) {
+        const ruler = state.rulers.find(r => r.id === state.draggingRulerId);
+        if (ruler) {
+            if (state.draggingRulerEnd === 'start') {
+                // Check for snap to charge center (immediate feedback)
+                const chargeSnap = snapToChargeCenter(mx, my);
+                ruler.x1 = chargeSnap.x;
+                ruler.y1 = chargeSnap.y;
+            } else if (state.draggingRulerEnd === 'end') {
+                // Check for snap to charge center (immediate feedback)
+                const chargeSnap = snapToChargeCenter(mx, my);
+                ruler.x2 = chargeSnap.x;
+                ruler.y2 = chargeSnap.y;
+            } else if (state.draggingRulerEnd === 'both') {
+                // Moving whole ruler - follow mouse
+                ruler.x1 = mx + state.rulerDragOffset.dx1;
+                ruler.y1 = my + state.rulerDragOffset.dy1;
+                ruler.x2 = mx + state.rulerDragOffset.dx2;
+                ruler.y2 = my + state.rulerDragOffset.dy2;
+            }
+            draw();
+        }
+        return;
+    }
+    
+    // Dragging marker - follow mouse (snap on release)
+    if (state.draggingMarkerId !== null) {
+        const marker = state.markers.find(m => m.id === state.draggingMarkerId);
+        if (marker) {
+            marker.x = mx;
+            marker.y = my;
+            draw();
+        }
+        return;
+    }
+    
+    // Check charge hover
+    const chargeIdx = getChargeAt(mx, my);
+    const wasHoveredCharge = state.hoveredCharge;
+    state.hoveredCharge = chargeIdx >= 0 ? chargeIdx : null;
+    
+    // Check equipotential hover (only if equipotentials are shown and not hovering a charge)
+    const wasHoveredEquip = state.hoveredEquipotential;
+    state.hoveredEquipotential = null;
+    
+    if (state.showEquipotential && state.hoveredCharge === null) {
+        // Check each stored Path2D using canvas hit testing
+        ctx.lineWidth = 15; // Hit test tolerance
+        
+        for (const ep of state.equipotentialPaths) {
+            if (!ep.path2d) continue;
+            
+            if (ctx.isPointInStroke(ep.path2d, mx, my)) {
+                state.hoveredEquipotential = { potential: ep.potential };
+                break;
+            }
+        }
+    }
+    
+    // Update cursor and redraw if hover state changed
+    const hoverChanged = (state.hoveredCharge !== wasHoveredCharge) || 
+                        (state.hoveredEquipotential?.potential !== wasHoveredEquip?.potential);
+    
+    if (hoverChanged) {
+        if (state.hoveredCharge !== null) {
+            canvas.style.cursor = 'grab';
+        } else if (state.hoveredEquipotential !== null) {
+            canvas.style.cursor = 'pointer';
+        } else {
+            canvas.style.cursor = 'default';
+        }
+        draw();
+    }
+}
+
+function onMouseUp() {
+    if (state.draggingCharge !== null) {
+        state.draggingCharge = null;
+        draw();
+    }
+    if (state.draggingComponentWindow) {
+        state.draggingComponentWindow = false;
+        draw();
+    }
+    if (state.draggingProbeId !== null) {
+        // Snap to grid on release
+        const probe = state.probes.find(p => p.id === state.draggingProbeId);
+        if (probe) {
+            const snapped = snapToGrid(probe.x, probe.y);
+            probe.x = snapped.x;
+            probe.y = snapped.y;
+        }
+        state.draggingProbeId = null;
+        draw();
+    }
+    if (state.draggingEProbeId !== null) {
+        // Snap to grid on release
+        const eprobe = state.eProbes.find(p => p.id === state.draggingEProbeId);
+        if (eprobe) {
+            const snapped = snapToGrid(eprobe.x, eprobe.y);
+            eprobe.x = snapped.x;
+            eprobe.y = snapped.y;
+        }
+        state.draggingEProbeId = null;
+        draw();
+    }
+    if (state.draggingRulerId !== null) {
+        // Snap ruler endpoints to grid on release (unless snapped to charge)
+        const ruler = state.rulers.find(r => r.id === state.draggingRulerId);
+        if (ruler) {
+            // Check if endpoints are snapped to charges
+            const chargeSnap1 = snapToChargeCenter(ruler.x1, ruler.y1);
+            const chargeSnap2 = snapToChargeCenter(ruler.x2, ruler.y2);
+            
+            // Only snap to grid if not already snapped to a charge
+            if (!chargeSnap1.snapped) {
+                const gridSnap1 = snapToGrid(ruler.x1, ruler.y1);
+                ruler.x1 = gridSnap1.x;
+                ruler.y1 = gridSnap1.y;
+            }
+            if (!chargeSnap2.snapped) {
+                const gridSnap2 = snapToGrid(ruler.x2, ruler.y2);
+                ruler.x2 = gridSnap2.x;
+                ruler.y2 = gridSnap2.y;
+            }
+        }
+        state.draggingRulerId = null;
+        state.draggingRulerEnd = null;
+        state.rulerDragOffset = null;
+        draw();
+    }
+    if (state.draggingMarkerId !== null) {
+        // Snap to grid on release
+        const marker = state.markers.find(m => m.id === state.draggingMarkerId);
+        if (marker) {
+            const snapped = snapToGrid(marker.x, marker.y);
+            marker.x = snapped.x;
+            marker.y = snapped.y;
+        }
+        state.draggingMarkerId = null;
+        draw();
+    }
+    canvas.style.cursor = state.hoveredCharge !== null ? 'grab' : 'default';
+}
+
+function loadPreset(name) {
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const spacing = 150;
+    
+    // Wipe everything (charges, instruments, options) before laying out the
+    // preset. Without this, the preset inherits whatever the user had before
+    // -- typically leaving stray probes from the previous layout.
+    _resetToDefaults();
+    
+    switch (name) {
+        case 'dipole':
+            state.charges = [
+                { x: cx - spacing, y: cy, q: 1 },
+                { x: cx + spacing, y: cy, q: -1 }
+            ];
+            break;
+        case 'twoPositive':
+            state.charges = [
+                { x: cx - spacing, y: cy, q: 1 },
+                { x: cx + spacing, y: cy, q: 1 }
+            ];
+            break;
+        case 'twoNegative':
+            state.charges = [
+                { x: cx - spacing, y: cy, q: -1 },
+                { x: cx + spacing, y: cy, q: -1 }
+            ];
+            break;
+        case 'quadrupole':
+            state.charges = [
+                { x: cx - spacing/1.5, y: cy - spacing/1.5, q: 1 },
+                { x: cx + spacing/1.5, y: cy - spacing/1.5, q: -1 },
+                { x: cx - spacing/1.5, y: cy + spacing/1.5, q: -1 },
+                { x: cx + spacing/1.5, y: cy + spacing/1.5, q: 1 }
+            ];
+            break;
+        case 'line':
+            state.charges = [
+                { x: cx - spacing * 1.5, y: cy, q: 1 },
+                { x: cx - spacing * 0.5, y: cy, q: -1 },
+                { x: cx + spacing * 0.5, y: cy, q: 1 },
+                { x: cx + spacing * 1.5, y: cy, q: -1 }
+            ];
+            break;
+        case 'triangle':
+            const r = spacing;
+            state.charges = [
+                { x: cx, y: cy - r, q: 1 },
+                { x: cx - r * Math.cos(Math.PI/6), y: cy + r * Math.sin(Math.PI/6), q: 1 },
+                { x: cx + r * Math.cos(Math.PI/6), y: cy + r * Math.sin(Math.PI/6), q: -1 }
+            ];
+            break;
+    }
+    
+    draw();
+}
+
+// Calculate distance from point (px, py) to line segment (x1,y1)-(x2,y2)
+function pointToSegmentDistance(px, py, x1, y1, x2, y2) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const lenSq = dx * dx + dy * dy;
+    
+    if (lenSq === 0) {
+        // Segment is a point
+        return Math.hypot(px - x1, py - y1);
+    }
+    
+    // Project point onto line, clamped to segment
+    let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+    
+    // Find closest point on segment
+    const closestX = x1 + t * dx;
+    const closestY = y1 + t * dy;
+    
+    return Math.hypot(px - closestX, py - closestY);
+}
+
+// Sample points along the smoothed quadratic bezier curve (matching how it's drawn)
+function sampleSmoothPath(path) {
+    if (path.length < 2) return path;
+    
+    const sampled = [path[0]];
+    
+    for (let i = 1; i < path.length - 1; i++) {
+        const p0 = sampled[sampled.length - 1];
+        const p1 = path[i];
+        const xc = (path[i].x + path[i + 1].x) / 2;
+        const yc = (path[i].y + path[i + 1].y) / 2;
+        const p2 = { x: xc, y: yc };
+        
+        // Sample the quadratic bezier curve
+        for (let t = 0.2; t <= 1; t += 0.2) {
+            const x = (1-t)*(1-t)*p0.x + 2*(1-t)*t*p1.x + t*t*p2.x;
+            const y = (1-t)*(1-t)*p0.y + 2*(1-t)*t*p1.y + t*t*p2.y;
+            sampled.push({ x, y });
+        }
+    }
+    
+    sampled.push(path[path.length - 1]);
+    return sampled;
+}
+
+// Calculate electric field at a point
+function getField(x, y) {
+    let Ex = 0, Ey = 0;
+    const k = 1; // Coulomb constant (normalized)
+    
+    for (const c of state.charges) {
+        const dx = x - c.x;
+        const dy = y - c.y;
+        const r2 = dx * dx + dy * dy;
+        const r = Math.sqrt(r2);
+        
+        if (r < 1) continue; // Avoid singularity
+        
+        const E = k * c.q / r2;
+        Ex += E * dx / r;
+        Ey += E * dy / r;
+    }
+    
+    return { x: Ex, y: Ey };
+}
+
+// Calculate potential at a point
+function getPotential(x, y) {
+    let V = 0;
+    const k = 1;
+    
+    for (const c of state.charges) {
+        const r = Math.hypot(x - c.x, y - c.y);
+        if (r < 1) continue;
+        V += k * c.q / r;
+    }
+    
+    return V;
+}
+
+// Trace a field line from a starting point
+// Get the normalised field direction at a point (for RK4 integration)
+function getFieldDir(x, y, dir) {
+    const E = getField(x, y);
+    const mag = Math.hypot(E.x, E.y);
+    if (mag < 1e-20) return { dx: 0, dy: 0, mag: mag };
+    return { dx: dir * E.x / mag, dy: dir * E.y / mag, mag: mag };
+}
+
+// Adaptive step size based on distance to nearest charge
+function getAdaptiveStep(x, y) {
+    let minDist = Infinity;
+    for (const c of state.charges) {
+        const d = Math.hypot(x - c.x, y - c.y);
+        if (d < minDist) minDist = d;
+    }
+    // Near charges: step as small as 0.25px. Far away: up to 3px.
+    // Transition smoothly based on distance
+    const baseStep = state.stepSize;
+    if (minDist < 5) return baseStep * 0.25;
+    if (minDist < 30) return baseStep * 0.25 + (minDist - 5) / 25 * 0.75; // 0.25 to 1.0
+    if (minDist < 100) return baseStep * 1.0 + (minDist - 30) / 70 * 1.0; // 1.0 to 2.0
+    return baseStep * 2.5; // Far from all charges
+}
+
+function traceFieldLine(startX, startY, direction) {
+    const points = [];
+    let x = startX;
+    let y = startY;
+    let stoppedAtNullRegion = false;
+    let totalDist = 0;
+    const maxTotalDist = 20000;
+    
+    // Track starting charge
+    let startingCharge = null;
+    for (const c of state.charges) {
+        const dist = Math.hypot(startX - c.x, startY - c.y);
+        if (dist < state.chargeRadius + 20) {
+            startingCharge = c;
+            break;
+        }
+    }
+    
+    // Point thinning
+    const minSpacing = 2;
+    let lastStoredX = x;
+    let lastStoredY = y;
+    points.push({ x, y });
+    
+    // Direction reversal tracking
+    let prevDx = 0, prevDy = 0;
+    let hasPrevDir = false;
+    
+    for (let step = 0; step < state.maxSteps; step++) {
+        
+        // --- Charge proximity checks ---
+        for (const c of state.charges) {
+            if (c === startingCharge) continue;
+            const dist = Math.hypot(x - c.x, y - c.y);
+            
+            if (dist < state.minDistToCharge && c.q * direction < 0) {
+                points.push({ x: c.x, y: c.y });
+                return points;
+            }
+            if (dist < state.minDistToCharge) {
+                return [];
+            }
+            if (startingCharge && c.q * startingCharge.q > 0 && dist < state.minDistToCharge + 5) {
+                return [];
+            }
+        }
+        
+        // Canvas boundary
+        if (x < -5 || x > canvas.width + 5 || y < -5 || y > canvas.height + 5) {
+            break;
+        }
+        
+        // --- FIELD ANALYSIS (done once per iteration) ---
+        // Compute net field and strongest single-charge contribution
+        const E = getField(x, y);
+        const netMag = Math.hypot(E.x, E.y);
+        
+        let maxSingleField = 0;
+        let minDistToCharge = Infinity;
+        for (const c of state.charges) {
+            const r = Math.hypot(x - c.x, y - c.y);
+            if (r < minDistToCharge) minDistToCharge = r;
+            if (r > 0.5) {
+                const singleE = Math.abs(c.q) / (r * r);
+                if (singleE > maxSingleField) maxSingleField = singleE;
+            }
+        }
+        
+        // Cancellation ratio: how much of the dominant charge's field survives superposition
+        const cancelRatio = maxSingleField > 0 ? netMag / maxSingleField : 1;
+        
+        // If net field is less than 3% of strongest individual contribution,
+        // we're at a null/saddle point — discard this line
+        if (cancelRatio < 0.03) {
+            stoppedAtNullRegion = true;
+            break;
+        }
+        
+        // Absolute floor
+        if (netMag < 1e-15) {
+            stoppedAtNullRegion = true;
+            break;
+        }
+        
+        // --- ADAPTIVE STEP SIZE ---
+        // Base step from distance to nearest charge
+        const baseStep = state.stepSize;
+        let h;
+        if (minDistToCharge < 5) h = baseStep * 0.25;
+        else if (minDistToCharge < 30) h = baseStep * 0.25 + (minDistToCharge - 5) / 25 * 0.75;
+        else if (minDistToCharge < 100) h = baseStep * 1.0 + (minDistToCharge - 30) / 70 * 1.0;
+        else h = baseStep * 2.5;
+        
+        // CRITICAL: also shrink step in field cancellation zones so we can't
+        // overshoot the 3% detection threshold. When cancelRatio is low,
+        // the field direction changes rapidly and we need finer steps.
+        if (cancelRatio < 0.5) {
+            h *= cancelRatio / 0.5; // At ratio=0.1 → step is 20% of normal
+            h = Math.max(h, 0.05);  // Floor to prevent infinite loops
+        }
+        
+        // --- RK4 integration ---
+        const k1 = getFieldDir(x, y, direction);
+        const k2 = getFieldDir(x + h * 0.5 * k1.dx, y + h * 0.5 * k1.dy, direction);
+        const k3 = getFieldDir(x + h * 0.5 * k2.dx, y + h * 0.5 * k2.dy, direction);
+        const k4 = getFieldDir(x + h * k3.dx, y + h * k3.dy, direction);
+        
+        const dx = h * (k1.dx + 2 * k2.dx + 2 * k3.dx + k4.dx) / 6;
+        const dy = h * (k1.dy + 2 * k2.dy + 2 * k3.dy + k4.dy) / 6;
+        
+        // Direction reversal backup
+        if (hasPrevDir) {
+            const dot = dx * prevDx + dy * prevDy;
+            if (dot < 0) {
+                stoppedAtNullRegion = true;
+                break;
+            }
+        }
+        prevDx = dx;
+        prevDy = dy;
+        hasPrevDir = true;
+        
+        x += dx;
+        y += dy;
+        totalDist += Math.hypot(dx, dy);
+        
+        if (totalDist > maxTotalDist) break;
+        
+        // Loop-back to starting charge
+        if (startingCharge && totalDist > 50) {
+            const distToStart = Math.hypot(x - startingCharge.x, y - startingCharge.y);
+            const visualRadius = state.chargeRadius + (Math.abs(startingCharge.q) - 1) * 5;
+            if (distToStart < visualRadius + 10) {
+                return [];
+            }
+        }
+        
+        // Store thinned points
+        const distFromLast = Math.hypot(x - lastStoredX, y - lastStoredY);
+        if (distFromLast >= minSpacing) {
+            points.push({ x, y });
+            lastStoredX = x;
+            lastStoredY = y;
+        }
+    }
+    
+    if (stoppedAtNullRegion) {
+        return [];
+    }
+    
+    // Extend to canvas edge
+    if (points.length >= 2) {
+        const lastPt = points[points.length - 1];
+        const prevPt = points[points.length - 2];
+        
+        const ddx = lastPt.x - prevPt.x;
+        const ddy = lastPt.y - prevPt.y;
+        const len = Math.hypot(ddx, ddy);
+        
+        if (len > 0.1) {
+            const dirX = ddx / len;
+            const dirY = ddy / len;
+            
+            let tMin = Infinity;
+            
+            if (dirX > 0.001) tMin = Math.min(tMin, (canvas.width - lastPt.x) / dirX);
+            else if (dirX < -0.001) tMin = Math.min(tMin, -lastPt.x / dirX);
+            
+            if (dirY > 0.001) tMin = Math.min(tMin, (canvas.height - lastPt.y) / dirY);
+            else if (dirY < -0.001) tMin = Math.min(tMin, -lastPt.y / dirY);
+            
+            if (tMin > 0 && tMin < 10000) {
+                const edgeX = Math.max(0, Math.min(canvas.width, lastPt.x + dirX * tMin));
+                const edgeY = Math.max(0, Math.min(canvas.height, lastPt.y + dirY * tMin));
+                points.push({ x: edgeX, y: edgeY });
+            }
+        }
+    }
+    
+    return points;
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw grid first (behind everything)
+    if (state.showGrid) {
+        drawGrid();
+    }
+    
+    if (state.charges.length === 0) {
+        ctx.fillStyle = '#555';
+        ctx.font = '18px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Drag charges onto canvas', canvas.width / 2, canvas.height / 2);
+        
+        // Still draw instruments if they exist
+        for (const probe of state.probes) {
+            drawProbe(probe);
+        }
+        for (const eprobe of state.eProbes) {
+            drawEProbe(eprobe);
+        }
+        for (const ruler of state.rulers) {
+            drawRuler(ruler);
+        }
+        return;
+    }
+    
+    // Draw vector field if enabled (draw first so it's behind everything)
+    if (state.showVectorField) {
+        drawVectorField();
+    }
+    
+    // Draw equipotential lines if enabled
+    if (state.showEquipotential) {
+        drawEquipotentials();
+    }
+    
+    // Draw field lines if enabled
+    if (state.showFieldLines) {
+        drawFieldLines();
+    }
+    
+    // Draw charges
+    drawCharges();
+    
+    // Draw all probes
+    for (const probe of state.probes) {
+        drawProbe(probe);
+    }
+    for (const eprobe of state.eProbes) {
+        drawEProbe(eprobe);
+    }
+    for (const ruler of state.rulers) {
+        drawRuler(ruler);
+    }
+    for (const marker of state.markers) {
+        drawMarker(marker);
+    }
+    
+    // Draw component window (on top of everything)
+    drawComponentWindow();
+}
+
+function drawGrid() {
+    const gridSize = state.gridSize;
+    
+    ctx.strokeStyle = 'rgba(100, 150, 200, 0.15)';
+    ctx.lineWidth = 1;
+    
+    // Draw vertical lines
+    for (let x = 0; x <= canvas.width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+    }
+    
+    // Draw horizontal lines
+    for (let y = 0; y <= canvas.height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
+    
+    // Draw dots at intersections
+    ctx.fillStyle = 'rgba(100, 180, 255, 0.4)';
+    for (let x = 0; x <= canvas.width; x += gridSize) {
+        for (let y = 0; y <= canvas.height; y += gridSize) {
+            ctx.beginPath();
+            ctx.arc(x, y, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+}
+
+function drawFieldLines() {
+    const posCharges = state.charges.filter(c => c.q > 0);
+    const negCharges = state.charges.filter(c => c.q < 0);
+    
+    // Start lines from positive charges (going outward following field)
+    for (const charge of posCharges) {
+        const numLines = Math.abs(charge.q) * state.linesPerCharge;
+        const visualRadius = state.chargeRadius + (Math.abs(charge.q) - 1) * 5;
+        
+        for (let i = 0; i < numLines; i++) {
+            const angle = (2 * Math.PI * i) / numLines;
+            const startX = charge.x + (visualRadius + 3) * Math.cos(angle);
+            const startY = charge.y + (visualRadius + 3) * Math.sin(angle);
+            
+            const points = traceFieldLine(startX, startY, 1);
+            
+            if (points.length >= 2) {
+                drawFieldLinePath(points, 1);
+            }
+        }
+    }
+    
+    // Only process negative charges if there ARE negative charges
+    if (negCharges.length > 0) {
+        // For negative charges: trace lines backward to find where they come from
+        // This draws lines coming INTO negative charges from infinity
+        for (const charge of negCharges) {
+            const numLines = Math.abs(charge.q) * state.linesPerCharge;
+            const visualRadius = state.chargeRadius + (Math.abs(charge.q) - 1) * 5;
+            
+            for (let i = 0; i < numLines; i++) {
+                const angle = (2 * Math.PI * i) / numLines;
+                const startX = charge.x + (visualRadius + 3) * Math.cos(angle);
+                const startY = charge.y + (visualRadius + 3) * Math.sin(angle);
+                
+                // Trace backward to find where line comes from
+                const points = traceFieldLine(startX, startY, -1);
+                
+                if (points.length >= 2) {
+                    // Check if this line came from a positive charge
+                    const endPoint = points[points.length - 1];
+                    let fromPositive = false;
+                    for (const pc of posCharges) {
+                        const distToPos = Math.hypot(endPoint.x - pc.x, endPoint.y - pc.y);
+                        const visualRadius = state.chargeRadius + (Math.abs(pc.q) - 1) * 5;
+                        if (distToPos < visualRadius + 25) {
+                            fromPositive = true;
+                            break;
+                        }
+                    }
+                    
+                    // Only draw if line comes from infinity (not from a positive charge)
+                    // Lines from positive charges are already drawn from the positive side
+                    if (!fromPositive) {
+                        points.reverse(); // Reverse so arrows point toward negative charge
+                        drawFieldLinePath(points, 1);
+                    }
+                }
+            }
+        }
+    }
+}
+
+function drawFieldLinePath(points, direction) {
+    if (points.length < 2) return;
+    
+    // Single color for cleaner look - cyan/electric blue
+    ctx.strokeStyle = '#00d4ff';
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    
+    for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.stroke();
+    
+    // Draw arrows along the line based on arc-length distance
+    if (state.showArrows && points.length > 5) {
+        const arrowSpacing = 60; // pixels of arc length between arrows
+        let distSinceArrow = arrowSpacing * 0.5; // Start first arrow partway in
+        
+        for (let i = 1; i < points.length - 2; i++) {
+            const segLen = Math.hypot(points[i].x - points[i-1].x, points[i].y - points[i-1].y);
+            distSinceArrow += segLen;
+            
+            if (distSinceArrow >= arrowSpacing) {
+                // Get direction from neighbouring points for smooth angle
+                const p1 = points[Math.max(0, i - 1)];
+                const p2 = points[Math.min(points.length - 1, i + 1)];
+                const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+                
+                drawArrowHead(points[i].x, points[i].y, angle, '#00d4ff');
+                distSinceArrow = 0;
+            }
+        }
+    }
+}
+
+function drawVectorField() {
+    const gridSpacing = 40; // Space between arrows
+    const maxArrowLength = 25; // Maximum arrow length in pixels
+    
+    // Find max field magnitude for scaling
+    let maxMag = 0;
+    for (let x = gridSpacing; x < canvas.width; x += gridSpacing) {
+        for (let y = gridSpacing; y < canvas.height; y += gridSpacing) {
+            // Skip if too close to any charge
+            let tooClose = false;
+            for (const c of state.charges) {
+                if (Math.hypot(x - c.x, y - c.y) < 50) {
+                    tooClose = true;
+                    break;
+                }
+            }
+            if (tooClose) continue;
+            
+            const E = getField(x, y);
+            const mag = Math.hypot(E.x, E.y);
+            if (mag > maxMag) maxMag = mag;
+        }
+    }
+    
+    if (maxMag === 0) return;
+    
+    // Draw arrows at grid points
+    for (let x = gridSpacing; x < canvas.width; x += gridSpacing) {
+        for (let y = gridSpacing; y < canvas.height; y += gridSpacing) {
+            // Skip if too close to any charge
+            let tooClose = false;
+            for (const c of state.charges) {
+                if (Math.hypot(x - c.x, y - c.y) < 50) {
+                    tooClose = true;
+                    break;
+                }
+            }
+            if (tooClose) continue;
+            
+            const E = getField(x, y);
+            const mag = Math.hypot(E.x, E.y);
+            
+            if (mag < 0.00001) continue;
+            
+            // Normalize and scale arrow length (logarithmic scaling for better visibility)
+            const logScale = Math.log(1 + mag / maxMag * 10) / Math.log(11);
+            const arrowLength = maxArrowLength * logScale;
+            
+            const angle = Math.atan2(E.y, E.x);
+            
+            // Arrow end point
+            const endX = x + arrowLength * Math.cos(angle);
+            const endY = y + arrowLength * Math.sin(angle);
+            
+            // Color based on field strength (blue weak -> red strong)
+            const hue = 200 - logScale * 140; // 200 (cyan) to 60 (orange)
+            const saturation = 80;
+            const lightness = 50 + logScale * 20;
+            ctx.strokeStyle = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+            ctx.fillStyle = ctx.strokeStyle;
+            
+            // Draw arrow line
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+            
+            // Draw arrowhead
+            const headSize = 5;
+            const headAngle = 0.4;
+            ctx.beginPath();
+            ctx.moveTo(endX, endY);
+            ctx.lineTo(
+                endX - headSize * Math.cos(angle - headAngle),
+                endY - headSize * Math.sin(angle - headAngle)
+            );
+            ctx.lineTo(
+                endX - headSize * Math.cos(angle + headAngle),
+                endY - headSize * Math.sin(angle + headAngle)
+            );
+            ctx.closePath();
+            ctx.fill();
+        }
+    }
+}
+
+function drawArrowHead(x, y, angle, color) {
+    const size = 8;
+    const spread = 0.4;
+    
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x + size * Math.cos(angle), y + size * Math.sin(angle));
+    ctx.lineTo(x + size * Math.cos(angle + Math.PI - spread), y + size * Math.sin(angle + Math.PI - spread));
+    ctx.lineTo(x + size * Math.cos(angle + Math.PI + spread), y + size * Math.sin(angle + Math.PI + spread));
+    ctx.closePath();
+    ctx.fill();
+}
+
+function drawEquipotentials() {
+    // ----- Equipotential path cache -----
+    // Building the contour set is expensive: a 16,200-cell field grid scan
+    // (one getPotential call per cell, summing over every charge), then
+    // marching squares for each level, then segment stitching. On every
+    // draw() call -- which fires up to 60 times per second while dragging
+    // an instrument -- this becomes the main cost on iPad.
+    //
+    // The build only depends on charge geometry and deltaV. Instruments
+    // (probes, rulers, markers, component window) don't affect the field,
+    // so when one is being dragged, the contour set hasn't changed. We
+    // fingerprint the field-relevant inputs and skip the build when the
+    // fingerprint matches the last build's. Hover/selection state changes
+    // every frame without invalidating the cache -- those don't change the
+    // geometry, only how we paint each path.
+    var _eqFp = '';
+    for (var _ci = 0; _ci < state.charges.length; _ci++) {
+        var _c = state.charges[_ci];
+        _eqFp += _c.x + ',' + _c.y + ',' + _c.q + '|';
+    }
+    _eqFp += 'd' + state.deltaV;
+    
+    // Inner helper: stroke one cached path2d with hover/selected/normal styling.
+    // Used by both the cache-hit fast path and the rebuild slow path so the
+    // visual treatment stays in one place.
+    function _drawEquipotentialPath(path2d, level) {
+        var isHovered = state.hoveredEquipotential && 
+            Math.abs(state.hoveredEquipotential.potential - level) < 0.0001;
+        var isSelected = state.selectedEquipotentials.some(
+            function(s) { return Math.abs(s.potential - level) < 0.0001; }
+        );
+        // Glow layer
+        if (isHovered) {
+            ctx.shadowColor = '#ffffff';
+            ctx.shadowBlur = 20;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.lineWidth = 10;
+        } else if (isSelected) {
+            ctx.shadowColor = '#ffaa00';
+            ctx.shadowBlur = 12;
+            ctx.strokeStyle = 'rgba(255, 170, 0, 0.4)';
+            ctx.lineWidth = 8;
+        } else {
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = 'rgba(0, 255, 136, 0.3)';
+            ctx.lineWidth = 6;
+        }
+        ctx.stroke(path2d);
+        ctx.shadowBlur = 0;
+        // Main line
+        if (isHovered) {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3.5;
+        } else if (isSelected) {
+            ctx.strokeStyle = '#ffcc00';
+            ctx.lineWidth = 3;
+        } else {
+            ctx.strokeStyle = '#00ff88';
+            ctx.lineWidth = 2.5;
+        }
+        ctx.stroke(path2d);
+    }
+    
+    // Cache hit -- skip the heavy build, just restyle and redraw cached paths.
+    if (state._equipotentialCacheKey === _eqFp && state.equipotentialPaths.length > 0) {
+        ctx.setLineDash([]);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        for (var ei = 0; ei < state.equipotentialPaths.length; ei++) {
+            var ep = state.equipotentialPaths[ei];
+            if (ep.path2d) _drawEquipotentialPath(ep.path2d, ep.potential);
+        }
+    } else {
+    // ----- Cache miss: full rebuild below -----
+    
+    // Generate levels based on deltaV spacing
+    const deltaV = state.deltaV;
+    
+    const step = 6;
+    const cols = Math.ceil(canvas.width / step) + 1;
+    const rows = Math.ceil(canvas.height / step) + 1;
+    
+    // Pre-calculate potential grid and find min/max
+    const grid = [];
+    let minV = Infinity, maxV = -Infinity;
+    for (let i = 0; i < cols; i++) {
+        grid[i] = [];
+        for (let j = 0; j < rows; j++) {
+            const v = getPotential(i * step, j * step);
+            grid[i][j] = v;
+            // Clamp extreme values near charges
+            if (Math.abs(v) < 1) {
+                minV = Math.min(minV, v);
+                maxV = Math.max(maxV, v);
+            }
+        }
+    }
+    
+    // Generate levels covering the actual range of potentials
+    const levels = [];
+    // Include V = 0 level (where positive and negative potentials cancel)
+    levels.push(0);
+    // Positive levels
+    for (let v = deltaV; v <= maxV + deltaV; v += deltaV) {
+        levels.push(v);
+    }
+    // Negative levels
+    for (let v = -deltaV; v >= minV - deltaV; v -= deltaV) {
+        levels.push(v);
+    }
+    
+    // Clear stored paths
+    state.equipotentialPaths = [];
+    
+    ctx.setLineDash([]);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    for (const level of levels) {
+        // Marching squares to find contour segments
+        const segments = [];
+        
+        for (let i = 0; i < cols - 1; i++) {
+            for (let j = 0; j < rows - 1; j++) {
+                const x = i * step;
+                const y = j * step;
+                
+                const v00 = grid[i][j];
+                const v10 = grid[i + 1][j];
+                const v01 = grid[i][j + 1];
+                const v11 = grid[i + 1][j + 1];
+                
+                // Classify corners
+                const c = (v00 > level ? 1 : 0) |
+                         (v10 > level ? 2 : 0) |
+                         (v01 > level ? 4 : 0) |
+                         (v11 > level ? 8 : 0);
+                
+                if (c === 0 || c === 15) continue;
+                
+                // Interpolation helper
+                const lerp = (va, vb, pa, pb) => {
+                    const t = (level - va) / (vb - va);
+                    return { x: pa.x + t * (pb.x - pa.x), y: pa.y + t * (pb.y - pa.y) };
+                };
+                
+                const p00 = { x, y };
+                const p10 = { x: x + step, y };
+                const p01 = { x, y: y + step };
+                const p11 = { x: x + step, y: y + step };
+                
+                // Edge midpoints where contour crosses
+                let points = [];
+                if ((c & 1) !== (c & 2) >> 1) points.push(lerp(v00, v10, p00, p10)); // top
+                if ((c & 2) >> 1 !== (c & 8) >> 3) points.push(lerp(v10, v11, p10, p11)); // right
+                if ((c & 4) >> 2 !== (c & 8) >> 3) points.push(lerp(v01, v11, p01, p11)); // bottom
+                if ((c & 1) !== (c & 4) >> 2) points.push(lerp(v00, v01, p00, p01)); // left
+                
+                if (points.length >= 2) {
+                    segments.push([points[0], points[1]]);
+                    if (points.length === 4) {
+                        segments.push([points[2], points[3]]);
+                    }
+                }
+            }
+        }
+        
+        // Connect segments into continuous paths
+        const paths = [];
+        const used = new Set();
+        
+        for (let i = 0; i < segments.length; i++) {
+            if (used.has(i)) continue;
+            
+            const path = [...segments[i]];
+            used.add(i);
+            
+            // Try to extend path in both directions
+            let extended = true;
+            while (extended) {
+                extended = false;
+                for (let j = 0; j < segments.length; j++) {
+                    if (used.has(j)) continue;
+                    
+                    const seg = segments[j];
+                    const threshold = step * 0.6;
+                    
+                    // Check if segment connects to start of path
+                    if (Math.hypot(seg[1].x - path[0].x, seg[1].y - path[0].y) < threshold) {
+                        path.unshift(seg[0]);
+                        used.add(j);
+                        extended = true;
+                    } else if (Math.hypot(seg[0].x - path[0].x, seg[0].y - path[0].y) < threshold) {
+                        path.unshift(seg[1]);
+                        used.add(j);
+                        extended = true;
+                    }
+                    // Check if segment connects to end of path
+                    else if (Math.hypot(seg[0].x - path[path.length-1].x, seg[0].y - path[path.length-1].y) < threshold) {
+                        path.push(seg[1]);
+                        used.add(j);
+                        extended = true;
+                    } else if (Math.hypot(seg[1].x - path[path.length-1].x, seg[1].y - path[path.length-1].y) < threshold) {
+                        path.push(seg[0]);
+                        used.add(j);
+                        extended = true;
+                    }
+                }
+            }
+            
+            if (path.length >= 3) {
+                paths.push(path);
+                // Store path for potential matching during highlighting
+                state.equipotentialPaths.push({ 
+                    path: path,
+                    potential: level,
+                    path2d: null // Will be set during drawing
+                });
+            }
+        }
+        
+        // Draw smooth paths with glow
+        for (let pathIdx = 0; pathIdx < paths.length; pathIdx++) {
+            const path = paths[pathIdx];
+            if (path.length < 2) continue;
+            
+            // Create Path2D for this curve (used for both drawing and hit testing)
+            const path2d = new Path2D();
+            path2d.moveTo(path[0].x, path[0].y);
+            for (let i = 1; i < path.length - 1; i++) {
+                const xc = (path[i].x + path[i + 1].x) / 2;
+                const yc = (path[i].y + path[i + 1].y) / 2;
+                path2d.quadraticCurveTo(path[i].x, path[i].y, xc, yc);
+            }
+            path2d.lineTo(path[path.length - 1].x, path[path.length - 1].y);
+            
+            // Store the Path2D for hit testing
+            // Find the matching entry in equipotentialPaths
+            for (const ep of state.equipotentialPaths) {
+                if (ep.path === path && ep.potential === level) {
+                    ep.path2d = path2d;
+                    break;
+                }
+            }
+            
+            // Render via helper so cache-hit and cache-miss paths look identical.
+            _drawEquipotentialPath(path2d, level);
+        }
+    }
+    
+    // Stash fingerprint so the next draw() can hit the cache fast path.
+    state._equipotentialCacheKey = _eqFp;
+    
+    } // ----- end cache-miss rebuild branch -----
+    
+    // Re-anchor selected-equipotential labels to surviving contours.
+    // selectedEquipotentials store {potential, x, y} where x,y is the
+    // position the user originally clicked. When a charge is deleted or
+    // moved, the contour at that potential may have shifted or vanished
+    // entirely. We walk each selection in reverse so we can splice:
+    //   - If no path with matching potential exists, drop the selection.
+    //   - Otherwise, snap the label position to the nearest point on the
+    //     nearest surviving path of that potential.
+    // This keeps the label attached to its contour through any edit.
+    for (let si = state.selectedEquipotentials.length - 1; si >= 0; si--) {
+        const sel = state.selectedEquipotentials[si];
+        let bestX = null, bestY = null;
+        let bestDist = Infinity;
+        for (const ep of state.equipotentialPaths) {
+            if (Math.abs(ep.potential - sel.potential) >= 0.0001) continue;
+            if (!ep.path || ep.path.length === 0) continue;
+            for (const pt of ep.path) {
+                const d = Math.hypot(pt.x - sel.x, pt.y - sel.y);
+                if (d < bestDist) {
+                    bestDist = d;
+                    bestX = pt.x;
+                    bestY = pt.y;
+                }
+            }
+        }
+        if (bestX === null) {
+            // Contour no longer exists at this potential — drop the selection.
+            state.selectedEquipotentials.splice(si, 1);
+        } else {
+            sel.x = bestX;
+            sel.y = bestY;
+        }
+    }
+    
+    // Draw labels for all selected equipotentials
+    for (const sel of state.selectedEquipotentials) {
+        // Convert to realistic voltage (V = kq/r where k=8.99e9, q in nC, r in cm→m)
+        // Our simulation: V = q/r with q in "units" and r in pixels
+        // Scale: 1 pixel = 1 cm, so r_m = r_px / 100
+        // Real V = k * q_nC * 1e-9 / (r_px / 100) = k * q_nC * 1e-7 / r_px
+        // Our V_sim = q / r_px, so V_real = V_sim * k * 1e-7 = V_sim * 899
+        const realVoltage = sel.potential * 899;
+        const sign = realVoltage >= 0 ? '+' : '';
+        const voltageText = `V = ${sign}${realVoltage.toFixed(1)} V`;
+        
+        // Draw label background
+        ctx.font = 'bold 14px Arial';
+        const textWidth = ctx.measureText(voltageText).width;
+        const padding = 8;
+        const labelX = sel.x;
+        const labelY = sel.y - 25;
+        
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.strokeStyle = '#ffcc00'; // Golden to match selected curve
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(labelX - textWidth/2 - padding, labelY - 12, textWidth + padding*2, 24, 6);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Draw label text
+        ctx.fillStyle = '#ffcc00'; // Golden
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(voltageText, labelX, labelY);
+    }
+}
+
+function drawCharges() {
+    for (let i = 0; i < state.charges.length; i++) {
+        const c = state.charges[i];
+        const isHovered = state.hoveredCharge === i;
+        const isDragging = state.draggingCharge === i;
+        const radius = state.chargeRadius + (Math.abs(c.q) - 1) * 5;
+        
+        // Glow effect
+        const glowColor = c.q > 0 ? 'rgba(231,76,60,0.4)' : 'rgba(52,152,219,0.4)';
+        const glowRadius = radius + (isHovered || isDragging ? 15 : 10);
+        
+        const glow = ctx.createRadialGradient(c.x, c.y, radius, c.x, c.y, glowRadius);
+        glow.addColorStop(0, glowColor);
+        glow.addColorStop(1, 'transparent');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, glowRadius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Main circle
+        const mainColor = c.q > 0 ? '#e74c3c' : '#3498db';
+        const grad = ctx.createRadialGradient(c.x - radius * 0.3, c.y - radius * 0.3, 0, c.x, c.y, radius);
+        grad.addColorStop(0, c.q > 0 ? '#ff8a80' : '#64b5f6');
+        grad.addColorStop(1, mainColor);
+        
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Border
+        ctx.strokeStyle = isHovered || isDragging ? '#fff' : 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = isHovered || isDragging ? 3 : 2;
+        ctx.stroke();
+        
+        // Sign
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${radius}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(c.q > 0 ? '+' : '−', c.x, c.y);
+        
+        // Label
+        if (state.showLabels) {
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            const sign = c.q > 0 ? '+' : '';
+            ctx.fillText(`q = ${sign}${c.q} nC`, c.x, c.y + radius + 18);
+        }
+    }
+}
+
+function drawProbe(p) {
+    const radius = 20;
+    const isDragging = state.draggingProbeId === p.id;
+    
+    // Glow effect
+    const glowRadius = radius + (isDragging ? 18 : 12);
+    const glow = ctx.createRadialGradient(p.x, p.y, radius, p.x, p.y, glowRadius);
+    glow.addColorStop(0, 'rgba(155, 89, 182, 0.5)');
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, glowRadius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Probe ring (not filled - transparent center)
+    ctx.strokeStyle = isDragging ? '#bb77dd' : '#9b59b6';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Outer highlight ring
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius + 2, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Crosshair
+    const crossSize = 12;
+    ctx.strokeStyle = isDragging ? '#ffffff' : '#bb77dd';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    
+    // Horizontal line
+    ctx.beginPath();
+    ctx.moveTo(p.x - crossSize, p.y);
+    ctx.lineTo(p.x + crossSize, p.y);
+    ctx.stroke();
+    
+    // Vertical line
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y - crossSize);
+    ctx.lineTo(p.x, p.y + crossSize);
+    ctx.stroke();
+    
+    // Center dot
+    ctx.fillStyle = isDragging ? '#ffffff' : '#bb77dd';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Display reading on canvas near probe
+    if (state.charges.length > 0) {
+        const potential = getPotential(p.x, p.y);
+        const realVoltage = potential * 899;
+        const sign = realVoltage >= 0 ? '+' : '';
+        const text = `${sign}${realVoltage.toFixed(1)} V`;
+        
+        ctx.font = 'bold 13px Arial';
+        const textWidth = ctx.measureText(text).width;
+        const padding = 6;
+        const labelX = p.x;
+        const labelY = p.y - radius - 20;
+        
+        // Background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.strokeStyle = '#9b59b6';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(labelX - textWidth/2 - padding, labelY - 10, textWidth + padding*2, 20, 5);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Text
+        ctx.fillStyle = '#bb99dd';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, labelX, labelY);
+    }
+}
+
+function drawEProbe(p) {
+    const radius = 20;
+    const isDragging = state.draggingEProbeId === p.id;
+    
+    // Get field at probe location
+    const E = getField(p.x, p.y);
+    const mag = Math.hypot(E.x, E.y);
+    const angle = Math.atan2(E.y, E.x);
+    
+    // Glow effect
+    const glowRadius = radius + (isDragging ? 18 : 12);
+    const glow = ctx.createRadialGradient(p.x, p.y, radius, p.x, p.y, glowRadius);
+    glow.addColorStop(0, 'rgba(230, 126, 34, 0.5)');
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, glowRadius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Probe ring (transparent center)
+    ctx.strokeStyle = isDragging ? '#f39c12' : '#e67e22';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Outer highlight ring
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius + 2, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Crosshair
+    const crossSize = 10;
+    ctx.strokeStyle = isDragging ? '#ffffff' : '#f39c12';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    
+    // Horizontal line
+    ctx.beginPath();
+    ctx.moveTo(p.x - crossSize, p.y);
+    ctx.lineTo(p.x + crossSize, p.y);
+    ctx.stroke();
+    
+    // Vertical line
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y - crossSize);
+    ctx.lineTo(p.x, p.y + crossSize);
+    ctx.stroke();
+    
+    // Center dot
+    ctx.fillStyle = isDragging ? '#ffffff' : '#f39c12';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw E vector arrow if there are charges
+    if (state.charges.length > 0) {
+        // Scale arrow length (log scale for visibility)
+        const maxArrowLen = 60;
+        const minArrowLen = 20;
+        const arrowLen = mag > 0.000001 
+            ? Math.min(maxArrowLen, minArrowLen + 15 * Math.log10(1 + mag * 10000))
+            : minArrowLen;
+        
+        const startX = p.x + (radius + 5) * Math.cos(angle);
+        const startY = p.y + (radius + 5) * Math.sin(angle);
+        const endX = p.x + (radius + 5 + arrowLen) * Math.cos(angle);
+        const endY = p.y + (radius + 5 + arrowLen) * Math.sin(angle);
+        
+        // Arrow shaft
+        ctx.strokeStyle = '#f39c12';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+        
+        // Arrowhead
+        const headSize = 10;
+        const headAngle = 0.4;
+        ctx.fillStyle = '#f39c12';
+        ctx.beginPath();
+        ctx.moveTo(endX, endY);
+        ctx.lineTo(
+            endX - headSize * Math.cos(angle - headAngle),
+            endY - headSize * Math.sin(angle - headAngle)
+        );
+        ctx.lineTo(
+            endX - headSize * Math.cos(angle + headAngle),
+            endY - headSize * Math.sin(angle + headAngle)
+        );
+        ctx.closePath();
+        ctx.fill();
+        
+        // Display reading on canvas
+        const realE = mag * 89900;
+        
+        let eText;
+        if (realE >= 1e6) {
+            eText = (realE / 1e6).toFixed(1) + ' MN/C';
+        } else if (realE >= 1e3) {
+            eText = (realE / 1e3).toFixed(1) + ' kN/C';
+        } else {
+            eText = realE.toFixed(1) + ' N/C';
+        }
+        
+        ctx.font = 'bold 12px Arial';
+        const textWidth = ctx.measureText(eText).width;
+        const padding = 5;
+        const labelX = p.x;
+        const labelY = p.y + radius + 25;
+        
+        // Background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.strokeStyle = '#e67e22';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(labelX - textWidth/2 - padding, labelY - 9, textWidth + padding*2, 18, 4);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Text
+        ctx.fillStyle = '#f5b041';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(eText, labelX, labelY);
+    }
+}
+
+// Draw a marker point for student problems
+function drawMarker(marker) {
+    const isDragging = state.draggingMarkerId === marker.id;
+    const color = isDragging ? '#f48fb1' : '#e91e63';
+    
+    // Outer glow
+    ctx.shadowColor = color;
+    ctx.shadowBlur = isDragging ? 15 : 10;
+    
+    // Main circle
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(marker.x, marker.y, 8, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Inner dot
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(marker.x, marker.y, 3, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.shadowBlur = 0;
+    
+    // Crosshair lines
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]);
+    
+    // Horizontal line
+    ctx.beginPath();
+    ctx.moveTo(marker.x - 18, marker.y);
+    ctx.lineTo(marker.x - 10, marker.y);
+    ctx.moveTo(marker.x + 10, marker.y);
+    ctx.lineTo(marker.x + 18, marker.y);
+    ctx.stroke();
+    
+    // Vertical line
+    ctx.beginPath();
+    ctx.moveTo(marker.x, marker.y - 18);
+    ctx.lineTo(marker.x, marker.y - 10);
+    ctx.moveTo(marker.x, marker.y + 10);
+    ctx.lineTo(marker.x, marker.y + 18);
+    ctx.stroke();
+    
+    ctx.setLineDash([]);
+    
+    // Label only
+    ctx.fillStyle = color;
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(marker.label, marker.x + 22, marker.y);
+}
+
+// Draw the E field component floating window
+function drawComponentWindow() {
+    if (!state.showEComponents || state.eProbes.length === 0) return;
+    
+    const p = state.eProbes[0];
+    const E = getField(p.x, p.y);
+    const mag = Math.hypot(E.x, E.y);
+    
+    if (state.charges.length === 0 || mag < 0.000001) return;
+    
+    const wx = state.componentWindowPos.x;
+    const wy = state.componentWindowPos.y;
+    const W = state.componentWindowSize.width;
+    const H = state.componentWindowSize.height;
+    const titleH = 28;
+    
+    // Real physics values
+    const realEx = E.x * 89900;
+    const realEy = -E.y * 89900;  // Flip y for screen coords
+    const realE = mag * 89900;
+    const angleFromHorizontal = Math.atan2(Math.abs(realEy), Math.abs(realEx));
+    const angleDeg = angleFromHorizontal * 180 / Math.PI;
+    
+    // ── Window chrome ──────────────────────────────────
+    // Drop shadow
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 20;
+    ctx.shadowOffsetY = 4;
+    ctx.fillStyle = 'rgba(12, 12, 28, 0.96)';
+    ctx.beginPath();
+    ctx.roundRect(wx, wy, W, H, 12);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    
+    // Border with subtle gradient effect
+    ctx.strokeStyle = 'rgba(230, 126, 34, 0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    
+    // Title bar
+    ctx.fillStyle = 'rgba(230, 126, 34, 0.15)';
+    ctx.beginPath();
+    ctx.roundRect(wx, wy, W, titleH, [12, 12, 0, 0]);
+    ctx.fill();
+    
+    // Title bar bottom border
+    ctx.strokeStyle = 'rgba(230, 126, 34, 0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(wx + 1, wy + titleH);
+    ctx.lineTo(wx + W - 1, wy + titleH);
+    ctx.stroke();
+    
+    // Drag dots
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.arc(wx + W/2 - 12 + i * 8, wy + 10, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    // Title text
+    ctx.fillStyle = '#f5b041';
+    ctx.font = 'bold 11px "Segoe UI", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('E  Field Components', wx + W/2, wy + titleH/2 + 2);
+    
+    // ── Vector diagram area ────────────────────────────
+    const diagramTop = wy + titleH + 8;
+    const diagramH = H * 0.52;
+    const diagramCX = wx + W / 2;
+    const diagramCY = diagramTop + diagramH / 2;
+    const maxLen = Math.min(W - 60, diagramH - 20) * 0.42;
+    
+    // Scale so resultant fits
+    const scale = realE > 0 ? maxLen / realE : 1;
+    const exDraw = realEx * scale;
+    const eyDraw = realEy * scale;
+    
+    // Subtle coordinate axes
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([]);
+    const axLen = maxLen + 15;
+    ctx.beginPath();
+    ctx.moveTo(diagramCX - axLen, diagramCY);
+    ctx.lineTo(diagramCX + axLen, diagramCY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(diagramCX, diagramCY - axLen);
+    ctx.lineTo(diagramCX, diagramCY + axLen);
+    ctx.stroke();
+    
+    // Axis labels
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.font = '9px "Segoe UI", Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('x', diagramCX + axLen + 8, diagramCY);
+    ctx.fillText('y', diagramCX, diagramCY - axLen - 8);
+    
+    // End points
+    const exEndX = diagramCX + exDraw;
+    const exEndY = diagramCY;
+    const eyEndX = diagramCX;
+    const eyEndY = diagramCY - eyDraw;
+    const eEndX = diagramCX + exDraw;
+    const eEndY = diagramCY - eyDraw;
+    
+    // Dashed construction lines (component rectangle)
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    // From Ex tip up/down to E tip
+    ctx.beginPath();
+    ctx.moveTo(exEndX, exEndY);
+    ctx.lineTo(eEndX, eEndY);
+    ctx.stroke();
+    // From Ey tip across to E tip
+    ctx.beginPath();
+    ctx.moveTo(eyEndX, eyEndY);
+    ctx.lineTo(eEndX, eEndY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Angle arc
+    if (angleDeg > 1 && Math.abs(exDraw) > 3) {
+        const arcR = Math.min(20, maxLen * 0.25);
+        ctx.strokeStyle = 'rgba(187, 136, 238, 0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        if (exDraw >= 0 && eyDraw >= 0) {
+            ctx.arc(diagramCX, diagramCY, arcR, 0, -angleFromHorizontal, true);
+        } else if (exDraw < 0 && eyDraw >= 0) {
+            ctx.arc(diagramCX, diagramCY, arcR, Math.PI, Math.PI + angleFromHorizontal, false);
+        } else if (exDraw < 0 && eyDraw < 0) {
+            ctx.arc(diagramCX, diagramCY, arcR, Math.PI, Math.PI - angleFromHorizontal, true);
+        } else {
+            ctx.arc(diagramCX, diagramCY, arcR, 0, angleFromHorizontal, false);
+        }
+        ctx.stroke();
+        
+        // θ label near the arc
+        const labelAngle = (exDraw >= 0 ? 1 : -1) * angleFromHorizontal / 2 + (exDraw >= 0 ? 0 : Math.PI);
+        const labelDist = arcR + 10;
+        ctx.fillStyle = '#bb88ee';
+        ctx.font = 'bold 10px "Segoe UI", Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('θ', diagramCX + labelDist * Math.cos(-labelAngle * (eyDraw >= 0 ? 1 : -1)), 
+                          diagramCY + labelDist * Math.sin(-labelAngle * (eyDraw >= 0 ? 1 : -1)));
+    }
+    
+    // Draw component vectors with arrowheads
+    const drawVectorArrow = (x1, y1, x2, y2, color, lineW) => {
+        const len = Math.hypot(x2 - x1, y2 - y1);
+        if (len < 2) return;
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const headSize = Math.min(8, len * 0.35);
+        
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineW;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        
+        if (len > 5) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2 - headSize * Math.cos(angle - 0.35), y2 - headSize * Math.sin(angle - 0.35));
+            ctx.lineTo(x2 - headSize * Math.cos(angle + 0.35), y2 - headSize * Math.sin(angle + 0.35));
+            ctx.closePath();
+            ctx.fill();
+        }
+    };
+    
+    // Ex component (red) — thinner
+    drawVectorArrow(diagramCX, diagramCY, exEndX, exEndY, '#e74c3c', 2.5);
+    
+    // Ey component (blue) — thinner
+    drawVectorArrow(diagramCX, diagramCY, eyEndX, eyEndY, '#3498db', 2.5);
+    
+    // Resultant E (orange) — thicker, drawn last on top
+    drawVectorArrow(diagramCX, diagramCY, eEndX, eEndY, '#f39c12', 3);
+    
+    // Origin dot
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(diagramCX, diagramCY, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // ── Readout panel ──────────────────────────────────
+    const formatE = (val) => {
+        const absVal = Math.abs(val);
+        if (absVal >= 1e6) return (val / 1e6).toFixed(1) + ' MN/C';
+        if (absVal >= 1e3) return (val / 1e3).toFixed(1) + ' kN/C';
+        return val.toFixed(1) + ' N/C';
+    };
+    
+    const panelTop = diagramTop + diagramH + 4;
+    const panelPad = 12;
+    const rowH = 22;
+    
+    // Panel background
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.roundRect(wx + 8, panelTop, W - 16, rowH * 4 + 12, 8);
+    ctx.fill();
+    
+    const rows = [
+        { color: '#e74c3c', dot: '#e74c3c', label: 'Eₓ', value: formatE(realEx) },
+        { color: '#3498db', dot: '#3498db', label: 'Eᵧ', value: formatE(realEy) },
+        { color: '#f39c12', dot: '#f39c12', label: '|E|', value: formatE(realE) },
+        { color: '#bb88ee', dot: '#bb88ee', label: 'θ', value: angleDeg.toFixed(1) + '°' },
+    ];
+    
+    ctx.textBaseline = 'middle';
+    
+    rows.forEach((row, i) => {
+        const ry = panelTop + 6 + i * rowH + rowH / 2;
+        
+        // Separator line (except first)
+        if (i > 0) {
+            ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(wx + 20, ry - rowH / 2);
+            ctx.lineTo(wx + W - 20, ry - rowH / 2);
+            ctx.stroke();
+        }
+        
+        // Color indicator dot
+        ctx.fillStyle = row.dot;
+        ctx.beginPath();
+        ctx.arc(wx + panelPad + 12, ry, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Label
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.font = '11px "Segoe UI", Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(row.label, wx + panelPad + 24, ry);
+        
+        // Value
+        ctx.fillStyle = row.color;
+        ctx.font = 'bold 12px "Segoe UI", Arial';
+        ctx.textAlign = 'right';
+        ctx.fillText(row.value, wx + W - panelPad - 8, ry);
+    });
+}
+
+function drawRuler(ruler) {
+    const isDragging = state.draggingRulerId === ruler.id;
+    const color = isDragging ? '#2ecc71' : '#27ae60';
+    const lightColor = isDragging ? '#58d68d' : '#2ecc71';
+    
+    // Calculate distance (1 pixel = 1 cm)
+    const distPx = Math.hypot(ruler.x2 - ruler.x1, ruler.y2 - ruler.y1);
+    const distCm = distPx; // 1:1 scale
+    const distM = distCm / 100;
+    
+    const angle = Math.atan2(ruler.y2 - ruler.y1, ruler.x2 - ruler.x1);
+    const perpAngle = angle + Math.PI / 2;
+    
+    // Draw main line with glow
+    ctx.shadowColor = color;
+    ctx.shadowBlur = isDragging ? 12 : 8;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(ruler.x1, ruler.y1);
+    ctx.lineTo(ruler.x2, ruler.y2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    
+    // Check if endpoints are snapped to charges
+    const snap1 = snapToChargeCenter(ruler.x1, ruler.y1);
+    const snap2 = snapToChargeCenter(ruler.x2, ruler.y2);
+    const isSnapped1 = snap1.snapped && snap1.x === ruler.x1 && snap1.y === ruler.y1;
+    const isSnapped2 = snap2.snapped && snap2.x === ruler.x2 && snap2.y === ruler.y2;
+    
+    // Draw perpendicular end caps (like a dimension line)
+    const capLen = 8;
+    ctx.strokeStyle = lightColor;
+    ctx.lineWidth = 2;
+    
+    // Start cap
+    ctx.beginPath();
+    ctx.moveTo(ruler.x1 - capLen * Math.cos(perpAngle), ruler.y1 - capLen * Math.sin(perpAngle));
+    ctx.lineTo(ruler.x1 + capLen * Math.cos(perpAngle), ruler.y1 + capLen * Math.sin(perpAngle));
+    ctx.stroke();
+    
+    // End cap
+    ctx.beginPath();
+    ctx.moveTo(ruler.x2 - capLen * Math.cos(perpAngle), ruler.y2 - capLen * Math.sin(perpAngle));
+    ctx.lineTo(ruler.x2 + capLen * Math.cos(perpAngle), ruler.y2 + capLen * Math.sin(perpAngle));
+    ctx.stroke();
+    
+    // Draw small endpoint dots for dragging (with snap indicator)
+    const dotRadius = 5;
+    
+    // Start dot - yellow if snapped to charge
+    if (isSnapped1) {
+        ctx.fillStyle = '#f1c40f';
+        ctx.strokeStyle = '#f39c12';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ruler.x1, ruler.y1, dotRadius + 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+    } else {
+        ctx.fillStyle = state.draggingRulerEnd === 'start' && isDragging ? '#ffffff' : lightColor;
+        ctx.beginPath();
+        ctx.arc(ruler.x1, ruler.y1, dotRadius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    // End dot - yellow if snapped to charge
+    if (isSnapped2) {
+        ctx.fillStyle = '#f1c40f';
+        ctx.strokeStyle = '#f39c12';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ruler.x2, ruler.y2, dotRadius + 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+    } else {
+        ctx.fillStyle = state.draggingRulerEnd === 'end' && isDragging ? '#ffffff' : lightColor;
+        ctx.beginPath();
+        ctx.arc(ruler.x2, ruler.y2, dotRadius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    // Draw distance label at midpoint
+    const midX = (ruler.x1 + ruler.x2) / 2;
+    const midY = (ruler.y1 + ruler.y2) / 2;
+    
+    // Format distance text
+    let distText;
+    if (distCm >= 100) {
+        distText = distM.toFixed(2) + ' m';
+    } else {
+        distText = distCm.toFixed(1) + ' cm';
+    }
+    
+    ctx.font = 'bold 13px Arial';
+    const textWidth = ctx.measureText(distText).width;
+    const padding = 6;
+    
+    // Offset label perpendicular to line
+    const labelOffset = 22;
+    const labelX = midX + labelOffset * Math.cos(perpAngle);
+    const labelY = midY + labelOffset * Math.sin(perpAngle);
+    
+    // Background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(labelX - textWidth/2 - padding, labelY - 10, textWidth + padding*2, 20, 5);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Text
+    ctx.fillStyle = lightColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(distText, labelX, labelY);
+}
+
+// ---- iPad / Apple Pencil polyfill for <input type="range"> ----
+// Mobile Safari has a long-standing bug where dragging a range slider
+// thumb to the LEFT and releasing causes the slider to snap to its
+// minimum value, regardless of where the touch actually ended. The
+// browser fires a synthetic click on touchend at coordinates that
+// sometimes get interpreted as the track origin. The community fix is
+// to recompute the slider value ourselves from the actual touch
+// position and dispatch corrected input/change events.
+//
+// Delegated at document level so it covers any current or future range
+// input — no per-element rebinding needed.
+function _ipadSliderTouchEnd(e) {
+    var el = e.target;
+    if (!el || el.tagName !== 'INPUT' || el.type !== 'range') return;
+    if (el.disabled) return;
+    if (!e.changedTouches || e.changedTouches.length === 0) return;
+    var t = e.changedTouches[0];
+    var rect = el.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    var min = parseFloat(el.min);
+    var max = parseFloat(el.max);
+    if (isNaN(min)) min = 0;
+    if (isNaN(max)) max = 100;
+    var step = parseFloat(el.step);
+    if (isNaN(step) || step <= 0) step = 1;
+    // Fraction along the track (0 = left, 1 = right). Clamp so a touch
+    // that ends just outside the slider bounds still produces an
+    // in-range value rather than snapping wildly.
+    var frac = (t.clientX - rect.left) / rect.width;
+    if (frac < 0) frac = 0;
+    if (frac > 1) frac = 1;
+    var raw = min + frac * (max - min);
+    // Snap to nearest step from min.
+    var stepped = min + Math.round((raw - min) / step) * step;
+    if (stepped < min) stepped = min;
+    if (stepped > max) stepped = max;
+    // Avoid floating-point noise like 0.30000000000000004 for step="0.1".
+    // toFixed picks decimal places from step's exponent.
+    var stepStr = String(step);
+    var dotIdx = stepStr.indexOf('.');
+    var decimals = (dotIdx >= 0) ? (stepStr.length - dotIdx - 1) : 0;
+    var newVal = decimals > 0 ? parseFloat(stepped.toFixed(decimals)) : stepped;
+    var current = parseFloat(el.value);
+    if (newVal === current) return;  // Browser got it right; don't double-fire.
+    el.value = String(newVal);
+    // Fire input first (live-update handler) then change (commit handler),
+    // mirroring the order a real interaction would produce.
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+}
+document.addEventListener('touchend', _ipadSliderTouchEnd, { passive: true });
+document.addEventListener('touchcancel', _ipadSliderTouchEnd, { passive: true });
+
+// Initialize
+canvas.style.cursor = 'default';
+draw();
+</script>
+</body>
+</html>
