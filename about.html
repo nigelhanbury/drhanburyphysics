@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About · Physics Virtual Laboratories · Dr Nigel Hanbury</title>
+<meta name="description" content="About Dr Nigel Hanbury, secondary physics teacher in Cardiff and designer of free interactive physics virtual laboratories for A-level and IB.">
+<style>
+:root {
+  --bg: #fafbfc;
+  --bg-elevated: #ffffff;
+  --bg-card: #ffffff;
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
+  --shadow: rgba(15, 23, 42, 0.04);
+  --text: #0f172a;
+  --text-muted: #475569;
+  --text-dim: #94a3b8;
+  --accent: #0d9488;
+  --accent-light: #14b8a6;
+  --accent-bg: rgba(20, 184, 166, 0.08);
+  --info-bg: #f1f5f9;
+  --info-border: #cbd5e1;
+  --info-text: #334155;
+  --info-icon: #64748b;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+a { color: inherit; text-decoration: none; }
+
+/* ============ Nav ============ */
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-brand {
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.3px;
+  color: var(--text);
+}
+
+.nav-brand span { color: var(--accent); }
+
+.nav-links {
+  display: flex;
+  gap: 24px;
+}
+
+.nav-links a {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.nav-links a:hover { color: var(--accent); }
+
+.nav-links a.active {
+  color: var(--accent);
+}
+
+/* ============ Hero ============ */
+header.hero {
+  padding: 80px 24px 48px;
+  text-align: center;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(20, 184, 166, 0.06) 0%, transparent 50%),
+    radial-gradient(circle at 70% 80%, rgba(124, 58, 237, 0.04) 0%, transparent 50%),
+    var(--bg);
+  position: relative;
+}
+
+header.hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+.hero-title {
+  font-size: clamp(2rem, 4.5vw, 3rem);
+  font-weight: 300;
+  letter-spacing: -0.5px;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+.hero-subtitle {
+  font-size: 1.05rem;
+  color: var(--text-muted);
+  max-width: 640px;
+  margin: 0 auto;
+  font-weight: 400;
+}
+
+/* ============ Main content ============ */
+main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 56px 24px 40px;
+}
+
+.about-section {
+  margin-bottom: 40px;
+}
+
+.about-section:last-of-type {
+  margin-bottom: 0;
+}
+
+.about-section h2 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 14px;
+  letter-spacing: 0.2px;
+}
+
+.about-section p {
+  font-size: 1.02rem;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.about-section p:last-child {
+  margin-bottom: 0;
+}
+
+.about-section p strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ============ Book promo (side) ============ */
+.intro-with-promo {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 36px;
+  align-items: start;
+  margin-bottom: 40px;
+}
+
+.intro-with-promo .about-section {
+  margin-bottom: 0;
+}
+
+.book-promo-side {
+  display: block;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.25s ease;
+  box-shadow: 0 1px 3px var(--shadow);
+}
+
+.book-promo-side:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10);
+}
+
+.book-promo-side .book-image {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f3f5f8;
+  margin-bottom: 14px;
+}
+
+.book-promo-side .book-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.book-promo-side .book-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 5px;
+}
+
+.book-promo-side .book-title {
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 5px;
+  line-height: 1.35;
+}
+
+.book-promo-side .book-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.book-promo-side .book-cta {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+@media (max-width: 720px) {
+  .intro-with-promo {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .book-promo-side .book-image {
+    max-width: 200px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* ============ Browser callout ============ */
+.callout {
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 32px 0;
+}
+
+.callout h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.callout h3 svg {
+  width: 18px;
+  height: 18px;
+  color: var(--info-icon);
+}
+
+.callout ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.callout li {
+  font-size: 0.95rem;
+  color: var(--info-text);
+  padding: 4px 0 4px 24px;
+  position: relative;
+}
+
+.callout li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.callout li strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ============ Licence card ============ */
+.licence-block {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-top: 32px;
+}
+
+.licence-block p {
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+}
+
+.licence-block p:last-child {
+  margin-bottom: 0;
+}
+
+.licence-block a {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.licence-block a:hover {
+  opacity: 0.8;
+}
+
+/* ============ Footer ============ */
+footer {
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+  padding: 40px 24px 32px;
+  margin-top: 64px;
+}
+
+.footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.footer-inner a {
+  color: var(--accent);
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.footer-inner a:hover { opacity: 0.75; }
+
+/* ============ Responsive ============ */
+@media (max-width: 600px) {
+  header.hero { padding: 56px 20px 36px; }
+  main { padding: 40px 18px 30px; }
+  .about-section h2 { font-size: 1.2rem; }
+  .callout, .licence-block { padding: 18px 18px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ NAVIGATION ============ -->
+<nav>
+  <div class="nav-inner">
+    <a href="index.html" class="nav-brand">Dr Nigel Hanbury<span> · Physics</span></a>
+    <div class="nav-links">
+      <a href="index.html">Labs</a>
+      <a href="about.html" class="active">About</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <h1 class="hero-title">About</h1>
+  <p class="hero-subtitle">Physics Virtual Laboratories, designed and built by a practising physics teacher.</p>
+</header>
+
+<!-- ============ MAIN CONTENT ============ -->
+<main>
+
+  <div class="intro-with-promo">
+    <section class="about-section">
+      <p>I'm Dr Nigel Hanbury, a secondary physics teacher in Cardiff with over twenty years of classroom experience. I designed and built these virtual laboratories to support physics teaching at A-level and IB.</p>
+      <p>My aim is to provide interactive, accurate physics tools that work directly in your browser. Each lab is designed to support classroom demonstration, student exploration, and independent investigation.</p>
+      <p>The labs are substantial enough to anchor full lessons. Teachers can build enquiry led sessions around them, with students investigating, predicting, and analysing through direct interaction.</p>
+    </section>
+
+    <a class="book-promo-side" href="https://books.apple.com/us/book/a-student-companion-to-a-level-physics/id6448841785?ign-itscg=30200&ign-itsct=books_box_link&mttnsubad=6448841785" target="_blank" rel="noopener">
+      <div class="book-image">
+        <img src="icons/physics-essentials-promo.png" alt="Physics Essentials: A Student Companion to A Level Physics" onerror="this.outerHTML='&lt;div style=&quot;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2.5rem;color:var(--text-dim);&quot;&gt;📘&lt;/div&gt;'">
+      </div>
+      <div class="book-label">Free companion book</div>
+      <div class="book-title">Physics Essentials: A Student Companion to A Level Physics</div>
+      <div class="book-desc">A free student companion for WJEC A Level Physics, covering Units 1 to 4.</div>
+      <div class="book-cta">Read on Apple Books →</div>
+    </a>
+  </div>
+
+  <section class="about-section">
+    <p><strong>Design and physics.</strong> I design every lab myself. The pedagogical structure, parameter choices, visual representations, and underlying physics modelling all reflect over two decades of classroom teaching and specialist subject knowledge. I rigorously test each lab for physical accuracy.</p>
+  </section>
+
+  <section class="about-section">
+    <p><strong>Implementation.</strong> Modern AI coding tools help me with the implementation. I direct every design and physics decision; the AI executes the code under my supervision and review.</p>
+  </section>
+
+  <!-- ============ Browser callout ============ -->
+  <div class="callout">
+    <h3>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="16" x2="12" y2="12"/>
+        <line x1="12" y1="8" x2="12.01" y2="8"/>
+      </svg>
+      Browser and device compatibility
+    </h3>
+    <ul>
+      <li><strong>Tested on Google Chrome (desktop / laptop), best viewed in full-screen mode</strong></li>
+      <li><strong>iPad compatible, use Safari for correct display and full touch support</strong></li>
+    </ul>
+    <p style="margin-top:12px; font-size:0.92rem; color: var(--info-text);">Other modern browsers may work, but I can't guarantee rendering and touch behaviour. If you hit a layout issue, please use one of the supported browser/device combinations above.</p>
+  </div>
+
+  <!-- ============ Licence ============ -->
+  <div class="licence-block">
+    <p><strong>Licence</strong></p>
+    <p>Free for educational use under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">Creative Commons BY-NC-SA 4.0</a>. Dr Nigel Hanbury.</p>
+  </div>
+
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      &copy; 2026 Dr Nigel Hanbury &nbsp;&middot;&nbsp; Free for educational use under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a>
+    </div>
+    <div>
+      <a href="index.html">Labs</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

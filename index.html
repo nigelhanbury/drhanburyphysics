@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Physics Virtual Laboratories · Dr Nigel Hanbury</title>
+<meta name="description" content="Free interactive physics labs for A-level and IB. Designed and built by Dr Nigel Hanbury, secondary physics teacher in Cardiff.">
+<style>
+:root {
+  --bg: #fafbfc;
+  --bg-elevated: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #ffffff;
+  --bg-icon: #f3f5f8;
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
+  --shadow: rgba(15, 23, 42, 0.04);
+  --shadow-hover: rgba(15, 23, 42, 0.10);
+  --text: #0f172a;
+  --text-muted: #475569;
+  --text-dim: #94a3b8;
+  --accent: #0d9488;
+  --accent-light: #14b8a6;
+  --accent-bg: rgba(20, 184, 166, 0.08);
+  --info-bg: #f1f5f9;
+  --info-border: #cbd5e1;
+  --info-text: #334155;
+  --info-icon: #64748b;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+a { color: inherit; text-decoration: none; }
+
+/* ============ Nav ============ */
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-brand {
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.3px;
+  color: var(--text);
+}
+
+.nav-brand span { color: var(--accent); }
+
+.nav-links {
+  display: flex;
+  gap: 24px;
+}
+
+.nav-links a {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.nav-links a:hover { color: var(--accent); }
+
+/* ============ Hero ============ */
+header.hero {
+  padding: 88px 24px 56px;
+  text-align: center;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(20, 184, 166, 0.06) 0%, transparent 50%),
+    radial-gradient(circle at 70% 80%, rgba(124, 58, 237, 0.04) 0%, transparent 50%),
+    var(--bg);
+  position: relative;
+}
+
+header.hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+.hero-title {
+  font-size: clamp(2.2rem, 5vw, 3.6rem);
+  font-weight: 300;
+  letter-spacing: -0.5px;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+.hero-tagline {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  max-width: 640px;
+  margin: 0 auto;
+  font-weight: 400;
+}
+
+/* ============ Browser note ============ */
+.browser-note {
+  max-width: 1200px;
+  margin: 32px auto 0;
+  padding: 14px 24px;
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--info-text);
+  font-size: 0.92rem;
+}
+
+.browser-note strong { color: var(--text); font-weight: 600; }
+
+.browser-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: var(--info-icon);
+}
+
+/* ============ Sections ============ */
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 56px 24px 80px;
+}
+
+.topic-section {
+  margin-bottom: 64px;
+}
+
+.topic-header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 28px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.topic-header h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: var(--text);
+}
+
+/* ============ Card grid ============ */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 22px;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  box-shadow: 0 1px 3px var(--shadow);
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  border-color: var(--border-strong);
+  box-shadow: 0 12px 28px var(--shadow-hover);
+}
+
+.card-icon {
+  aspect-ratio: 1;
+  background: var(--bg-icon);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.card-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Placeholder for missing icons */
+.card-icon-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  color: var(--text-dim);
+  background: linear-gradient(135deg, #f3f5f8, #e5e7eb);
+}
+
+.card-body {
+  padding: 18px 20px 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+.card-desc {
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* ============ Footer ============ */
+footer {
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+  padding: 40px 24px 32px;
+  margin-top: 64px;
+}
+
+.footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.footer-inner a {
+  color: var(--accent);
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.footer-inner a:hover { opacity: 0.75; }
+
+/* ============ Responsive ============ */
+@media (max-width: 600px) {
+  .card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+  }
+  header.hero { padding: 60px 20px 40px; }
+  main { padding: 40px 16px 60px; }
+  .topic-section { margin-bottom: 48px; }
+  .browser-note {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ NAVIGATION ============ -->
+<nav>
+  <div class="nav-inner">
+    <a href="index.html" class="nav-brand">Dr Nigel Hanbury<span> · Physics</span></a>
+    <div class="nav-links">
+      <a href="index.html">Labs</a>
+      <a href="about.html">About</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <h1 class="hero-title">Physics Virtual Laboratories</h1>
+  <p class="hero-tagline">Free interactive physics labs for A-level and IB. Designed for exploration, investigation, and lessons that students remember.</p>
+</header>
+
+<!-- ============ BROWSER NOTE ============ -->
+<div class="browser-note">
+  <svg class="browser-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="12" y1="16" x2="12" y2="12"/>
+    <line x1="12" y1="8" x2="12.01" y2="8"/>
+  </svg>
+  <span><strong>For best results:</strong> Use Google Chrome (desktop / laptop) in full-screen mode. Press F11 to toggle. iPad compatible: use Safari.</span>
+</div>
+
+<!-- ============ MAIN CONTENT ============ -->
+<main>
+
+  <!-- ===== MECHANICS ===== -->
+  <section class="topic-section" id="mechanics">
+    <div class="topic-header">
+      <h2>Mechanics</h2>
+    </div>
+    <div class="card-grid">
+
+      <a class="card" href="labs/projectiles.html">
+        <div class="card-icon">
+          <img src="icons/projectiles.png" alt="Projectile Motion" onerror="this.outerHTML='&lt;div class=&quot;card-icon-placeholder&quot;&gt;🎯&lt;/div&gt;'">
+        </div>
+        <div class="card-body">
+          <div class="card-title">Projectile Motion</div>
+          <div class="card-desc">Investigate trajectories with vectors, drag forces, and motion graphs</div>
+        </div>
+      </a>
+
+      <a class="card" href="labs/moments.html">
+        <div class="card-icon">
+          <img src="icons/moments.png" alt="Moments &amp; Equilibrium" onerror="this.outerHTML='&lt;div class=&quot;card-icon-placeholder&quot;&gt;⚖️&lt;/div&gt;'">
+        </div>
+        <div class="card-body">
+          <div class="card-title">Moments &amp; Equilibrium</div>
+          <div class="card-desc">Investigate moments, balanced beams, and conditions for static equilibrium</div>
+        </div>
+      </a>
+
+      <a class="card" href="labs/vector-addition.html">
+        <div class="card-icon">
+          <img src="icons/vectors.png" alt="Vector Addition" onerror="this.outerHTML='&lt;div class=&quot;card-icon-placeholder&quot;&gt;➕&lt;/div&gt;'">
+        </div>
+        <div class="card-body">
+          <div class="card-title">Vector Addition</div>
+          <div class="card-desc">Add vectors with parallelogram, component, and force-equilibrium views</div>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- ===== ELECTRICITY ===== -->
+  <section class="topic-section" id="electricity">
+    <div class="topic-header">
+      <h2>Electricity</h2>
+    </div>
+    <div class="card-grid">
+
+      <a class="card" href="labs/dc-construction-kit.html">
+        <div class="card-icon">
+          <img src="icons/dc.png" alt="DC Circuit Construction Kit" onerror="this.outerHTML='&lt;div class=&quot;card-icon-placeholder&quot;&gt;⚡&lt;/div&gt;'">
+        </div>
+        <div class="card-body">
+          <div class="card-title">DC Circuit Construction Kit</div>
+          <div class="card-desc">Build series and parallel circuits; measure current, voltage, and resistance</div>
+        </div>
+      </a>
+
+      <a class="card" href="labs/ac-construction-kit.html">
+        <div class="card-icon">
+          <img src="icons/ac.png" alt="AC Circuit Construction Kit" onerror="this.outerHTML='&lt;div class=&quot;card-icon-placeholder&quot;&gt;〰️&lt;/div&gt;'">
+        </div>
+        <div class="card-body">
+          <div class="card-title">AC Circuit Construction Kit</div>
+          <div class="card-desc">Investigate AC circuits with resistors, capacitors, inductors, and resonance</div>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- ===== FIELDS ===== -->
+  <section class="topic-section" id="fields">
+    <div class="topic-header">
+      <h2>Fields</h2>
+    </div>
+    <div class="card-grid">
+
+      <a class="card" href="labs/electric-fields.html">
+        <div class="card-icon">
+          <img src="icons/electric-fields.png" alt="Electric Fields" onerror="this.outerHTML='&lt;div class=&quot;card-icon-placeholder&quot;&gt;✨&lt;/div&gt;'">
+        </div>
+        <div class="card-body">
+          <div class="card-title">Electric Fields</div>
+          <div class="card-desc">Explore field lines around point charges, dipoles, and parallel plates</div>
+        </div>
+      </a>
+
+      <a class="card" href="labs/magnetic-fields.html">
+        <div class="card-icon">
+          <img src="icons/magnetic-fields.png" alt="Magnetic Fields" onerror="this.outerHTML='&lt;div class=&quot;card-icon-placeholder&quot;&gt;🧲&lt;/div&gt;'">
+        </div>
+        <div class="card-body">
+          <div class="card-title">Magnetic Fields</div>
+          <div class="card-desc">Visualise magnetic field lines around magnets and current-carrying wires; deflect charged particles</div>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- ===== ELECTROMAGNETISM ===== -->
+  <section class="topic-section" id="electromagnetism">
+    <div class="topic-header">
+      <h2>Electromagnetism</h2>
+    </div>
+    <div class="card-grid">
+
+      <a class="card" href="labs/em-induction.html">
+        <div class="card-icon">
+          <img src="icons/em-induction.png" alt="EM Induction" onerror="this.outerHTML='&lt;div class=&quot;card-icon-placeholder&quot;&gt;🔁&lt;/div&gt;'">
+        </div>
+        <div class="card-body">
+          <div class="card-title">EM Induction</div>
+          <div class="card-desc">Explore Faraday's law and Lenz's law with a moving magnet and coil</div>
+        </div>
+      </a>
+
+      <a class="card" href="labs/ac-generator.html">
+        <div class="card-icon">
+          <img src="icons/ac-generator.png" alt="AC Generator" onerror="this.outerHTML='&lt;div class=&quot;card-icon-placeholder&quot;&gt;🔄&lt;/div&gt;'">
+        </div>
+        <div class="card-body">
+          <div class="card-title">AC Generator</div>
+          <div class="card-desc">Investigate how a rotating coil in a magnetic field produces sinusoidal EMF</div>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- ===== WAVES AND LIGHT ===== -->
+  <section class="topic-section" id="waves">
+    <div class="topic-header">
+      <h2>Waves and Light</h2>
+    </div>
+    <div class="card-grid">
+
+      <a class="card" href="labs/refraction.html">
+        <div class="card-icon">
+          <img src="icons/refraction.png" alt="Refraction" onerror="this.outerHTML='&lt;div class=&quot;card-icon-placeholder&quot;&gt;🌈&lt;/div&gt;'">
+        </div>
+        <div class="card-body">
+          <div class="card-title">Refraction</div>
+          <div class="card-desc">Investigate Snell's law, total internal reflection, and critical angles</div>
+        </div>
+      </a>
+
+      <a class="card" href="labs/youngs-fringes.html">
+        <div class="card-icon">
+          <img src="icons/youngs.png" alt="Path Difference and Young's Fringes" onerror="this.outerHTML='&lt;div class=&quot;card-icon-placeholder&quot;&gt;〰️&lt;/div&gt;'">
+        </div>
+        <div class="card-body">
+          <div class="card-title">Path Difference and Young's Fringes</div>
+          <div class="card-desc">Explore Young's experiment with path difference, phase difference, and bright/dark fringe analysis</div>
+        </div>
+      </a>
+
+      <a class="card" href="labs/two-speaker.html">
+        <div class="card-icon">
+          <img src="icons/two-speaker.png" alt="Two Speaker Interference" onerror="this.outerHTML='&lt;div class=&quot;card-icon-placeholder&quot;&gt;🔊&lt;/div&gt;'">
+        </div>
+        <div class="card-body">
+          <div class="card-title">Two Speaker Interference</div>
+          <div class="card-desc">Explore sound interference with two speakers; drag the microphone and hear the loud and quiet bands</div>
+        </div>
+      </a>
+
+      <a class="card" href="labs/multimode-fibres.html">
+        <div class="card-icon">
+          <img src="icons/multimode.png" alt="Multimode Fibres" onerror="this.outerHTML='&lt;div class=&quot;card-icon-placeholder&quot;&gt;🌟&lt;/div&gt;'">
+        </div>
+        <div class="card-body">
+          <div class="card-title">Multimode Fibres</div>
+          <div class="card-desc">Visualise light rays in optical fibres and the effects of modal dispersion</div>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      &copy; 2026 Dr Nigel Hanbury &nbsp;&middot;&nbsp; Free for educational use under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a>
+    </div>
+    <div>
+      <a href="about.html">About</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
