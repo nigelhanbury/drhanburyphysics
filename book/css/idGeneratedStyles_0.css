@@ -1,0 +1,104 @@
+@font-face {
+	font-family:Arial;
+	font-style:italic;
+	font-weight:bold;
+	src : url("../font/Arial-BoldItalicMT.ttf");
+}
+@font-face {
+	font-family:Arial;
+	font-style:oblique;
+	font-weight:bold;
+	src : url("../font/Arial-BoldItalicMT.ttf");
+}
+@font-face {
+	font-family:Arial;
+	font-style:normal;
+	font-weight:bold;
+	src : url("../font/Arial-BoldMT.ttf");
+}
+@font-face {
+	font-family:Arial;
+	font-style:italic;
+	font-weight:normal;
+	src : url("../font/Arial-ItalicMT.ttf");
+}
+@font-face {
+	font-family:Arial;
+	font-style:oblique;
+	font-weight:normal;
+	src : url("../font/Arial-ItalicMT.ttf");
+}
+@font-face {
+	font-family:Arial;
+	font-style:normal;
+	font-weight:normal;
+	src : url("../font/ArialMT.ttf");
+}
+@font-face {
+	font-family:"Minion Pro";
+	font-style:normal;
+	font-weight:normal;
+	src : url("../font/MinionPro-Regular.otf");
+}
+@font-face {
+	font-family:STIXGeneral;
+	font-style:normal;
+	font-weight:bold;
+	src : url("../font/STIXGeneral-Bold.otf");
+}
+@font-face {
+	font-family:STIXGeneral;
+	font-style:italic;
+	font-weight:bold;
+	src : url("../font/STIXGeneral-BoldItalic.otf");
+}
+@font-face {
+	font-family:STIXGeneral;
+	font-style:oblique;
+	font-weight:bold;
+	src : url("../font/STIXGeneral-BoldItalic.otf");
+}
+@font-face {
+	font-family:STIXGeneral;
+	font-style:italic;
+	font-weight:normal;
+	src : url("../font/STIXGeneral-Italic.otf");
+}
+@font-face {
+	font-family:STIXGeneral;
+	font-style:oblique;
+	font-weight:normal;
+	src : url("../font/STIXGeneral-Italic.otf");
+}
+@font-face {
+	font-family:STIXGeneral;
+	font-style:normal;
+	font-weight:normal;
+	src : url("../font/STIXGeneral-Regular.otf");
+}
+@font-face {
+	font-family:STIXSizeOneSym;
+	font-style:normal;
+	font-weight:normal;
+	src : url("../font/STIXSizeOneSym-Regular.otf");
+}
+@font-face {
+	font-family:STIXSizeTwoSym;
+	font-style:normal;
+	font-weight:normal;
+	src : url("../font/STIXSizeTwoSym-Regular.otf");
+}
+body, div, dl, dt, dd, h1, h2, h3, h4, h5, h6, p, pre, code, blockquote {
+	margin:0;
+	padding:0;
+	border-width:0;
+	text-rendering:optimizeSpeed;
+}
+div.Basic-Graphics-Frame {
+	border-color:#000000;
+	border-width:1px;
+	border-style:solid;
+}
+div.Basic-Text-Frame {
+	border-style:solid;
+}

@@ -196,17 +196,17 @@ main {
 
 .book-promo-side .book-image {
   width: 100%;
-  aspect-ratio: 1;
   border-radius: 10px;
   overflow: hidden;
   background: #f3f5f8;
   margin-bottom: 14px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
 }
 
 .book-promo-side .book-image img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
+  display: block;
 }
 
 .book-promo-side .book-label {
@@ -239,13 +239,54 @@ main {
   color: var(--accent);
 }
 
+/* Two action buttons inside the book card */
+.book-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.book-btn {
+  display: block;
+  text-align: center;
+  padding: 9px 12px;
+  border-radius: 9px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.book-btn-primary {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.book-btn-primary:hover {
+  background: var(--accent-light);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(20, 184, 166, 0.28);
+}
+
+.book-btn-secondary {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--border-strong);
+}
+
+.book-btn-secondary:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
 @media (max-width: 720px) {
   .intro-with-promo {
     grid-template-columns: 1fr;
     gap: 24px;
   }
   .book-promo-side .book-image {
-    max-width: 200px;
+    max-width: 240px;
     margin-left: auto;
     margin-right: auto;
   }
@@ -395,15 +436,18 @@ footer {
       <p>The labs are substantial enough to anchor full lessons. Teachers can build enquiry led sessions around them, with students investigating, predicting, and analysing through direct interaction.</p>
     </section>
 
-    <a class="book-promo-side" href="https://books.apple.com/us/book/a-student-companion-to-a-level-physics/id6448841785?ign-itscg=30200&ign-itsct=books_box_link&mttnsubad=6448841785" target="_blank" rel="noopener">
+    <div class="book-promo-side">
       <div class="book-image">
-        <img src="icons/physics-essentials-promo.png" alt="Physics Essentials: A Student Companion to A Level Physics" onerror="this.outerHTML='&lt;div style=&quot;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2.5rem;color:var(--text-dim);&quot;&gt;📘&lt;/div&gt;'">
+        <img src="icons/book-cover.jpg" alt="Physics Essentials: A Student Companion to A Level Physics" onerror="this.outerHTML='&lt;div style=&quot;width:100%;height:280px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;color:var(--text-dim);&quot;&gt;📘&lt;/div&gt;'">
       </div>
       <div class="book-label">Free companion book</div>
       <div class="book-title">Physics Essentials: A Student Companion to A Level Physics</div>
       <div class="book-desc">A free student companion for WJEC A Level Physics, covering Units 1 to 4.</div>
-      <div class="book-cta">Read on Apple Books →</div>
-    </a>
+      <div class="book-actions">
+        <a class="book-btn book-btn-primary" href="book/" target="_blank" rel="noopener">Read free online →</a>
+        <a class="book-btn book-btn-secondary" href="https://books.apple.com/us/book/a-student-companion-to-a-level-physics/id6448841785?ign-itscg=30200&ign-itsct=books_box_link&mttnsubad=6448841785" target="_blank" rel="noopener">Apple Books</a>
+      </div>
+    </div>
   </div>
 
   <section class="about-section">
