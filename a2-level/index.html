@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>A Student Companion to A2 Level Physics · Read Online · Dr Nigel Hanbury</title>
+<style>
+  :root {
+    --bar: #0f172a;
+    --bar-text: #e6edf3;
+    --accent: #14b8a6;
+    --page-bg: #ffffff;
+    --surround: #1e2433;
+    --muted: #94a3b8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--surround);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Top bar */
+  #topbar {
+    position: fixed; top: 0; left: 0; right: 0; height: 52px;
+    background: var(--bar); color: var(--bar-text);
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 14px; z-index: 50;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  }
+  #topbar .title { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #topbar .title span { color: var(--accent); }
+  #topbar .spacer { flex: 1; }
+  #topbar button {
+    background: rgba(255,255,255,0.08); color: var(--bar-text);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
+    padding: 7px 12px; font-size: 0.85rem; font-weight: 500; cursor: pointer;
+    transition: background 0.15s;
+  }
+  #topbar button:hover { background: rgba(255,255,255,0.16); }
+  #topbar .pageinfo { font-size: 0.85rem; color: var(--muted); min-width: 92px; text-align: center; }
+
+  /* Stage holds the scaled page */
+  #stage {
+    position: fixed; top: 52px; left: 0; right: 0; bottom: 0;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  /* The page frame keeps the 4:3 aspect ratio (2732x2048) */
+  #pageWrap {
+    position: relative;
+    background: var(--page-bg);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  }
+  #pageFrame {
+    width: 2732px; height: 2048px;
+    border: 0; display: block;
+    transform-origin: top left;
+    background: #fff;
+  }
+
+  /* Nav arrows */
+  .navarrow {
+    position: fixed; top: 50%; transform: translateY(-50%);
+    width: 48px; height: 80px; z-index: 40;
+    background: rgba(15,23,42,0.55); color: #fff;
+    border: none; cursor: pointer; font-size: 1.6rem;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px; transition: background 0.15s;
+  }
+  .navarrow:hover { background: rgba(15,23,42,0.85); }
+  #prevBtn { left: 10px; }
+  #nextBtn { right: 10px; }
+  .navarrow:disabled { opacity: 0.25; cursor: default; }
+
+  /* Contents drawer */
+  #toc {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 300px;
+    background: #fff; z-index: 60; transform: translateX(-100%);
+    transition: transform 0.25s ease; overflow-y: auto;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+  }
+  #toc.open { transform: translateX(0); }
+  #toc h2 { font-size: 1rem; padding: 18px 18px 10px; color: var(--bar); border-bottom: 1px solid #e5e7eb; }
+  #toc a {
+    display: block; padding: 11px 18px; color: #334155;
+    text-decoration: none; font-size: 0.9rem; border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+  }
+  #toc a:hover { background: #f1f5f9; color: var(--accent); }
+  #tocOverlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 55;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  #tocOverlay.open { opacity: 1; pointer-events: auto; }
+
+  #loading {
+    position: fixed; inset: 52px 0 0 0; display: flex;
+    align-items: center; justify-content: center;
+    color: var(--muted); font-size: 0.95rem; z-index: 30;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <button id="tocBtn" aria-label="Contents">☰ Contents</button>
+  <div class="title">A2 Level Physics<span> · Dr Nigel Hanbury</span></div>
+  <div class="spacer"></div>
+  <div class="pageinfo" id="pageInfo">– / –</div>
+</div>
+
+<div id="stage">
+  <div id="pageWrap">
+    <iframe id="pageFrame" scrolling="no" title="Book page"></iframe>
+  </div>
+</div>
+
+<button class="navarrow" id="prevBtn" aria-label="Previous page">‹</button>
+<button class="navarrow" id="nextBtn" aria-label="Next page">›</button>
+
+<div id="tocOverlay"></div>
+<nav id="toc">
+  <h2>Contents</h2>
+  <div id="tocList"></div>
+</nav>
+
+<div id="loading">Loading…</div>
+
+<script>
+var BOOK_DATA = {"pages":["Copyright_and_Preface-1.xhtml","Copyright_and_Preface-2.xhtml","Copyright_and_Preface-3.xhtml","Circular_Motion-1.xhtml","Circular_Motion-2.xhtml","Circular_Motion-3.xhtml","Circular_Motion-4.xhtml","Circular_Motion-5.xhtml","Circular_Motion-6.xhtml","Circular_Motion-7.xhtml","Vibrations-1.xhtml","Vibrations-2.xhtml","Vibrations-3.xhtml","Vibrations-4.xhtml","Vibrations-5.xhtml","Vibrations-6.xhtml","Vibrations-7.xhtml","Vibrations-8.xhtml","Vibrations-9.xhtml","Vibrations-10.xhtml","Vibrations-11.xhtml","Vibrations-12.xhtml","Vibrations-13.xhtml","Vibrations-14.xhtml","Vibrations-15.xhtml","Kinetic-1.xhtml","Kinetic-2.xhtml","Kinetic-3.xhtml","Kinetic-4.xhtml","Kinetic-5.xhtml","Kinetic-6.xhtml","Kinetic-7.xhtml","Kinetic-8.xhtml","Kinetic-9.xhtml","Kinetic-10.xhtml","Kinetic-11.xhtml","Kinetic-12.xhtml","Kinetic-13.xhtml","Thermal-1.xhtml","Thermal-2.xhtml","Thermal-3.xhtml","Thermal-4.xhtml","Thermal-5.xhtml","Thermal-6.xhtml","Thermal-7.xhtml","Thermal-8.xhtml","Thermal-9.xhtml","Thermal-10.xhtml","Thermal-11.xhtml","Thermal-12.xhtml","Thermal-13.xhtml","Nuclear_Decay-1.xhtml","Nuclear_Decay-2.xhtml","Nuclear_Decay-3.xhtml","Nuclear_Decay-4.xhtml","Nuclear_Decay-5.xhtml","Nuclear_Decay-6.xhtml","Nuclear_Decay-7.xhtml","Nuclear_Decay-8.xhtml","Nuclear_Decay-9.xhtml","Nuclear_Decay-10.xhtml","Nuclear_Decay-11.xhtml","Nuclear_Decay-12.xhtml","Nuclear_Decay-13.xhtml","Nuclear_Energy-1.xhtml","Nuclear_Energy-2.xhtml","Nuclear_Energy-3.xhtml","Nuclear_Energy-4.xhtml","Nuclear_Energy-5.xhtml","Nuclear_Energy-6.xhtml","Nuclear_Energy-7.xhtml","Nuclear_Energy-8.xhtml","Capacitance-1.xhtml","Capacitance-2.xhtml","Capacitance-3.xhtml","Capacitance-4.xhtml","Capacitance-5.xhtml","Capacitance-6.xhtml","Capacitance-7.xhtml","Capacitance-8.xhtml","Capacitance-9.xhtml","Capacitance-10.xhtml","Capacitance-11.xhtml","Capacitance-12.xhtml","Capacitance-13.xhtml","Capacitance-14.xhtml","Capacitance-15.xhtml","Electrostatic_Fields-1.xhtml","Electrostatic_Fields-2.xhtml","Electrostatic_Fields-3.xhtml","Electrostatic_Fields-4.xhtml","Electrostatic_Fields-5.xhtml","Electrostatic_Fields-6.xhtml","Electrostatic_Fields-7.xhtml","Electrostatic_Fields-8.xhtml","Electrostatic_Fields-9.xhtml","Electrostatic_Fields-10.xhtml","Electrostatic_Fields-11.xhtml","Electrostatic_Fields-12.xhtml","Gravitational_Fields-1.xhtml","Gravitational_Fields-2.xhtml","Gravitational_Fields-3.xhtml","Gravitational_Fields-4.xhtml","Gravitational_Fields-5.xhtml","Gravitational_Fields-6.xhtml","Gravitational_Fields-7.xhtml","Gravitational_Fields-8.xhtml","Gravitational_Fields-9.xhtml","Gravitational_Fields-10.xhtml","Orbits_and_The_Wider_Universe-1.xhtml","Orbits_and_The_Wider_Universe-2.xhtml","Orbits_and_The_Wider_Universe-3.xhtml","Orbits_and_The_Wider_Universe-4.xhtml","Orbits_and_The_Wider_Universe-5.xhtml","Orbits_and_The_Wider_Universe-6.xhtml","Orbits_and_The_Wider_Universe-7.xhtml","Orbits_and_The_Wider_Universe-8.xhtml","Orbits_and_The_Wider_Universe-9.xhtml","Orbits_and_The_Wider_Universe-10.xhtml","Orbits_and_The_Wider_Universe-11.xhtml","Orbits_and_The_Wider_Universe-12.xhtml","Orbits_and_The_Wider_Universe-13.xhtml","Orbits_and_The_Wider_Universe-14.xhtml","Orbits_and_The_Wider_Universe-15.xhtml","Orbits_and_The_Wider_Universe-16.xhtml","Orbits_and_The_Wider_Universe-17.xhtml","Orbits_and_The_Wider_Universe-18.xhtml","Orbits_and_The_Wider_Universe-19.xhtml","MagneticFields-1.xhtml","MagneticFields-2.xhtml","MagneticFields-3.xhtml","MagneticFields-4.xhtml","MagneticFields-5.xhtml","MagneticFields-6.xhtml","MagneticFields-7.xhtml","MagneticFields-8.xhtml","MagneticFields-9.xhtml","MagneticFields-10.xhtml","MagneticFields-11.xhtml","MagneticFields-12.xhtml","MagneticFields-13.xhtml","MagneticFields-14.xhtml","MagneticFields-15.xhtml","MagneticFields-16.xhtml","Induction-1.xhtml","Induction-2.xhtml","Induction-3.xhtml","Induction-4.xhtml","Induction-5.xhtml","Induction-6.xhtml","Induction-7.xhtml","Induction-8.xhtml","Induction-9.xhtml","Induction-10.xhtml","Induction-11.xhtml","Induction-12.xhtml"],"chapters":[{"title":"Preface","page":0},{"title":"Unit 3 – Oscillations and Nuclei","page":3},{"title":"3.1 Circular Motion","page":3},{"title":"3.2 Vibrations","page":10},{"title":"3.3 Kinetic Theory","page":25},{"title":"3.4 Thermal Physics","page":38},{"title":"3.5 Nuclear Decay","page":51},{"title":"3.6 Nuclear Energy","page":64},{"title":"Unit 4 – Fields","page":72},{"title":"4.1 Capacitance","page":72},{"title":"4.2a Electrostatic Fields","page":87},{"title":"4.2b Gravitational Fields","page":99},{"title":"4.3 Orbits and the Wider Universe","page":109},{"title":"4.4 Magnetic Fields","page":128},{"title":"4.5 Electromagnetic Induction","page":144}]};
+</script>
+
+<script>
+(function () {
+  var PAGE_W = 2732, PAGE_H = 2048;
+  var pages = [], chapters = [], current = 0;
+
+  var frame = document.getElementById('pageFrame');
+  var wrap = document.getElementById('pageWrap');
+  var stage = document.getElementById('stage');
+  var pageInfo = document.getElementById('pageInfo');
+  var prevBtn = document.getElementById('prevBtn');
+  var nextBtn = document.getElementById('nextBtn');
+  var tocBtn = document.getElementById('tocBtn');
+  var toc = document.getElementById('toc');
+  var tocOverlay = document.getElementById('tocOverlay');
+  var tocList = document.getElementById('tocList');
+  var loading = document.getElementById('loading');
+
+  function scalePage() {
+    var availW = stage.clientWidth - 24;
+    var availH = stage.clientHeight - 24;
+    var scale = Math.min(availW / PAGE_W, availH / PAGE_H);
+    if (scale <= 0) scale = 0.1;
+    frame.style.transform = 'scale(' + scale + ')';
+    wrap.style.width = (PAGE_W * scale) + 'px';
+    wrap.style.height = (PAGE_H * scale) + 'px';
+  }
+
+  function showPage(i) {
+    if (i < 0) i = 0;
+    if (i > pages.length - 1) i = pages.length - 1;
+    current = i;
+    loading.style.display = 'flex';
+    frame.src = pages[i];
+    pageInfo.textContent = (i + 1) + ' / ' + pages.length;
+    prevBtn.disabled = (i === 0);
+    nextBtn.disabled = (i === pages.length - 1);
+    try { window.location.hash = 'p' + (i + 1); } catch (e) {}
+  }
+
+  frame.addEventListener('load', function () {
+    loading.style.display = 'none';
+    scalePage();
+  });
+
+  function next() { if (current < pages.length - 1) showPage(current + 1); }
+  function prev() { if (current > 0) showPage(current - 1); }
+
+  nextBtn.addEventListener('click', next);
+  prevBtn.addEventListener('click', prev);
+
+  // Keyboard
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown') { next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { prev(); }
+  });
+
+  // Contents drawer
+  function openToc() { toc.classList.add('open'); tocOverlay.classList.add('open'); }
+  function closeToc() { toc.classList.remove('open'); tocOverlay.classList.remove('open'); }
+  tocBtn.addEventListener('click', function () {
+    if (toc.classList.contains('open')) closeToc(); else openToc();
+  });
+  tocOverlay.addEventListener('click', closeToc);
+
+  // Swipe (touch) on the stage
+  var touchX = null, touchY = null;
+  stage.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 1) { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY; }
+  }, { passive: true });
+  stage.addEventListener('touchend', function (e) {
+    if (touchX === null) return;
+    var dx = e.changedTouches[0].clientX - touchX;
+    var dy = e.changedTouches[0].clientY - touchY;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) next(); else prev();
+    }
+    touchX = null; touchY = null;
+  }, { passive: true });
+
+  window.addEventListener('resize', scalePage);
+
+  // Load book data
+  function init(data) {
+    pages = data.pages;
+    chapters = data.chapters;
+    // Build TOC
+    var html = '';
+    for (var c = 0; c < chapters.length; c++) {
+      html += '<a data-page="' + chapters[c].page + '">' + chapters[c].title + '</a>';
+    }
+    tocList.innerHTML = html;
+    var links = tocList.getElementsByTagName('a');
+    for (var k = 0; k < links.length; k++) {
+      links[k].addEventListener('click', function () {
+        var p = parseInt(this.getAttribute('data-page'), 10);
+        closeToc();
+        showPage(p);
+      });
+    }
+    // Start page (from hash if present)
+    var start = 0;
+    var m = (window.location.hash || '').match(/p(\d+)/);
+    if (m) { start = parseInt(m[1], 10) - 1; }
+    showPage(start);
+  }
+
+  // Book data is embedded inline (see BOOK_DATA below) so the reader
+  // works from a plain double-click (no server / no XHR needed).
+  if (typeof BOOK_DATA !== 'undefined') {
+    init(BOOK_DATA);
+  } else {
+    loading.textContent = 'Could not load book data.';
+  }
+})();
+</script>
+
+</body>
+</html>

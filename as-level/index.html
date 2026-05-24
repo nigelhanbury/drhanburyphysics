@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>A Student Companion to AS Level Physics · Read Online · Dr Nigel Hanbury</title>
+<style>
+  :root {
+    --bar: #0f172a;
+    --bar-text: #e6edf3;
+    --accent: #14b8a6;
+    --page-bg: #ffffff;
+    --surround: #1e2433;
+    --muted: #94a3b8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--surround);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Top bar */
+  #topbar {
+    position: fixed; top: 0; left: 0; right: 0; height: 52px;
+    background: var(--bar); color: var(--bar-text);
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 14px; z-index: 50;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  }
+  #topbar .title { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #topbar .title span { color: var(--accent); }
+  #topbar .spacer { flex: 1; }
+  #topbar button {
+    background: rgba(255,255,255,0.08); color: var(--bar-text);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
+    padding: 7px 12px; font-size: 0.85rem; font-weight: 500; cursor: pointer;
+    transition: background 0.15s;
+  }
+  #topbar button:hover { background: rgba(255,255,255,0.16); }
+  #topbar .pageinfo { font-size: 0.85rem; color: var(--muted); min-width: 92px; text-align: center; }
+
+  /* Stage holds the scaled page */
+  #stage {
+    position: fixed; top: 52px; left: 0; right: 0; bottom: 0;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  /* The page frame keeps the 4:3 aspect ratio (2732x2048) */
+  #pageWrap {
+    position: relative;
+    background: var(--page-bg);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  }
+  #pageFrame {
+    width: 2732px; height: 2048px;
+    border: 0; display: block;
+    transform-origin: top left;
+    background: #fff;
+  }
+
+  /* Nav arrows */
+  .navarrow {
+    position: fixed; top: 50%; transform: translateY(-50%);
+    width: 48px; height: 80px; z-index: 40;
+    background: rgba(15,23,42,0.55); color: #fff;
+    border: none; cursor: pointer; font-size: 1.6rem;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px; transition: background 0.15s;
+  }
+  .navarrow:hover { background: rgba(15,23,42,0.85); }
+  #prevBtn { left: 10px; }
+  #nextBtn { right: 10px; }
+  .navarrow:disabled { opacity: 0.25; cursor: default; }
+
+  /* Contents drawer */
+  #toc {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 300px;
+    background: #fff; z-index: 60; transform: translateX(-100%);
+    transition: transform 0.25s ease; overflow-y: auto;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+  }
+  #toc.open { transform: translateX(0); }
+  #toc h2 { font-size: 1rem; padding: 18px 18px 10px; color: var(--bar); border-bottom: 1px solid #e5e7eb; }
+  #toc a {
+    display: block; padding: 11px 18px; color: #334155;
+    text-decoration: none; font-size: 0.9rem; border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+  }
+  #toc a:hover { background: #f1f5f9; color: var(--accent); }
+  #tocOverlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 55;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  #tocOverlay.open { opacity: 1; pointer-events: auto; }
+
+  #loading {
+    position: fixed; inset: 52px 0 0 0; display: flex;
+    align-items: center; justify-content: center;
+    color: var(--muted); font-size: 0.95rem; z-index: 30;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <button id="tocBtn" aria-label="Contents">☰ Contents</button>
+  <div class="title">AS Level Physics<span> · Dr Nigel Hanbury</span></div>
+  <div class="spacer"></div>
+  <div class="pageinfo" id="pageInfo">– / –</div>
+</div>
+
+<div id="stage">
+  <div id="pageWrap">
+    <iframe id="pageFrame" scrolling="no" title="Book page"></iframe>
+  </div>
+</div>
+
+<button class="navarrow" id="prevBtn" aria-label="Previous page">‹</button>
+<button class="navarrow" id="nextBtn" aria-label="Next page">›</button>
+
+<div id="tocOverlay"></div>
+<nav id="toc">
+  <h2>Contents</h2>
+  <div id="tocList"></div>
+</nav>
+
+<div id="loading">Loading…</div>
+
+<script>
+var BOOK_DATA = {"pages":["Copyright_and_Preface-1.xhtml","Copyright_and_Preface-2.xhtml","Mechanics-1.xhtml","Mechanics-2.xhtml","Mechanics-3.xhtml","Mechanics-4.xhtml","Mechanics-5.xhtml","Mechanics-6.xhtml","Mechanics-7.xhtml","Mechanics-8.xhtml","Mechanics-9.xhtml","Mechanics-10.xhtml","Mechanics-11.xhtml","Mechanics-12.xhtml","Mechanics-13.xhtml","Mechanics-14.xhtml","Mechanics-15.xhtml","Mechanics-16.xhtml","Mechanics-17.xhtml","Mechanics-18.xhtml","Mechanics-19.xhtml","Mechanics-20.xhtml","Mechanics-21.xhtml","Mechanics-22.xhtml","Mechanics-23.xhtml","Mechanics-24.xhtml","Mechanics-25.xhtml","Mechanics-26.xhtml","Mechanics-27.xhtml","Mechanics-28.xhtml","Mechanics-29.xhtml","Mechanics-30.xhtml","Mechanics-31.xhtml","Mechanics-32.xhtml","Mechanics-33.xhtml","Mechanics-34.xhtml","Mechanics-35.xhtml","Mechanics-36.xhtml","Mechanics-37.xhtml","Mechanics-38.xhtml","Mechanics-39.xhtml","SolidsUnderStress-1.xhtml","SolidsUnderStress-2.xhtml","SolidsUnderStress-3.xhtml","SolidsUnderStress-4.xhtml","SolidsUnderStress-5.xhtml","SolidsUnderStress-6.xhtml","SolidsUnderStress-7.xhtml","SolidsUnderStress-8.xhtml","SolidsUnderStress-9.xhtml","SolidsUnderStress-10.xhtml","SolidsUnderStress-11.xhtml","SolidsUnderStress-12.xhtml","Using_Radiation_to_Investigate_Stars-1.xhtml","Using_Radiation_to_Investigate_Stars-2.xhtml","Using_Radiation_to_Investigate_Stars-3.xhtml","Using_Radiation_to_Investigate_Stars-4.xhtml","Using_Radiation_to_Investigate_Stars-5.xhtml","Using_Radiation_to_Investigate_Stars-6.xhtml","Using_Radiation_to_Investigate_Stars-7.xhtml","Particles_and_Nuclear_Structure-1.xhtml","Particles_and_Nuclear_Structure-2.xhtml","Particles_and_Nuclear_Structure-3.xhtml","Particles_and_Nuclear_Structure-4.xhtml","Particles_and_Nuclear_Structure-5.xhtml","Particles_and_Nuclear_Structure-6.xhtml","Particles_and_Nuclear_Structure-7.xhtml","Particles_and_Nuclear_Structure-8.xhtml","Particles_and_Nuclear_Structure-9.xhtml","Particles_and_Nuclear_Structure-10.xhtml","Particles_and_Nuclear_Structure-11.xhtml","Electricity-1.xhtml","Electricity-2.xhtml","Electricity-3.xhtml","Electricity-4.xhtml","Electricity-5.xhtml","Electricity-6.xhtml","Electricity-7.xhtml","Electricity-8.xhtml","Electricity-9.xhtml","Electricity-10.xhtml","Electricity-11.xhtml","Electricity-12.xhtml","Electricity-13.xhtml","Electricity-14.xhtml","Electricity-15.xhtml","Electricity-16.xhtml","Electricity-17.xhtml","Electricity-18.xhtml","Electricity-19.xhtml","Electricity-20.xhtml","Electricity-21.xhtml","Electricity-22.xhtml","Electricity-23.xhtml","Electricity-24.xhtml","Electricity-25.xhtml","Electricity-26.xhtml","Electricity-27.xhtml","Waves-1.xhtml","Waves-2.xhtml","Waves-3.xhtml","Waves-4.xhtml","Waves-5.xhtml","Waves-6.xhtml","Waves-7.xhtml","Waves-8.xhtml","Waves-9.xhtml","Waves-10.xhtml","Waves-11.xhtml","Waves-12.xhtml","Waves-13.xhtml","Waves-14.xhtml","Waves-15.xhtml","Waves-16.xhtml","Waves-17.xhtml","Waves-18.xhtml","Waves-19.xhtml","Waves-20.xhtml","Waves-21.xhtml","Waves-22.xhtml","Waves-23.xhtml","Waves-24.xhtml","Waves-25.xhtml","Waves-26.xhtml","Waves-27.xhtml","Waves-28.xhtml","Waves-29.xhtml","Waves-30.xhtml","Waves-31.xhtml","Waves-32.xhtml","Waves-33.xhtml","Waves-34.xhtml","Photons_and_Lasers-1.xhtml","Photons_and_Lasers-2.xhtml","Photons_and_Lasers-3.xhtml","Photons_and_Lasers-4.xhtml","Photons_and_Lasers-5.xhtml","Photons_and_Lasers-6.xhtml","Photons_and_Lasers-7.xhtml","Photons_and_Lasers-8.xhtml","Photons_and_Lasers-9.xhtml","Photons_and_Lasers-10.xhtml","Photons_and_Lasers-11.xhtml","Photons_and_Lasers-12.xhtml","Photons_and_Lasers-13.xhtml","Photons_and_Lasers-14.xhtml","Photons_and_Lasers-15.xhtml","Photons_and_Lasers-16.xhtml","Photons_and_Lasers-17.xhtml","Photons_and_Lasers-18.xhtml","Photons_and_Lasers-19.xhtml","Photons_and_Lasers-20.xhtml","Photons_and_Lasers-21.xhtml","Photons_and_Lasers-22.xhtml","Photons_and_Lasers-23.xhtml"],"chapters":[{"title":"Preface","page":0},{"title":"Unit 1 – Motion, Energy and Matter","page":2},{"title":"1.1 Basic Physics","page":2},{"title":"1.2 Kinematics","page":18},{"title":"1.3 Dynamics","page":30},{"title":"1.4 Energy Concepts","page":36},{"title":"1.5 Solids Under Stress","page":41},{"title":"1.6 Using Radiation to Investigate Stars","page":53},{"title":"1.7 Particles and Nuclear Structure","page":60},{"title":"Unit 2 – Electricity and Light","page":71},{"title":"2.1 Conduction of Electricity","page":71},{"title":"2.2 Resistance","page":77},{"title":"2.3 Direct Current Circuits","page":87},{"title":"2.4 The Nature of Waves","page":98},{"title":"2.5 Wave Properties","page":108},{"title":"2.6 The Refraction of Light","page":124},{"title":"2.7 Photons","page":132},{"title":"2.8 Lasers","page":146}]};
+</script>
+
+<script>
+(function () {
+  var PAGE_W = 2732, PAGE_H = 2048;
+  var pages = [], chapters = [], current = 0;
+
+  var frame = document.getElementById('pageFrame');
+  var wrap = document.getElementById('pageWrap');
+  var stage = document.getElementById('stage');
+  var pageInfo = document.getElementById('pageInfo');
+  var prevBtn = document.getElementById('prevBtn');
+  var nextBtn = document.getElementById('nextBtn');
+  var tocBtn = document.getElementById('tocBtn');
+  var toc = document.getElementById('toc');
+  var tocOverlay = document.getElementById('tocOverlay');
+  var tocList = document.getElementById('tocList');
+  var loading = document.getElementById('loading');
+
+  function scalePage() {
+    var availW = stage.clientWidth - 24;
+    var availH = stage.clientHeight - 24;
+    var scale = Math.min(availW / PAGE_W, availH / PAGE_H);
+    if (scale <= 0) scale = 0.1;
+    frame.style.transform = 'scale(' + scale + ')';
+    wrap.style.width = (PAGE_W * scale) + 'px';
+    wrap.style.height = (PAGE_H * scale) + 'px';
+  }
+
+  function showPage(i) {
+    if (i < 0) i = 0;
+    if (i > pages.length - 1) i = pages.length - 1;
+    current = i;
+    loading.style.display = 'flex';
+    frame.src = pages[i];
+    pageInfo.textContent = (i + 1) + ' / ' + pages.length;
+    prevBtn.disabled = (i === 0);
+    nextBtn.disabled = (i === pages.length - 1);
+    try { window.location.hash = 'p' + (i + 1); } catch (e) {}
+  }
+
+  frame.addEventListener('load', function () {
+    loading.style.display = 'none';
+    scalePage();
+  });
+
+  function next() { if (current < pages.length - 1) showPage(current + 1); }
+  function prev() { if (current > 0) showPage(current - 1); }
+
+  nextBtn.addEventListener('click', next);
+  prevBtn.addEventListener('click', prev);
+
+  // Keyboard
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown') { next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { prev(); }
+  });
+
+  // Contents drawer
+  function openToc() { toc.classList.add('open'); tocOverlay.classList.add('open'); }
+  function closeToc() { toc.classList.remove('open'); tocOverlay.classList.remove('open'); }
+  tocBtn.addEventListener('click', function () {
+    if (toc.classList.contains('open')) closeToc(); else openToc();
+  });
+  tocOverlay.addEventListener('click', closeToc);
+
+  // Swipe (touch) on the stage
+  var touchX = null, touchY = null;
+  stage.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 1) { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY; }
+  }, { passive: true });
+  stage.addEventListener('touchend', function (e) {
+    if (touchX === null) return;
+    var dx = e.changedTouches[0].clientX - touchX;
+    var dy = e.changedTouches[0].clientY - touchY;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) next(); else prev();
+    }
+    touchX = null; touchY = null;
+  }, { passive: true });
+
+  window.addEventListener('resize', scalePage);
+
+  // Load book data
+  function init(data) {
+    pages = data.pages;
+    chapters = data.chapters;
+    // Build TOC
+    var html = '';
+    for (var c = 0; c < chapters.length; c++) {
+      html += '<a data-page="' + chapters[c].page + '">' + chapters[c].title + '</a>';
+    }
+    tocList.innerHTML = html;
+    var links = tocList.getElementsByTagName('a');
+    for (var k = 0; k < links.length; k++) {
+      links[k].addEventListener('click', function () {
+        var p = parseInt(this.getAttribute('data-page'), 10);
+        closeToc();
+        showPage(p);
+      });
+    }
+    // Start page (from hash if present)
+    var start = 0;
+    var m = (window.location.hash || '').match(/p(\d+)/);
+    if (m) { start = parseInt(m[1], 10) - 1; }
+    showPage(start);
+  }
+
+  // Book data is embedded inline (see BOOK_DATA below) so the reader
+  // works from a plain double-click (no server / no XHR needed).
+  if (typeof BOOK_DATA !== 'undefined') {
+    init(BOOK_DATA);
+  } else {
+    loading.textContent = 'Could not load book data.';
+  }
+})();
+</script>
+
+</body>
+</html>
