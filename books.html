@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Books · Physics Virtual Laboratories · Dr Nigel Hanbury</title>
+<meta name="description" content="Free companion physics books by Dr Nigel Hanbury. Read online in any browser, on any device.">
+<style>
+:root {
+  --bg: #fafbfc;
+  --bg-elevated: #ffffff;
+  --bg-card: #ffffff;
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
+  --shadow: rgba(15, 23, 42, 0.04);
+  --shadow-hover: rgba(15, 23, 42, 0.10);
+  --text: #0f172a;
+  --text-muted: #475569;
+  --text-dim: #94a3b8;
+  --accent: #0d9488;
+  --accent-light: #14b8a6;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+a { color: inherit; text-decoration: none; }
+
+/* Nav */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-inner {
+  max-width: 1200px; margin: 0 auto; padding: 16px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.nav-brand { font-weight: 700; font-size: 1rem; letter-spacing: 0.3px; color: var(--text); }
+.nav-brand span { color: var(--accent); }
+.nav-links { display: flex; gap: 24px; }
+.nav-links a { color: var(--text-muted); font-size: 0.95rem; font-weight: 500; transition: color 0.2s; }
+.nav-links a:hover { color: var(--accent); }
+.nav-links a.active { color: var(--accent); }
+
+/* Hero */
+header.hero {
+  padding: 80px 24px 48px; text-align: center;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(20, 184, 166, 0.06) 0%, transparent 50%),
+    radial-gradient(circle at 70% 80%, rgba(124, 58, 237, 0.04) 0%, transparent 50%),
+    var(--bg);
+  position: relative;
+}
+header.hero::after {
+  content: ''; position: absolute; bottom: 0; left: 50%;
+  transform: translateX(-50%); width: 80px; height: 3px;
+  background: var(--accent); border-radius: 2px;
+}
+.hero-title { font-size: clamp(2rem, 4.5vw, 3rem); font-weight: 300; letter-spacing: -0.5px; margin-bottom: 12px; color: var(--text); }
+.hero-subtitle { font-size: 1.05rem; color: var(--text-muted); max-width: 640px; margin: 0 auto; font-weight: 400; }
+
+/* Main */
+main { max-width: 1000px; margin: 0 auto; padding: 56px 24px 40px; }
+
+.books-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 320px));
+  gap: 40px;
+  justify-content: center;
+  align-items: start;
+}
+
+.book {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  box-shadow: 0 1px 3px var(--shadow);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.25s ease;
+}
+.book:hover {
+  transform: translateY(-3px);
+  border-color: var(--border-strong);
+  box-shadow: 0 12px 28px var(--shadow-hover);
+}
+.book { cursor: pointer; text-decoration: none; color: inherit; }
+
+.book-cover {
+  width: 100%;
+  margin: 0 0 16px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+}
+.book-cover img { width: 100%; height: auto; display: block; }
+
+.book-title {
+  font-size: 1.05rem; font-weight: 600; color: var(--text);
+  margin-bottom: 8px; line-height: 1.35;
+}
+.book-desc {
+  font-size: 0.9rem; color: var(--text-muted); line-height: 1.55;
+  margin-bottom: 16px;
+}
+
+.book-cue {
+  font-size: 0.95rem; font-weight: 600; color: var(--accent);
+}
+.book:hover .book-cue { color: var(--accent-light); }
+
+.books-note {
+  max-width: 680px; margin: 40px auto 0; text-align: center;
+  font-size: 0.95rem; color: var(--text-muted);
+}
+
+/* Footer */
+footer { background: var(--bg-elevated); border-top: 1px solid var(--border); padding: 40px 24px 32px; margin-top: 64px; }
+.footer-inner {
+  max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap;
+  gap: 24px; justify-content: space-between; align-items: center;
+  color: var(--text-muted); font-size: 0.88rem;
+}
+.footer-inner a { color: var(--accent); font-weight: 500; transition: opacity 0.2s; }
+.footer-inner a:hover { opacity: 0.75; }
+
+@media (max-width: 600px) {
+  header.hero { padding: 56px 20px 36px; }
+  main { padding: 40px 18px 30px; }
+  .books-grid { gap: 28px; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="index.html" class="nav-brand">Dr Nigel Hanbury<span> · Physics</span></a>
+    <div class="nav-links">
+      <a href="index.html">Labs</a>
+      <a href="books.html" class="active">Books</a>
+      <a href="about.html">About</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <h1 class="hero-title">Books</h1>
+  <p class="hero-subtitle">Free companion books for A-level physics. Read online in any browser, on any device.</p>
+</header>
+
+<main>
+  <div class="books-grid">
+
+    <!-- A-level Companion -->
+    <a class="book" href="book/index.html" target="_blank" rel="noopener">
+      <div class="book-cover">
+        <img src="icons/book-cover.jpg" alt="Physics Essentials: A Student Companion to A Level Physics" onerror="this.outerHTML='&lt;div style=&quot;width:100%;height:280px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;color:var(--text-dim);background:#f3f5f8;&quot;&gt;📘&lt;/div&gt;'">
+      </div>
+      <div class="book-title">Physics Essentials: A Student Companion to A Level Physics</div>
+      <div class="book-desc">A full companion for WJEC A Level Physics, covering Units 1 to 4.</div>
+      <div class="book-cue">Read free online →</div>
+    </a>
+
+    <!-- AC Theory Option -->
+    <a class="book" href="ac-theory/index.html" target="_blank" rel="noopener">
+      <div class="book-cover">
+        <img src="icons/ac-cover.jpg" alt="A Student Companion to Option A: AC Theory" onerror="this.outerHTML='&lt;div style=&quot;width:100%;height:280px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;color:var(--text-dim);background:#f3f5f8;&quot;&gt;📘&lt;/div&gt;'">
+      </div>
+      <div class="book-title">A Student Companion to Option A: AC Theory</div>
+      <div class="book-desc">A focused companion for the WJEC A Level Physics option, AC Theory.</div>
+      <div class="book-cue">Read free online →</div>
+    </a>
+
+  </div>
+
+  <p class="books-note">Reading online works in any modern browser on any device, with no app or account needed.</p>
+
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div>
+      &copy; 2026 Dr Nigel Hanbury &nbsp;&middot;&nbsp; Free for educational use under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a>
+    </div>
+    <div>
+      <a href="index.html">Labs</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

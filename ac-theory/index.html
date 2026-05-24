@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AC Theory · Read Online · Dr Nigel Hanbury</title>
+<style>
+  :root {
+    --bar: #0f172a;
+    --bar-text: #e6edf3;
+    --accent: #14b8a6;
+    --page-bg: #ffffff;
+    --surround: #1e2433;
+    --muted: #94a3b8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--surround);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Top bar */
+  #topbar {
+    position: fixed; top: 0; left: 0; right: 0; height: 52px;
+    background: var(--bar); color: var(--bar-text);
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 14px; z-index: 50;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  }
+  #topbar .title { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #topbar .title span { color: var(--accent); }
+  #topbar .spacer { flex: 1; }
+  #topbar button {
+    background: rgba(255,255,255,0.08); color: var(--bar-text);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
+    padding: 7px 12px; font-size: 0.85rem; font-weight: 500; cursor: pointer;
+    transition: background 0.15s;
+  }
+  #topbar button:hover { background: rgba(255,255,255,0.16); }
+  #topbar .pageinfo { font-size: 0.85rem; color: var(--muted); min-width: 92px; text-align: center; }
+
+  /* Stage holds the scaled page */
+  #stage {
+    position: fixed; top: 52px; left: 0; right: 0; bottom: 0;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  /* The page frame keeps the 4:3 aspect ratio (2732x2048) */
+  #pageWrap {
+    position: relative;
+    background: var(--page-bg);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  }
+  #pageFrame {
+    width: 2732px; height: 2048px;
+    border: 0; display: block;
+    transform-origin: top left;
+    background: #fff;
+  }
+
+  /* Nav arrows */
+  .navarrow {
+    position: fixed; top: 50%; transform: translateY(-50%);
+    width: 48px; height: 80px; z-index: 40;
+    background: rgba(15,23,42,0.55); color: #fff;
+    border: none; cursor: pointer; font-size: 1.6rem;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px; transition: background 0.15s;
+  }
+  .navarrow:hover { background: rgba(15,23,42,0.85); }
+  #prevBtn { left: 10px; }
+  #nextBtn { right: 10px; }
+  .navarrow:disabled { opacity: 0.25; cursor: default; }
+
+  /* Contents drawer */
+  #toc {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 300px;
+    background: #fff; z-index: 60; transform: translateX(-100%);
+    transition: transform 0.25s ease; overflow-y: auto;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+  }
+  #toc.open { transform: translateX(0); }
+  #toc h2 { font-size: 1rem; padding: 18px 18px 10px; color: var(--bar); border-bottom: 1px solid #e5e7eb; }
+  #toc a {
+    display: block; padding: 11px 18px; color: #334155;
+    text-decoration: none; font-size: 0.9rem; border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+  }
+  #toc a:hover { background: #f1f5f9; color: var(--accent); }
+  #tocOverlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 55;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  #tocOverlay.open { opacity: 1; pointer-events: auto; }
+
+  #loading {
+    position: fixed; inset: 52px 0 0 0; display: flex;
+    align-items: center; justify-content: center;
+    color: var(--muted); font-size: 0.95rem; z-index: 30;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <button id="tocBtn" aria-label="Contents">☰ Contents</button>
+  <div class="title">AC Theory<span> · Dr Nigel Hanbury</span></div>
+  <div class="spacer"></div>
+  <div class="pageinfo" id="pageInfo">– / –</div>
+</div>
+
+<div id="stage">
+  <div id="pageWrap">
+    <iframe id="pageFrame" scrolling="no" title="Book page"></iframe>
+  </div>
+</div>
+
+<button class="navarrow" id="prevBtn" aria-label="Previous page">‹</button>
+<button class="navarrow" id="nextBtn" aria-label="Next page">›</button>
+
+<div id="tocOverlay"></div>
+<nav id="toc">
+  <h2>Contents</h2>
+  <div id="tocList"></div>
+</nav>
+
+<div id="loading">Loading…</div>
+
+<script>
+var BOOK_DATA = {"pages":["Copyright_and_Preface-1.xhtml","Copyright_and_Preface-2.xhtml","Copyright_and_Preface-3.xhtml","AC_Theory-1.xhtml","AC_Theory-2.xhtml","AC_Theory-3.xhtml","AC_Theory-4.xhtml","AC_Theory-5.xhtml","AC_Theory-6.xhtml","AC_Theory-7.xhtml","AC_Theory-8.xhtml","AC_Theory-9.xhtml","AC_Theory-10.xhtml","AC_Theory-11.xhtml","AC_Theory-12.xhtml","AC_Theory-13.xhtml","AC_Theory-14.xhtml","AC_Theory-15.xhtml","AC_Theory-16.xhtml","AC_Theory-17.xhtml","AC_Theory-18.xhtml","AC_Theory-19.xhtml","AC_Theory-20.xhtml","AC_Theory-21.xhtml","AC_Theory-22.xhtml","AC_Theory-23.xhtml"],"chapters":[{"title":"Preface","page":0},{"title":"Alternating Current and Voltage","page":3},{"title":"Induced Current in an AC Generator","page":4},{"title":"Mean Power Dissipated in a Resistor","page":5},{"title":"Determining Resistance Using AC Voltage and Current","page":6},{"title":"Alternating Voltage Across a Capacitor","page":7},{"title":"Capacitive Reactance","page":8},{"title":"Power Dissipation","page":9},{"title":"Capacitor and Resistor Connected in Series","page":10},{"title":"Impedance of CR Network","page":11},{"title":"Alternating Voltage Across an Inductor","page":13},{"title":"Inductive Reactance","page":14},{"title":"Increasing AC Supply Frequency","page":15},{"title":"Inductor and Resistor Connected in Series","page":16},{"title":"Impedance of LR Network","page":17},{"title":"LCR Circuits","page":19},{"title":"Impedance of LCR Network","page":20},{"title":"Analysis of The Resonance Curve","page":21},{"title":"The Quality Factor Q","page":22},{"title":"Stretch and Challenge - Simple Harmonic Motion","page":24},{"title":"Using Oscilloscopes","page":25}]};
+</script>
+
+<script>
+(function () {
+  var PAGE_W = 2732, PAGE_H = 2048;
+  var pages = [], chapters = [], current = 0;
+
+  var frame = document.getElementById('pageFrame');
+  var wrap = document.getElementById('pageWrap');
+  var stage = document.getElementById('stage');
+  var pageInfo = document.getElementById('pageInfo');
+  var prevBtn = document.getElementById('prevBtn');
+  var nextBtn = document.getElementById('nextBtn');
+  var tocBtn = document.getElementById('tocBtn');
+  var toc = document.getElementById('toc');
+  var tocOverlay = document.getElementById('tocOverlay');
+  var tocList = document.getElementById('tocList');
+  var loading = document.getElementById('loading');
+
+  function scalePage() {
+    var availW = stage.clientWidth - 24;
+    var availH = stage.clientHeight - 24;
+    var scale = Math.min(availW / PAGE_W, availH / PAGE_H);
+    if (scale <= 0) scale = 0.1;
+    frame.style.transform = 'scale(' + scale + ')';
+    wrap.style.width = (PAGE_W * scale) + 'px';
+    wrap.style.height = (PAGE_H * scale) + 'px';
+  }
+
+  function showPage(i) {
+    if (i < 0) i = 0;
+    if (i > pages.length - 1) i = pages.length - 1;
+    current = i;
+    loading.style.display = 'flex';
+    frame.src = pages[i];
+    pageInfo.textContent = (i + 1) + ' / ' + pages.length;
+    prevBtn.disabled = (i === 0);
+    nextBtn.disabled = (i === pages.length - 1);
+    try { window.location.hash = 'p' + (i + 1); } catch (e) {}
+  }
+
+  frame.addEventListener('load', function () {
+    loading.style.display = 'none';
+    scalePage();
+  });
+
+  function next() { if (current < pages.length - 1) showPage(current + 1); }
+  function prev() { if (current > 0) showPage(current - 1); }
+
+  nextBtn.addEventListener('click', next);
+  prevBtn.addEventListener('click', prev);
+
+  // Keyboard
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown') { next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { prev(); }
+  });
+
+  // Contents drawer
+  function openToc() { toc.classList.add('open'); tocOverlay.classList.add('open'); }
+  function closeToc() { toc.classList.remove('open'); tocOverlay.classList.remove('open'); }
+  tocBtn.addEventListener('click', function () {
+    if (toc.classList.contains('open')) closeToc(); else openToc();
+  });
+  tocOverlay.addEventListener('click', closeToc);
+
+  // Swipe (touch) on the stage
+  var touchX = null, touchY = null;
+  stage.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 1) { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY; }
+  }, { passive: true });
+  stage.addEventListener('touchend', function (e) {
+    if (touchX === null) return;
+    var dx = e.changedTouches[0].clientX - touchX;
+    var dy = e.changedTouches[0].clientY - touchY;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) next(); else prev();
+    }
+    touchX = null; touchY = null;
+  }, { passive: true });
+
+  window.addEventListener('resize', scalePage);
+
+  // Load book data
+  function init(data) {
+    pages = data.pages;
+    chapters = data.chapters;
+    // Build TOC
+    var html = '';
+    for (var c = 0; c < chapters.length; c++) {
+      html += '<a data-page="' + chapters[c].page + '">' + chapters[c].title + '</a>';
+    }
+    tocList.innerHTML = html;
+    var links = tocList.getElementsByTagName('a');
+    for (var k = 0; k < links.length; k++) {
+      links[k].addEventListener('click', function () {
+        var p = parseInt(this.getAttribute('data-page'), 10);
+        closeToc();
+        showPage(p);
+      });
+    }
+    // Start page (from hash if present)
+    var start = 0;
+    var m = (window.location.hash || '').match(/p(\d+)/);
+    if (m) { start = parseInt(m[1], 10) - 1; }
+    showPage(start);
+  }
+
+  // Book data is embedded inline (see BOOK_DATA below) so the reader
+  // works from a plain double-click (no server / no XHR needed).
+  if (typeof BOOK_DATA !== 'undefined') {
+    init(BOOK_DATA);
+  } else {
+    loading.textContent = 'Could not load book data.';
+  }
+})();
+</script>
+
+</body>
+</html>
