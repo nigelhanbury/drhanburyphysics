@@ -1171,6 +1171,7 @@ input[type=range]:disabled { opacity:0.4; }
     <button class="graphs-type-btn active" data-gtype="amp"   id="resGtBtn_amp">amplitude vs <i>f</i></button>
     <button class="graphs-type-btn"        data-gtype="phase" id="resGtBtn_phase">phase vs <i>f</i></button>
     <button class="graphs-type-btn"        data-gtype="trace" id="resGtBtn_trace">force &amp; displacement vs <i>t</i></button>
+    <button class="graphs-type-btn"        data-gtype="power" id="resGtBtn_power">mean power vs <i>f</i></button>
   </div>
   <div class="popout-body">
     <canvas id="resGraphsCanvas"></canvas>
@@ -8913,7 +8914,7 @@ window.closeHelpModal = closeHelpModal;
   var graphsClose       = document.getElementById('resGraphsClose');
   var graphsResizeGrip  = document.getElementById('resGraphsResizeGrip');
   var graphsTypeSelector = document.getElementById('resGraphsTypeSelector');
-  var res_graphsPreset  = 'amp';   // 'amp' | 'phase'
+  var res_graphsPreset  = 'amp';   // 'amp' | 'phase' | 'trace' | 'power'
 
   /* ---- Derived readout (kept in a display:none group, like Tabs 1 & 2) ---- */
   function updateReadout() {
@@ -8952,6 +8953,7 @@ window.closeHelpModal = closeHelpModal;
      the amplitude axis; curves larger than this clip at the top (honest: the
      response really is very large there). */
   var RES_AXIS_CM = 6;                     // cm at top of the amplitude axis
+  var RES_PWR_AXIS_MW = 1.0;               // mW at top of the mean-power axis (fixed)
 
   /* ---- Steady-state amplitude response of a directly-driven damped
      oscillator, returned in CENTIMETRES (real physics).
@@ -9901,10 +9903,233 @@ window.closeHelpModal = closeHelpModal;
     actx.textAlign = 'left';
   }
 
+  /* ---- Mean power supplied by the driver in the steady state (watts) ----
+     In the steady state the driver puts energy in at the same average rate
+     the damping takes it out, so the system's own energy stays constant.
+     That average rate is
+       Pbar(omega) = (F0^2 * gamma * omega^2)
+                     / ( m * [ (w0^2 - omega^2)^2 + (2*gamma*omega)^2 ] )
+     with omega = 2*pi*f. The omega^2 factor pulls the peak right onto f0
+     (unlike the amplitude curve, whose peak sits just left of f0), and forces
+     Pbar(0) = 0. Returned in watts (very small -- the graph self-scales). ---- */
+  function meanPowerAt(freqHz) {
+    var omega = 2 * Math.PI * freqHz;
+    var w0 = omega0();
+    var resTerm = (w0 * w0 - omega * omega);
+    var denom = resTerm * resTerm + (2 * res_gamma * omega) * (2 * res_gamma * omega);
+    if (denom < 1e-12) denom = 1e-12;
+    return (RES_F0_N * RES_F0_N * res_gamma * omega * omega) / (res_m * denom);
+  }
+
+  /* Instantaneous power P(t) = F(t) * v(t) supplied by the driver, in WATTS.
+     F(t) = F0 cos(wt);  x(t) = A cos(wt - phi)  =>  v(t) = -A w sin(wt - phi).
+     A from ampAt (cm) -> metres (/100). Its cycle-average equals meanPowerAt. */
+  function instPowerAt(freqHz, t) {
+    var w = 2 * Math.PI * freqHz;
+    var phi = phaseLag(freqHz);
+    var Am = ampAt(freqHz) / 100;            // metres
+    var F = RES_F0_N * Math.cos(w * t);
+    var v = -Am * w * Math.sin(w * t - phi);
+    return F * v;                            // watts
+  }
+
+  /* ---- Preset 'power': TWO stacked panels sharing the popout.
+     TOP  -- mean power supplied by the driver vs driving frequency (fixed
+             0..RES_PWR_AXIS_MW mW). Marker at current f; peak sits on f0.
+     BOTM -- instantaneous power P(t)=Fv over 2 cycles at the current f, with a
+             horizontal MEAN line (= the top marker's value) and signed shading:
+             green where the driver feeds energy IN (P>0), amber where energy
+             flows BACK to the driver (P<0). Detuning grows the amber lobes and
+             drops the mean line -- which is exactly the top curve falling away
+             from its peak. The two panels move in lockstep as f is dragged. ---- */
+  function drawGraphsPower() {
+    var g = graphsPrep();
+    var actx = g.actx;
+    var meanW = meanPowerAt(res_f);          // watts (same value both panels)
+
+    // ---- split the plot area into two panels ----
+    var gap = 72;                            // vertical gap: top x-label + bottom title both fit
+    var topH = Math.max(60, (g.h - gap) * 0.46);
+    var botH = (g.h - gap) - topH;
+    var topY = g.y;
+    var botY = g.y + topH + gap;
+
+    /* =================== TOP PANEL: mean power vs f =================== */
+    actx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI"';
+    // y-axis line + arrow + label (house style, like graphsAxes but local rect)
+    var pxPerMwTop = topH / RES_PWR_AXIS_MW;
+    // axis lines
+    actx.strokeStyle = 'rgba(255,255,255,0.3)'; actx.lineWidth = 2;
+    actx.beginPath(); actx.moveTo(g.x, topY - 6); actx.lineTo(g.x, topY + topH); actx.stroke();
+    actx.beginPath(); actx.moveTo(g.x, topY + topH); actx.lineTo(g.x + g.w + 8, topY + topH); actx.stroke();
+    // x arrowhead
+    actx.fillStyle = 'rgba(255,255,255,0.5)';
+    actx.beginPath();
+    actx.moveTo(g.x + g.w + 8, topY + topH);
+    actx.lineTo(g.x + g.w, topY + topH - 4); actx.lineTo(g.x + g.w, topY + topH + 4);
+    actx.closePath(); actx.fill();
+    // y ticks (mW)
+    actx.textAlign = 'right'; actx.textBaseline = 'middle';
+    var ttk = [0.5, 1.0], tk, tmw, tyy;
+    for (tk = 0; tk < ttk.length; tk++) {
+      tmw = ttk[tk]; if (tmw > RES_PWR_AXIS_MW) break;
+      tyy = topY + topH - tmw * pxPerMwTop;
+      actx.strokeStyle = 'rgba(255,255,255,0.65)'; actx.lineWidth = 2;
+      actx.beginPath(); actx.moveTo(g.x - 7, tyy); actx.lineTo(g.x, tyy); actx.stroke();
+      actx.fillStyle = 'rgba(255,255,255,1)'; actx.fillText(tmw.toFixed(1), g.x - 10, tyy);
+    }
+    actx.fillStyle = 'rgba(255,255,255,1)'; actx.fillText('0', g.x - 10, topY + topH);
+    // x ticks (Hz)
+    actx.textAlign = 'center'; actx.textBaseline = 'top';
+    var fx, fxv;
+    for (fx = 0; fx <= 4; fx++) {
+      fxv = F_MAX * fx / 4;
+      var fpx = g.x + (fxv / F_MAX) * g.w;
+      actx.strokeStyle = 'rgba(255,255,255,0.6)'; actx.lineWidth = 2;
+      actx.beginPath(); actx.moveTo(fpx, topY + topH); actx.lineTo(fpx, topY + topH + 7); actx.stroke();
+      actx.fillStyle = 'rgba(255,255,255,1)'; actx.fillText(fxv.toFixed(2), fpx, topY + topH + 10);
+    }
+    // x-axis label (italic, house style)
+    actx.fillStyle = 'rgba(255,255,255,0.9)'; actx.font = 'italic 13px -apple-system, BlinkMacSystemFont, "Segoe UI"';
+    actx.textAlign = 'center'; actx.textBaseline = 'top';
+    actx.fillText('driving frequency, f (Hz)', g.x + g.w / 2, topY + topH + 26);
+    // y title (rotated)
+    actx.save();
+    actx.fillStyle = '#e5e7eb'; actx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI"';
+    actx.textAlign = 'center'; actx.textBaseline = 'middle';
+    actx.translate(g.x - 42, topY + topH / 2); actx.rotate(-Math.PI / 2);
+    actx.fillText('mean power (mW)', 0, 0);
+    actx.restore();
+    // dashed f0 line
+    var f0 = omega0() / (2 * Math.PI);
+    if (f0 <= F_MAX) {
+      var f0x = g.x + (f0 / F_MAX) * g.w;
+      actx.setLineDash([5, 5]); actx.strokeStyle = 'rgba(138,180,248,0.8)'; actx.lineWidth = 1.5;
+      actx.beginPath(); actx.moveTo(f0x, topY + topH); actx.lineTo(f0x, topY); actx.stroke();
+      actx.setLineDash([]);
+      actx.fillStyle = '#8ab4f8'; actx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI"';
+      actx.textAlign = 'center'; actx.textBaseline = 'bottom';
+      actx.fillText('f\u2080', f0x, topY - 1);
+    }
+    // mean-power curve
+    actx.strokeStyle = '#4ade80'; actx.lineWidth = 2.4;
+    actx.beginPath();
+    var i, N = Math.round(g.w), started = false;
+    for (i = 0; i <= N; i++) {
+      var hz = F_MAX * i / N;
+      var px = g.x + (i / N) * g.w;
+      var py = topY + topH - (meanPowerAt(hz) * 1000) * pxPerMwTop;
+      if (py < topY) py = topY;
+      if (!started) { actx.moveTo(px, py); started = true; } else { actx.lineTo(px, py); }
+    }
+    actx.stroke();
+    // current-f marker + dropline
+    var cx = g.x + (res_f / F_MAX) * g.w;
+    var cyTop = topY + topH - (meanW * 1000) * pxPerMwTop;
+    if (cyTop < topY) cyTop = topY;
+    actx.setLineDash([4, 5]); actx.strokeStyle = 'rgba(255,255,255,0.45)'; actx.lineWidth = 1.5;
+    actx.beginPath(); actx.moveTo(cx, topY + topH); actx.lineTo(cx, cyTop); actx.stroke();
+    actx.setLineDash([]);
+    actx.beginPath(); actx.arc(cx, cyTop, 5, 0, Math.PI * 2);
+    actx.fillStyle = '#facc15'; actx.shadowColor = '#facc15'; actx.shadowBlur = 8; actx.fill();
+    actx.shadowBlur = 0; actx.lineWidth = 1.5; actx.strokeStyle = 'rgba(255,255,255,0.9)'; actx.stroke();
+    // top title
+    actx.textAlign = 'center'; actx.textBaseline = 'alphabetic';
+    actx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI"';
+    actx.fillStyle = '#e5e7eb';
+    actx.fillText('Mean power supplied by the driver', g.x + g.w / 2, topY - 12);
+
+    /* ============ BOTTOM PANEL: instantaneous power P(t)=Fv ============ */
+    var PWR_HI = 2.0;                        // mW at top of inst. panel
+    var PWR_LO = -0.5;                       // mW at bottom (give-back is small)
+    var pxPerMwBot = botH / (PWR_HI - PWR_LO);
+    var midB = botY + PWR_HI * pxPerMwBot;   // y of the zero-power line
+    var T = (res_f > 1e-6) ? (1 / res_f) : 4.0;
+    var span = 2 * T;                        // two displacement cycles
+
+    // frame: vertical axis + zero line
+    actx.strokeStyle = 'rgba(255,255,255,0.3)'; actx.lineWidth = 2;
+    actx.beginPath(); actx.moveTo(g.x, botY - 6); actx.lineTo(g.x, botY + botH); actx.stroke();
+    actx.beginPath(); actx.moveTo(g.x, midB); actx.lineTo(g.x + g.w + 8, midB); actx.stroke();
+    // time-axis arrowhead + label
+    actx.fillStyle = 'rgba(255,255,255,0.5)';
+    actx.beginPath();
+    actx.moveTo(g.x + g.w + 8, midB);
+    actx.lineTo(g.x + g.w, midB - 4); actx.lineTo(g.x + g.w, midB + 4);
+    actx.closePath(); actx.fill();
+    // y ticks (mW): label a few sensible values
+    actx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI"';
+    actx.textAlign = 'right'; actx.textBaseline = 'middle';
+    var pticks = [2.0, 1.0, 0.0, -0.5], pt, ptv, pty;
+    for (pt = 0; pt < pticks.length; pt++) {
+      ptv = pticks[pt];
+      pty = midB - ptv * pxPerMwBot;
+      actx.strokeStyle = 'rgba(255,255,255,0.55)'; actx.lineWidth = 2;
+      actx.beginPath(); actx.moveTo(g.x - 6, pty); actx.lineTo(g.x, pty); actx.stroke();
+      actx.fillStyle = 'rgba(255,255,255,1)';
+      actx.fillText((ptv > 0 ? '+' : '') + ptv.toFixed(ptv === 0 ? 0 : 1), g.x - 8, pty);
+    }
+    // y title (rotated)
+    actx.save();
+    actx.fillStyle = '#e5e7eb'; actx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI"';
+    actx.textAlign = 'center'; actx.textBaseline = 'middle';
+    actx.translate(g.x - 42, botY + botH / 2); actx.rotate(-Math.PI / 2);
+    actx.fillText('power, P (mW)', 0, 0);
+    actx.restore();
+
+    // build the P(t) sample arrays once (reused for shading + line)
+    var M = Math.round(g.w), j, px2 = [], py2 = [], pw = [];
+    for (j = 0; j <= M; j++) {
+      var t = span * j / M;
+      var P = instPowerAt(res_f, t) * 1000;          // mW
+      px2.push(g.x + (j / M) * g.w);
+      var yy = midB - P * pxPerMwBot;
+      if (yy < botY) yy = botY; if (yy > botY + botH) yy = botY + botH;
+      py2.push(yy);
+      pw.push(P);
+    }
+    // signed shading: fill between curve and zero line, colour by sign
+    for (j = 0; j < M; j++) {
+      actx.fillStyle = (pw[j] >= 0) ? 'rgba(74,222,128,0.22)' : 'rgba(244,114,182,0.30)';
+      actx.beginPath();
+      actx.moveTo(px2[j], midB); actx.lineTo(px2[j], py2[j]);
+      actx.lineTo(px2[j + 1], py2[j + 1]); actx.lineTo(px2[j + 1], midB);
+      actx.closePath(); actx.fill();
+    }
+    // P(t) curve
+    actx.strokeStyle = '#facc15'; actx.lineWidth = 2.2;
+    actx.beginPath();
+    for (j = 0; j <= M; j++) { if (j === 0) actx.moveTo(px2[j], py2[j]); else actx.lineTo(px2[j], py2[j]); }
+    actx.stroke();
+    // mean line (= top marker value), dashed white
+    var meanY = midB - (meanW * 1000) * pxPerMwBot;
+    if (meanY < botY) meanY = botY;
+    actx.setLineDash([7, 5]); actx.strokeStyle = 'rgba(255,255,255,0.9)'; actx.lineWidth = 2;
+    actx.beginPath(); actx.moveTo(g.x, meanY); actx.lineTo(g.x + g.w, meanY); actx.stroke();
+    actx.setLineDash([]);
+    actx.fillStyle = '#fff'; actx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI"';
+    actx.textAlign = 'right'; actx.textBaseline = 'bottom';
+    actx.fillText('mean = ' + (meanW * 1000).toFixed(2) + ' mW', g.x + g.w - 4, meanY - 3);
+    // time-axis label
+    actx.fillStyle = 'rgba(255,255,255,0.9)'; actx.font = 'italic 13px -apple-system, BlinkMacSystemFont, "Segoe UI"';
+    actx.textAlign = 'center'; actx.textBaseline = 'top';
+    actx.fillText('time, t (s)', g.x + g.w / 2, botY + botH + 6);
+    // bottom title + legend
+    actx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI"';
+    actx.fillStyle = '#e5e7eb'; actx.textAlign = 'center'; actx.textBaseline = 'alphabetic';
+    actx.fillText('Instantaneous power P = Fv  (averages to the mean above)', g.x + g.w / 2, botY - 12);
+    actx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI"';
+    actx.textAlign = 'left'; actx.textBaseline = 'top';
+    actx.fillStyle = '#4ade80'; actx.fillText('\u25a0 energy in', g.x + 6, botY + 2);
+    actx.fillStyle = '#f472b6'; actx.fillText('\u25a0 energy back to driver', g.x + 92, botY + 2);
+    actx.textAlign = 'left'; actx.textBaseline = 'alphabetic';
+  }
+
   function drawGraphsWindow() {
     if (!res_showGraphs) return;
     if (res_graphsPreset === 'phase') drawGraphsPhase();
     else if (res_graphsPreset === 'trace') drawGraphsTrace();
+    else if (res_graphsPreset === 'power') drawGraphsPower();
     else drawGraphsAmp();
   }
 
