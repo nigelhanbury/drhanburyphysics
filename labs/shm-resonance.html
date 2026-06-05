@@ -1005,6 +1005,14 @@ input[type=range]:disabled { opacity:0.4; }
         <input type="checkbox" id="resDispChk">
         <label for="resDispChk">Show displacement</label>
       </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="resVelChk">
+        <label for="resVelChk">Show velocity</label>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="resForceChk" checked>
+        <label for="resForceChk">Show force</label>
+      </div>
     </div>
 
     <div class="chk-group">
@@ -1172,6 +1180,7 @@ input[type=range]:disabled { opacity:0.4; }
     <button class="graphs-type-btn"        data-gtype="phase" id="resGtBtn_phase">phase vs <i>f</i></button>
     <button class="graphs-type-btn"        data-gtype="trace" id="resGtBtn_trace">force &amp; displacement vs <i>t</i></button>
     <button class="graphs-type-btn"        data-gtype="power" id="resGtBtn_power">mean power vs <i>f</i></button>
+    <button class="graphs-type-btn"        data-gtype="fv"    id="resGtBtn_fv">force &amp; velocity vs <i>t</i></button>
   </div>
   <div class="popout-body">
     <canvas id="resGraphsCanvas"></canvas>
@@ -1319,10 +1328,10 @@ function showHelpModal(topic) {
       '<h3>What to look for</h3>' +
       '<p>See how the amplitude of the forced oscillation changes with driving frequency. At <span class="key">resonance</span>, the amplitude is maximum \u2014 this happens when the driving frequency equals the natural frequency of the system. Lower the damping and the peak grows taller and sharper; raise it and the peak flattens away.</p>' +
       '<h3>Display options</h3>' +
-      '<p><span class="key">Natural frequency line</span> marks where resonance happens. <span class="key">Resonance curve</span> shows or hides the curve. <span class="key">Show displacement</span> draws the mass\u2019s current displacement from x = 0 as a labelled arrow in cm. <span class="key">Show probe</span> adds a draggable marker that reads off the frequency and the amplitude in cm anywhere on the curve. The curve does not change as it animates, so the probe can be dragged at any time.</p>' +
+      '<p><span class="key">Natural frequency line</span> marks where resonance happens. <span class="key">Resonance curve</span> shows or hides the curve. <span class="key">Show displacement</span> draws the mass\u2019s current displacement from x = 0 as a labelled arrow in cm. <span class="key">Show velocity</span> draws the mass\u2019s current velocity as a labelled arrow in mm/s on a fixed scale, and <span class="key">Show force</span> draws the driving force as a labelled arrow in mN, with the live value of F = 20 cos(\u03c9t) mN and the phase \u03c9t in radians. <span class="key">Show probe</span> adds a draggable marker that reads off the frequency and the amplitude in cm anywhere on the curve. The curve does not change as it animates, so the probe can be dragged at any time.</p>' +
       '<h3>Analysis</h3>' +
       '<p><span class="key">Phase difference</span> opens a window with two turning arrows. The <span class="key">driving force</span> arrow leads; the <span class="key">displacement</span> arrow follows behind it. Well below resonance they point almost the same way (in phase); at resonance the displacement is a quarter turn behind; well above resonance it points the opposite way (antiphase). The window says in words how far the displacement lags the driving force.</p>' +
-      '<p><span class="key">Graphs</span> opens a larger window with three views you can switch between: <span class="key">amplitude</span> against driving frequency (the resonance curve, bigger for projecting), <span class="key">phase</span> against driving frequency (rising from nothing, through a quarter cycle at resonance, towards half a cycle), and <span class="key">force &amp; displacement against time</span> (the two waveforms together, showing the displacement lagging the driving force).</p>' +
+      '<p><span class="key">Graphs</span> opens a larger window with five views you can switch between: <span class="key">amplitude</span> against driving frequency (the resonance curve, bigger for projecting); <span class="key">phase</span> against driving frequency (rising from nothing, through a quarter cycle at resonance, towards half a cycle); <span class="key">force &amp; displacement against time</span> (the two waveforms together, showing the displacement lagging the driving force); <span class="key">mean power</span> against driving frequency, with a second panel below showing instantaneous power P = Fv over time \u2014 shaded green where the driver feeds energy in and magenta where energy flows back to the driver, with a dashed line marking the mean (this peak sits exactly on the natural frequency, unlike the amplitude peak); and <span class="key">force &amp; velocity against time</span>, with the driving force as a fixed reference and the mass velocity on its own fixed scale \u2014 at resonance the velocity locks in phase with the force. The last two presets carry a moving dot tied to the Time scrubber, so you can match the graph against the moving spring.</p>' +
       '<h3>Touch</h3>' +
       '<p>Drag the probe and the windows with a finger or Apple Pencil exactly as with a mouse.</p>';
   } else {
@@ -8852,6 +8861,8 @@ window.closeHelpModal = closeHelpModal;
   var res_showCurve = true;    // the resonance curve itself
   var res_showProbes = false;  // measuring probes on the resonance curve
   var res_showDisp = false;    // displacement vector on the spring diagram
+  var res_showVel = false;     // velocity vector on the spring diagram
+  var res_showForce = true;    // driving-force vector on the spring diagram (on by default)
   var res_probeF1 = 0.10;      // probe frequency (Hz)
   var res_probeDrag = 0;       // 0 none, 1 or 2 = which probe is being dragged
   var res_curvePxPerAmp = 1;   // last curve y-scale, set each draw for probe placement
@@ -8884,6 +8895,8 @@ window.closeHelpModal = closeHelpModal;
   var curveChk  = document.getElementById('resCurveChk');
   var probesChk = document.getElementById('resProbesChk');
   var dispChk   = document.getElementById('resDispChk');
+  var velChk    = document.getElementById('resVelChk');
+  var forceChk  = document.getElementById('resForceChk');
   var phaseChk  = document.getElementById('resPhaseChk');
   var graphsChk = document.getElementById('resGraphsChk');
 
@@ -8914,7 +8927,7 @@ window.closeHelpModal = closeHelpModal;
   var graphsClose       = document.getElementById('resGraphsClose');
   var graphsResizeGrip  = document.getElementById('resGraphsResizeGrip');
   var graphsTypeSelector = document.getElementById('resGraphsTypeSelector');
-  var res_graphsPreset  = 'amp';   // 'amp' | 'phase' | 'trace' | 'power'
+  var res_graphsPreset  = 'amp';   // 'amp' | 'phase' | 'trace' | 'power' | 'fv'
 
   /* ---- Derived readout (kept in a display:none group, like Tabs 1 & 2) ---- */
   function updateReadout() {
@@ -8954,6 +8967,8 @@ window.closeHelpModal = closeHelpModal;
      response really is very large there). */
   var RES_AXIS_CM = 6;                     // cm at top of the amplitude axis
   var RES_PWR_AXIS_MW = 1.0;               // mW at top of the mean-power axis (fixed)
+  var RES_F_AXIS_MN = 20;                  // mN at top of force axis (peak is always F0 = 0.02 N = 20 mN)
+  var RES_V_AXIS_MMS = 100;                // mm/s at top of velocity axis (global max peak speed ~95 mm/s)
 
   /* ---- Steady-state amplitude response of a directly-driven damped
      oscillator, returned in CENTIMETRES (real physics).
@@ -9036,6 +9051,8 @@ window.closeHelpModal = closeHelpModal;
   // Driving-force arrow: peak length in px (prominent). Direction/length track
   // F0 cos(driver phase); sign flips as the force reverses.
   var OSC_FORCE_MAX_PX = 60;
+  var OSC_VEL_MAX_PX = 60;                  // px for the global max peak speed (~95 mm/s)
+  var RES_V_GLOBAL_MAX = 0.0953;           // m/s: F0/(2*m_min*gamma_min), the fixed velocity scale
 
   /* ---- Resonance-curve panel ---- */
   function drawCurvePanel() {
@@ -9361,26 +9378,55 @@ window.closeHelpModal = closeHelpModal;
     ctx.fillStyle = '#4ade80'; ctx.shadowColor = '#4ade80'; ctx.shadowBlur = 10;
     ctx.beginPath(); ctx.arc(massCx, midY, 4, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
 
-    // --- DRIVING FORCE vector on the mass ---
-    // Drawn on a line just above the spring axis so a left-pointing arrow never
+    // --- DRIVING FORCE vector on the mass (optional) ---
+    // Drawn on a line above the spring axis so a left-pointing arrow never
     // tangles with the coils. Tail pinned to the mass centre at all times;
     // signed length tracks F0 cos(phase): points right on the +half-cycle,
-    // collapses to zero, then points left.
-    var forceY = midY - 40;
-    var forceL = OSC_FORCE_MAX_PX * Math.cos(phase);
-    // a short stub linking the arrow line down to the mass, so it reads as
-    // acting ON the mass
-    ctx.strokeStyle = 'rgba(96,165,250,0.5)'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]);
-    ctx.beginPath(); ctx.moveTo(massCx, midY - osc.massH / 2 - 2); ctx.lineTo(massCx, forceY); ctx.stroke();
-    ctx.setLineDash([]);
-    drawForceArrowH(massCx, forceY, forceL, '#60a5fa');
-    // label
-    ctx.fillStyle = '#93c5fd';
-    ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI"';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-    var omegaDrive = 2 * Math.PI * res_f;
-    ctx.fillText('F = ' + RES_F0_N.toFixed(2) + ' cos(\u03c9t),  \u03c9 = ' + omegaDrive.toFixed(2) + ' rad s\u207b\u00b9', osc.eqX, forceY - 22);
-    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    // collapses to zero, then points left. Raised slightly to sit close under
+    // its equation label. Shows a live value in mN and the phase wt in degrees.
+    if (res_showForce) {
+      var forceY = midY - 52;
+      var forceL = OSC_FORCE_MAX_PX * Math.cos(phase);
+      // a short stub linking the arrow line down to the mass, so it reads as
+      // acting ON the mass
+      ctx.strokeStyle = 'rgba(96,165,250,0.5)'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(massCx, midY - osc.massH / 2 - 2); ctx.lineTo(massCx, forceY); ctx.stroke();
+      ctx.setLineDash([]);
+      drawForceArrowH(massCx, forceY, forceL, '#60a5fa');
+      // headline equation + live values
+      var forceMn = RES_F0_N * Math.cos(phase) * 1000;            // mN
+      var wtRad = phase % (2 * Math.PI); if (wtRad < 0) wtRad += 2 * Math.PI;  // 0..2pi
+      ctx.fillStyle = '#93c5fd';
+      ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI"';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText('F = 20 cos(\u03c9t) mN = ' + (forceMn >= 0 ? '+' : '') + forceMn.toFixed(0) + ' mN',
+        osc.eqX, forceY - 24);
+      ctx.fillText('\u03c9t = ' + wtRad.toFixed(2) + ' rad', osc.eqX, forceY - 8);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    }
+
+    // --- VELOCITY vector (optional) ---
+    // Tail at the mass centre, on its own line just above the spring axis so it
+    // sits clear of the force arrow (higher) and the spring/mass. Length tracks
+    // instantaneous speed on a FIXED scale (global max ~95 mm/s -> OSC_VEL_MAX_PX),
+    // matching the fixed v-axis of the 'force & velocity' graph. Orange to tie
+    // the two together. v(t) = -A w sin(phase - phi); + points right.
+    if (res_showVel) {
+      var velMs = -ampAt(res_f) / 100 * (2 * Math.PI * res_f) * Math.sin(phase - phi); // m/s
+      var velY = midY - 14;
+      var velL = (velMs / RES_V_GLOBAL_MAX) * OSC_VEL_MAX_PX;                            // px, signed
+      // tie-down stub to the mass top
+      ctx.strokeStyle = 'rgba(251,146,60,0.5)'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(massCx, midY - osc.massH / 2 - 2); ctx.lineTo(massCx, velY); ctx.stroke();
+      ctx.setLineDash([]);
+      drawForceArrowH(massCx, velY, velL, '#fb923c');
+      // value readout, fixed position under the x = 0 line area (above force label region)
+      ctx.fillStyle = '#fdba74';
+      ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI"';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText('v = ' + (velMs * 1000).toFixed(0) + ' mm s\u207b\u00b9', massCx, velY - 10);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    }
 
     // --- DISPLACEMENT vector (optional) ---
     // Tail fixed on the x = 0 dashed line, head tracking the mass's current
@@ -10143,11 +10189,162 @@ window.closeHelpModal = closeHelpModal;
     actx.textAlign = 'left'; actx.textBaseline = 'alphabetic';
   }
 
+  /* Instantaneous driver force and mass velocity at time t (SI units).
+     Force is the REFERENCE: F(t) = F0 cos(wt) -- its amplitude is ALWAYS F0,
+     never changes with any slider. The mass lags by phi, so
+     x(t) = A cos(wt - phi)  =>  v(t) = -A w sin(wt - phi). */
+  function forceAt(t) { return RES_F0_N * Math.cos(2 * Math.PI * res_f * t); }   // N
+  function velAt(t) {
+    var w = 2 * Math.PI * res_f;
+    var Am = ampAt(res_f) / 100;                 // metres
+    return -Am * w * Math.sin(w * t - phaseLag(res_f));   // m/s
+  }
+
+  /* ---- Preset 'fv': driver force and mass velocity vs time on ONE time axis
+     with TWO fixed vertical scales. Force (cyan, left axis) is fixed at
+     +/-RES_F_AXIS_MN because its peak is always F0. Velocity (orange, right
+     axis) is fixed at +/-RES_V_AXIS_MMS, sized to the global maximum possible
+     peak speed F0/(2*m_min*gamma_min) so the scale never needs to change.
+     Resonance is when the velocity peaks LINE UP with the force peaks (v in
+     phase with F) and v reaches full height -- "v locks onto F". A live dot
+     (synced to res_t, matching the spring) rides the velocity trace. ---- */
+  function drawGraphsFV() {
+    var g = graphsPrep();
+    var actx = g.actx;
+
+    // reserve a header band at the top for the title + legend
+    var head = 44;
+    g.y += head; g.h -= head;
+    // reserve room on the right for the velocity-axis numbers (local, doesn't
+    // affect other presets' shared margins)
+    var rPad = 46;
+    g.w -= rPad;
+
+    var midY = g.y + g.h / 2;                     // shared zero line
+    var halfH = g.h / 2 - 6;
+    var pxPerMn = halfH / RES_F_AXIS_MN;          // px per milli-newton
+    var pxPerMms = halfH / RES_V_AXIS_MMS;        // px per (mm/s)
+
+    var T = (res_f > 1e-6) ? (1 / res_f) : 4.0;
+    var span = SCRUB_CYCLES * T;                  // matches the time scrubber
+
+    // ---- frame: time axis (zero line) + arrowhead ----
+    actx.strokeStyle = 'rgba(255,255,255,0.3)'; actx.lineWidth = 2;
+    actx.beginPath(); actx.moveTo(g.x, g.y - 6); actx.lineTo(g.x, g.y + g.h); actx.stroke();
+    actx.beginPath(); actx.moveTo(g.x, midY); actx.lineTo(g.x + g.w + 8, midY); actx.stroke();
+    actx.fillStyle = 'rgba(255,255,255,0.5)';
+    actx.beginPath();
+    actx.moveTo(g.x + g.w + 8, midY);
+    actx.lineTo(g.x + g.w, midY - 4); actx.lineTo(g.x + g.w, midY + 4);
+    actx.closePath(); actx.fill();
+    // right axis line
+    actx.strokeStyle = 'rgba(255,255,255,0.3)'; actx.lineWidth = 2;
+    actx.beginPath(); actx.moveTo(g.x + g.w, g.y - 6); actx.lineTo(g.x + g.w, g.y + g.h); actx.stroke();
+
+    // ---- LEFT axis ticks: force (mN), cyan ----
+    actx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI"';
+    actx.textAlign = 'right'; actx.textBaseline = 'middle';
+    var ft = [RES_F_AXIS_MN, RES_F_AXIS_MN / 2, 0, -RES_F_AXIS_MN / 2, -RES_F_AXIS_MN], fi, fv, fyy;
+    for (fi = 0; fi < ft.length; fi++) {
+      fv = ft[fi]; fyy = midY - fv * pxPerMn;
+      actx.strokeStyle = 'rgba(56,189,248,0.55)'; actx.lineWidth = 2;
+      actx.beginPath(); actx.moveTo(g.x - 6, fyy); actx.lineTo(g.x, fyy); actx.stroke();
+      actx.fillStyle = '#7dd3fc';
+      actx.fillText((fv > 0 ? '+' : '') + fv.toFixed(0), g.x - 8, fyy);
+    }
+    // ---- RIGHT axis ticks: velocity (mm/s), orange ----
+    actx.textAlign = 'left';
+    var vt = [RES_V_AXIS_MMS, RES_V_AXIS_MMS / 2, 0, -RES_V_AXIS_MMS / 2, -RES_V_AXIS_MMS], vi, vv, vyy;
+    for (vi = 0; vi < vt.length; vi++) {
+      vv = vt[vi]; vyy = midY - vv * pxPerMms;
+      actx.strokeStyle = 'rgba(251,146,60,0.55)'; actx.lineWidth = 2;
+      actx.beginPath(); actx.moveTo(g.x + g.w, vyy); actx.lineTo(g.x + g.w + 6, vyy); actx.stroke();
+      actx.fillStyle = '#fdba74';
+      actx.fillText((vv > 0 ? '+' : '') + vv.toFixed(0), g.x + g.w + 9, vyy);
+    }
+
+    // ---- axis titles (rotated, colour-matched) ----
+    actx.save();
+    actx.fillStyle = '#38bdf8'; actx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI"';
+    actx.textAlign = 'center'; actx.textBaseline = 'middle';
+    actx.translate(g.x - 40, midY); actx.rotate(-Math.PI / 2);
+    actx.fillText('driving force, F (mN)', 0, 0);
+    actx.restore();
+    actx.save();
+    actx.fillStyle = '#fb923c'; actx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI"';
+    actx.textAlign = 'center'; actx.textBaseline = 'middle';
+    actx.translate(g.x + g.w + 44, midY); actx.rotate(-Math.PI / 2);
+    actx.fillText('mass velocity, v (mm/s)', 0, 0);
+    actx.restore();
+
+    // ---- FORCE trace (cyan) ----
+    actx.strokeStyle = '#38bdf8'; actx.lineWidth = 2.4;
+    actx.beginPath();
+    var i, N = Math.round(g.w);
+    for (i = 0; i <= N; i++) {
+      var t = span * i / N;
+      var Fmn = forceAt(t) * 1000;               // mN
+      var px = g.x + (i / N) * g.w;
+      var py = midY - Fmn * pxPerMn;
+      if (i === 0) actx.moveTo(px, py); else actx.lineTo(px, py);
+    }
+    actx.stroke();
+    // ---- VELOCITY trace (orange) ----
+    actx.strokeStyle = '#fb923c'; actx.lineWidth = 2.4;
+    actx.beginPath();
+    for (i = 0; i <= N; i++) {
+      var t2 = span * i / N;
+      var vmms = velAt(t2) * 1000;               // mm/s
+      var px2 = g.x + (i / N) * g.w;
+      var py2 = midY - vmms * pxPerMms;
+      if (py2 < g.y) py2 = g.y; if (py2 > g.y + g.h) py2 = g.y + g.h;
+      if (i === 0) actx.moveTo(px2, py2); else actx.lineTo(px2, py2);
+    }
+    actx.stroke();
+
+    // ---- live playhead dot on the VELOCITY trace (matches the spring) ----
+    var tNow = res_t % span; if (tNow < 0) tNow += span;
+    var dotX = g.x + (tNow / span) * g.w;
+    var dvmms = velAt(tNow) * 1000;
+    var dotY = midY - dvmms * pxPerMms;
+    if (dotY < g.y) dotY = g.y; if (dotY > g.y + g.h) dotY = g.y + g.h;
+    actx.setLineDash([3, 4]); actx.strokeStyle = 'rgba(255,255,255,0.4)'; actx.lineWidth = 1.2;
+    actx.beginPath(); actx.moveTo(dotX, midY); actx.lineTo(dotX, dotY); actx.stroke();
+    actx.setLineDash([]);
+    actx.beginPath(); actx.arc(dotX, dotY, 6, 0, Math.PI * 2);
+    actx.fillStyle = '#fb923c'; actx.shadowColor = '#fb923c'; actx.shadowBlur = 9; actx.fill();
+    actx.shadowBlur = 0; actx.lineWidth = 1.6; actx.strokeStyle = 'rgba(255,255,255,0.95)'; actx.stroke();
+
+    // ---- time-axis label ----
+    actx.fillStyle = 'rgba(255,255,255,0.9)'; actx.font = 'italic 13px -apple-system, BlinkMacSystemFont, "Segoe UI"';
+    actx.textAlign = 'center'; actx.textBaseline = 'top';
+    actx.fillText('time, t (s)', g.x + g.w / 2, g.y + g.h + 6);
+
+    // ---- title + at-resonance hint ----
+    actx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI"';
+    actx.fillStyle = '#e5e7eb'; actx.textAlign = 'center'; actx.textBaseline = 'alphabetic';
+    actx.fillText('Driving force (reference) and mass velocity', g.x + g.w / 2, g.y - 30);
+    // legend
+    actx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI"';
+    actx.fillStyle = '#38bdf8'; actx.textAlign = 'center';
+    actx.fillText('\u25a0 force', g.x + g.w / 2 - 130, g.y - 12);
+    actx.fillStyle = '#fb923c';
+    actx.fillText('\u25a0 velocity', g.x + g.w / 2 - 60, g.y - 12);
+    // resonance cue: how close v is to in-phase with F (phi -> 90 deg)
+    var phiDeg = phaseLag(res_f) * 180 / Math.PI;
+    var locked = Math.abs(phiDeg - 90) < 4;
+    actx.fillStyle = locked ? '#4ade80' : 'rgba(255,255,255,0.75)';
+    actx.fillText(locked ? 'v locked onto F  (resonance)' : 'phase lag \u03c6 = ' + phiDeg.toFixed(0) + '\u00b0',
+      g.x + g.w / 2 + 60, g.y - 12);
+    actx.textAlign = 'left'; actx.textBaseline = 'alphabetic';
+  }
+
   function drawGraphsWindow() {
     if (!res_showGraphs) return;
     if (res_graphsPreset === 'phase') drawGraphsPhase();
     else if (res_graphsPreset === 'trace') drawGraphsTrace();
     else if (res_graphsPreset === 'power') drawGraphsPower();
+    else if (res_graphsPreset === 'fv') drawGraphsFV();
     else drawGraphsAmp();
   }
 
@@ -10216,6 +10413,12 @@ window.closeHelpModal = closeHelpModal;
   });
   dispChk.addEventListener('change', function (e) {
     res_showDisp = e.target.checked; if (!res_running) drawFrame();
+  });
+  velChk.addEventListener('change', function (e) {
+    res_showVel = e.target.checked; if (!res_running) drawFrame();
+  });
+  forceChk.addEventListener('change', function (e) {
+    res_showForce = e.target.checked; if (!res_running) drawFrame();
   });
   phaseChk.addEventListener('change', function (e) { setPhaseOpen(e.target.checked); });
   phaseClose.addEventListener('click', function () { setPhaseOpen(false); });
@@ -10309,6 +10512,8 @@ window.closeHelpModal = closeHelpModal;
     res_showCurve = true; curveChk.checked = true;
     res_showProbes = false; probesChk.checked = false;
     res_showDisp = false; dispChk.checked = false;
+    res_showVel = false;  velChk.checked = false;
+    res_showForce = true; forceChk.checked = true;
     res_probeF1 = 0.10; res_probeDrag = 0;
     setPhaseOpen(false);
     setGraphsOpen(false);
