@@ -10110,6 +10110,24 @@ window.closeHelpModal = closeHelpModal;
     actx.fillStyle = '#fff'; actx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI"';
     actx.textAlign = 'right'; actx.textBaseline = 'bottom';
     actx.fillText('mean = ' + (meanW * 1000).toFixed(2) + ' mW', g.x + g.w - 4, meanY - 3);
+
+    // ---- live playhead dot: marks the CURRENT instant (res_t) on the curve,
+    // so it lines up with the oscillating-spring animation. Loops every 'span'
+    // (= SCRUB_CYCLES periods, matching the time scrubber). Coloured by sign:
+    // green while the driver feeds energy in, magenta while it flows back. ----
+    var tNow = res_t % span; if (tNow < 0) tNow += span;
+    var dotPmw = instPowerAt(res_f, tNow) * 1000;
+    var dotX = g.x + (tNow / span) * g.w;
+    var dotY = midB - dotPmw * pxPerMwBot;
+    if (dotY < botY) dotY = botY; if (dotY > botY + botH) dotY = botY + botH;
+    // faint vertical guide from the zero line to the dot
+    actx.setLineDash([3, 4]); actx.strokeStyle = 'rgba(255,255,255,0.4)'; actx.lineWidth = 1.2;
+    actx.beginPath(); actx.moveTo(dotX, midB); actx.lineTo(dotX, dotY); actx.stroke();
+    actx.setLineDash([]);
+    var dotCol = (dotPmw >= 0) ? '#4ade80' : '#f472b6';
+    actx.beginPath(); actx.arc(dotX, dotY, 6, 0, Math.PI * 2);
+    actx.fillStyle = dotCol; actx.shadowColor = dotCol; actx.shadowBlur = 9; actx.fill();
+    actx.shadowBlur = 0; actx.lineWidth = 1.6; actx.strokeStyle = 'rgba(255,255,255,0.95)'; actx.stroke();
     // time-axis label
     actx.fillStyle = 'rgba(255,255,255,0.9)'; actx.font = 'italic 13px -apple-system, BlinkMacSystemFont, "Segoe UI"';
     actx.textAlign = 'center'; actx.textBaseline = 'top';
