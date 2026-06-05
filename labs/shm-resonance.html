@@ -9948,7 +9948,7 @@ window.closeHelpModal = closeHelpModal;
     var meanW = meanPowerAt(res_f);          // watts (same value both panels)
 
     // ---- split the plot area into two panels ----
-    var gap = 72;                            // vertical gap: top x-label + bottom title both fit
+    var gap = 92;                            // vertical gap: top x-label + title + legend all fit
     var topH = Math.max(60, (g.h - gap) * 0.46);
     var botH = (g.h - gap) - topH;
     var topY = g.y;
@@ -10114,14 +10114,14 @@ window.closeHelpModal = closeHelpModal;
     actx.fillStyle = 'rgba(255,255,255,0.9)'; actx.font = 'italic 13px -apple-system, BlinkMacSystemFont, "Segoe UI"';
     actx.textAlign = 'center'; actx.textBaseline = 'top';
     actx.fillText('time, t (s)', g.x + g.w / 2, botY + botH + 6);
-    // bottom title + legend
+    // bottom title (raised) + legend in the gap above the panel (clear of curve)
     actx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI"';
     actx.fillStyle = '#e5e7eb'; actx.textAlign = 'center'; actx.textBaseline = 'alphabetic';
-    actx.fillText('Instantaneous power P = Fv  (averages to the mean above)', g.x + g.w / 2, botY - 12);
+    actx.fillText('Instantaneous power P = Fv  (averages to the mean above)', g.x + g.w / 2, botY - 32);
     actx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI"';
-    actx.textAlign = 'left'; actx.textBaseline = 'top';
-    actx.fillStyle = '#4ade80'; actx.fillText('\u25a0 energy in', g.x + 6, botY + 2);
-    actx.fillStyle = '#f472b6'; actx.fillText('\u25a0 energy back to driver', g.x + 92, botY + 2);
+    actx.textAlign = 'center'; actx.textBaseline = 'alphabetic';
+    actx.fillStyle = '#4ade80'; actx.fillText('\u25a0 energy in', g.x + g.w / 2 - 90, botY - 13);
+    actx.fillStyle = '#f472b6'; actx.fillText('\u25a0 energy back to driver', g.x + g.w / 2 + 60, botY - 13);
     actx.textAlign = 'left'; actx.textBaseline = 'alphabetic';
   }
 
