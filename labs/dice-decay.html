@@ -1,0 +1,1664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Dice Decay &mdash; Modelling Radioactive Decay</title>
+<style>
+/* ============================================================= *
+ * SHARED CORE STYLES (matches SHM/Resonance & Wave Motion suite)*
+ * ============================================================= */
+:root {
+  --accent:#34d399; --accent-amber:#f59e0b;
+  --cross:#34d399; --fit:#fbbf24;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { -webkit-text-size-adjust:100%; }
+body {
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:#000; color:#fff; min-height:100vh;
+  display:flex; flex-direction:column; align-items:center; padding:8px 20px 20px;
+}
+.container {
+  background:#000; border:1px solid rgba(255,255,255,0.15); border-radius:20px;
+  padding:16px 30px 30px; max-width:1300px; width:100%;
+}
+.app-header { text-align:center; margin-bottom:16px; }
+.app-header h1 { font-size:2.3em; font-weight:300; letter-spacing:1px; margin-bottom:6px; }
+.app-header .subtitle { font-size:1.05em; opacity:0.9; font-weight:300; }
+
+.tab-bar { display:flex; justify-content:center; gap:12px; flex-wrap:wrap; padding:6px; margin-bottom:20px; }
+.main-tab {
+  position:relative; padding:12px 26px; border:none;
+  background:linear-gradient(145deg,#2a2a4a,#1e1e36); color:#8a8aaa; border-radius:14px; cursor:pointer;
+  font-size:0.9em; font-weight:700; text-transform:uppercase; letter-spacing:1.2px;
+  transition:all 0.35s cubic-bezier(0.4,0,0.2,1);
+  box-shadow:0 4px 15px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+  -webkit-tap-highlight-color:transparent;
+}
+.main-tab.active {
+  background:linear-gradient(145deg,#0c3a3a,#062525); color:var(--accent);
+  transform:translateY(-2px); border:1px solid rgba(52,211,153,0.4);
+  box-shadow:0 8px 30px rgba(52,211,153,0.2), 0 0 40px rgba(52,211,153,0.12), inset 0 1px 0 rgba(120,255,200,0.15);
+}
+
+/* layout: table left, graph right */
+.lab-row { display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+.table-col { flex:0 0 280px; max-width:300px; }
+.graph-col { flex:1 1 600px; min-width:420px; }
+
+canvas {
+  display:block; width:100%; height:540px; border-radius:10px; background:#000;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.08) inset; touch-action:none;
+}
+
+.table-wrap {
+  height:480px; overflow-y:auto; border:1px solid rgba(255,255,255,0.12);
+  border-radius:12px; background:linear-gradient(135deg,rgba(40,40,70,0.4),rgba(20,20,38,0.55));
+}
+table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+th, td { padding:7px 14px; text-align:center; font-size:0.95em; }
+thead th {
+  position:sticky; top:0; background:#0c3a3a; color:var(--accent);
+  font-size:0.78em; text-transform:uppercase; letter-spacing:1px; font-weight:700;
+  border-bottom:1px solid rgba(52,211,153,0.4);
+}
+tbody tr:nth-child(even) { background:rgba(255,255,255,0.03); }
+tbody tr.latest { background:rgba(52,211,153,0.15); }
+td.throw0 { color:#fbbf24; font-weight:700; }
+
+/* controls */
+.controls { display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin:18px 0 4px; }
+.control-group {
+  display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px 14px;
+  background:linear-gradient(135deg,rgba(40,40,70,0.55),rgba(20,20,38,0.7));
+  border:1px solid rgba(255,255,255,0.1); border-radius:12px;
+  box-shadow:0 4px 14px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.controls label { font-weight:600; font-size:0.74em; text-transform:uppercase; letter-spacing:1.1px; color:#b8b8d8; }
+.num-input {
+  width:110px; font-size:1em; font-weight:600; text-align:center; color:#fff;
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15);
+  border-radius:999px; padding:6px 12px; font-variant-numeric:tabular-nums;
+}
+.cbtn {
+  color:#fff; background:linear-gradient(135deg,rgba(60,60,100,0.7),rgba(35,35,60,0.8));
+  border:1px solid rgba(255,255,255,0.15); padding:10px 20px; border-radius:999px;
+  font-size:0.9em; font-weight:700; letter-spacing:0.5px; cursor:pointer;
+  transition:transform 0.12s ease, box-shadow 0.2s, border-color 0.2s;
+  box-shadow:0 4px 12px rgba(0,0,0,0.3); -webkit-tap-highlight-color:transparent;
+}
+.cbtn:hover { transform:translateY(-1px); }
+.cbtn:disabled { opacity:0.4; cursor:not-allowed; transform:none; }
+.cbtn.go { border-color:var(--accent); }
+.cbtn.go.running { background:linear-gradient(135deg,#0c3a3a,#062525); border-color:var(--accent); box-shadow:0 0 14px rgba(52,211,153,0.4); }
+.cbtn.reset { border-color:var(--accent-amber); }
+.btn-row { display:flex; justify-content:center; gap:12px; flex-wrap:wrap; margin-top:6px; }
+
+.checkbox-bar { display:flex; justify-content:center; flex-wrap:wrap; gap:10px 22px; margin-top:14px; }
+.checkbox-row { display:flex; align-items:center; gap:8px; cursor:pointer; }
+.checkbox-row input[type=checkbox] { width:18px; height:18px; accent-color:var(--accent); cursor:pointer; }
+.checkbox-row label { color:#c8c8e0; font-size:0.9em; cursor:pointer; user-select:none; }
+
+.fit-readout {
+  text-align:center; margin-top:12px; font-size:0.95em; color:#cbd5e1; min-height:1.4em;
+  font-variant-numeric:tabular-nums;
+}
+.fit-readout .fitk { color:var(--fit); font-weight:700; }
+.fit-readout .theory { color:#7dd3fc; font-size:1.5em; font-weight:700; vertical-align:middle; }
+
+/* graph preset selector (SHM graphs-type-btn style) */
+.graphs-type-selector {
+  display:flex; flex-wrap:wrap; gap:6px; align-items:center;
+  justify-content:center; margin-bottom:8px;
+}
+.graphs-type-btn {
+  padding:5px 14px; border-radius:7px; border:1px solid rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.04); color:#bbb; font-size:0.82em;
+  font-weight:600; cursor:pointer; transition:all 0.15s; white-space:nowrap;
+  touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+}
+.graphs-type-btn:hover {
+  background:rgba(52,211,153,0.12); color:#34d399; border-color:rgba(52,211,153,0.35);
+}
+.graphs-type-btn.active {
+  background:rgba(52,211,153,0.22); color:#34d399; border-color:rgba(52,211,153,0.6);
+}
+
+/* ---- Resizable graph popout (matches SHM/Resonance suite) ---- */
+.popout-window {
+  position: fixed; top: 90px; left: calc(50% - 320px);
+  width: 640px; height: 460px; min-width: 380px; min-height: 300px;
+  max-width: calc(100vw - 20px); max-height: calc(100vh - 20px);
+  background: linear-gradient(145deg, #12122a, #0c1426);
+  border: 1px solid rgba(52,211,153,0.5); border-radius: 14px;
+  display: none; flex-direction: column;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.65); z-index: 950;
+  -webkit-user-select: none; user-select: none;
+}
+.popout-window.open { display: flex; }
+.popout-header {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; padding: 9px 12px; cursor: move;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.popout-title { font-size: 0.82em; letter-spacing: 0.5px; color: #34d399; font-weight: 700; }
+.popout-body { flex: 1; min-height: 0; padding: 6px; position: relative; overflow: hidden; }
+#graphsCanvas { width: 100%; height: 100%; display: block; }
+#statsCanvas { width: 100%; height: 100%; display: block; }
+.work-close {
+  background: none; border: none; color: #aaa; font-size: 16px;
+  cursor: pointer; padding: 2px 6px; border-radius: 6px; line-height: 1;
+}
+.work-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.popout-resize-grip {
+  position: absolute; right: 0; bottom: 0; width: 22px; height: 22px;
+  cursor: nwse-resize; touch-action: none;
+  background: linear-gradient(135deg, transparent 0 6px, rgba(52,211,153,0.55) 6px 7.5px, transparent 7.5px 11px, rgba(52,211,153,0.55) 11px 12.5px, transparent 12.5px 16px, rgba(52,211,153,0.55) 16px 17.5px, transparent 17.5px);
+  border-bottom-right-radius: 14px; opacity: 0.7; transition: opacity 0.15s;
+}
+.popout-resize-grip:hover { opacity: 1; }
+
+.tab-help-btn {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: rgba(52,211,153,0.18); border: 1px solid rgba(52,211,153,0.4);
+  color: #34d399; font-size: 15px; font-weight: bold; cursor: pointer;
+  margin-left: 10px; transition: all 0.2s; vertical-align: middle;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.tab-help-btn:hover { background: rgba(52,211,153,0.4); color: #fff; box-shadow: 0 0 10px rgba(52,211,153,0.4); }
+.chk-help-btn {
+  width: 18px; height: 18px; border-radius: 50%; padding: 0; line-height: 1;
+  background: rgba(52,211,153,0.16); border: 1px solid rgba(52,211,153,0.4);
+  color: #34d399; font-size: 12px; font-weight: bold; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  margin-left: 4px; transition: all 0.2s; flex-shrink: 0; vertical-align: middle;
+}
+.chk-help-btn:hover { background: rgba(52,211,153,0.4); color: #fff; box-shadow: 0 0 8px rgba(52,211,153,0.35); }
+.help-modal-overlay {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7); z-index: 2000;
+  justify-content: center; align-items: center; backdrop-filter: blur(3px);
+}
+.help-modal {
+  background: linear-gradient(135deg, #1a2540 0%, #0f1525 100%);
+  border: 1px solid rgba(52,211,153,0.3); border-radius: 12px;
+  max-width: 580px; max-height: 82vh; overflow-y: auto;
+  padding: 20px 26px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+.help-modal h2 { color: #34d399; margin: 0 0 15px 0; font-size: 1.3em; border-bottom: 1px solid rgba(52,211,153,0.2); padding-bottom: 10px; }
+.help-modal h3 { color: #80c0a0; margin: 15px 0 8px 0; font-size: 1em; }
+.help-modal p { color: #b0c0d0; margin: 6px 0; font-size: 0.9em; line-height: 1.5; }
+.help-modal .key { color: #facc15; font-weight: 600; }
+.help-modal .close-btn { float: right; background: none; border: none; color: #ff6666; font-size: 22px; cursor: pointer; padding: 0 5px; }
+.help-modal .close-btn:hover { color: #ff9999; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="app-header">
+    <h1>Radioactive Dice <button class="tab-help-btn" onclick="showHelpModal('main')" title="Help">?</button></h1>
+  </div>
+
+  <div class="controls" style="align-items:center;">
+    <div class="control-group">
+      <label>Number of dice</label>
+      <input class="num-input" id="diceInput" type="number" min="1" max="1000000" step="1" value="600">
+    </div>
+    <div class="control-group">
+      <label>Dice sides</label>
+      <select class="num-input" id="sidesInput" style="text-align:center;">
+        <option value="4">4</option>
+        <option value="6" selected>6</option>
+        <option value="8">8</option>
+        <option value="10">10</option>
+        <option value="12">12</option>
+        <option value="20">20</option>
+      </select>
+    </div>
+    <button class="cbtn" id="throwBtn">Throw once</button>
+    <button class="cbtn go" id="autoBtn">Start auto</button>
+    <button class="cbtn reset" id="resetBtn">Reset</button>
+  </div>
+
+  <div class="fit-readout" id="fitReadout"></div>
+
+  <div class="lab-row" style="margin-top:8px;">
+    <div class="table-col">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Throw</th><th>Dice remaining</th></tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="graph-col">
+      <canvas id="graphCanvas" width="1000" height="640"></canvas>
+      <div class="checkbox-bar">
+        <div class="checkbox-row">
+          <input type="checkbox" id="fitChk" checked>
+          <label for="fitChk">Show exponential best-fit curve</label>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="calcChk">
+          <label for="calcChk">Show calculated &lambda; and half-life</label>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="graphsChk">
+          <label for="graphsChk">Show graphs (pop-up)</label>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="probesChk">
+          <label for="probesChk">Show probes</label>
+        </div>
+        <button class="cbtn" id="repeatBtn" style="font-size:0.82em; padding:6px 14px;">Repeat 1000&times;</button>
+        <button class="chk-help-btn" onclick="showHelpModal('repeat')" title="Repeat 1000\u00d7 help">?</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Resizable Graphs popout with presets (SHM style) -->
+<div class="popout-window graphs-window" id="graphsWindow">
+  <div class="popout-header" id="graphsHeader">
+    <span class="popout-title">Graphs</span>
+    <button class="work-close" id="graphsClose" title="Close">&times;</button>
+  </div>
+  <div class="graphs-type-selector" id="graphsTypeSelector">
+    <button class="graphs-type-btn active" data-gtype="remaining">Dice remaining</button>
+    <button class="graphs-type-btn" data-gtype="activity">Activity (decays per throw)</button>
+    <button class="graphs-type-btn" data-gtype="avsn">Activity vs N</button>
+    <button class="graphs-type-btn" data-gtype="ln">ln graph</button>
+  </div>
+  <div class="popout-body">
+    <canvas id="graphsCanvas" width="900" height="540"></canvas>
+  </div>
+  <div class="popout-resize-grip" id="graphsResizeGrip" title="Drag to resize"></div>
+</div>
+
+<!-- Statistics popout: distribution of the two decay-constant estimates -->
+<div class="popout-window" id="statsWindow">
+  <div class="popout-header" id="statsHeader">
+    <span class="popout-title">Spread of &lambda; over many runs</span>
+    <button class="work-close" id="statsClose" title="Close">&times;</button>
+  </div>
+  <div class="popout-body">
+    <canvas id="statsCanvas" width="900" height="560"></canvas>
+  </div>
+  <div class="popout-resize-grip" id="statsResizeGrip" title="Drag to resize"></div>
+</div>
+
+<!-- Help modal (SHM style) -->
+<div id="helpModalOverlay" class="help-modal-overlay" onclick="if(event.target===this)closeHelpModal()">
+  <div class="help-modal">
+    <button class="close-btn" onclick="closeHelpModal()">&times;</button>
+    <div id="helpModalContent"></div>
+  </div>
+</div>
+
+<script>
+function showHelpModal(topic) {
+  var c = document.getElementById('helpModalContent');
+  if (!c) return;
+  if (topic === 'repeat') {
+    c.innerHTML =
+      '<h2>Repeat 1000\u00d7 \u2014 Help</h2>' +
+      '<h3>What it does</h3>' +
+      '<p>Runs the whole dice experiment <span class="key">1000 times over</span> and collects the decay constant measured each time, so you can see how much a single experiment\u2019s result varies by chance.</p>' +
+      '<h3>What you get</h3>' +
+      '<p>A window with <span class="key">two histograms</span> sharing one horizontal scale. The top shows the <span class="key">A vs N gradient</span> (the probability of decay per throw); the bottom shows the <span class="key">ln-plot \u03bb</span> (the decay constant). Each gives its <span class="key">mean \u00b1 standard deviation</span>.</p>' +
+      '<h3>What to look for</h3>' +
+      '<p>The two distributions sit at <span class="key">different values</span> \u2014 a good discussion point about what each \u201c\u03bb\u201d really means. Re-run with more dice and watch both piles <span class="key">narrow</span>: the spread shrinks as the number of dice rises (the law of large numbers).</p>' +
+      '<h3>Note</h3>' +
+      '<p>The analysis is capped at <span class="key">1000 dice</span> so it stays fast. If you have more than 1000 dice, reduce the number and run again.</p>';
+  } else {
+    c.innerHTML =
+      '<h2>Radioactive Dice \u2014 Help</h2>' +
+      '<h3>The idea</h3>' +
+      '<p>Each die is an undecayed nucleus. Every throw, a die that lands on its <span class="key">highest face</span> has \u201cdecayed\u201d and is removed. With a six-sided die the chance is <span class="key">1 in 6</span> each throw \u2014 just like every nucleus having a fixed chance of decaying in each interval.</p>' +
+      '<h3>The controls</h3>' +
+      '<p><span class="key">Number of dice</span> sets how many you start with (up to a million). <span class="key">Dice sides</span> chooses a real die (4, 6, 8, 10, 12 or 20) \u2014 more sides means a smaller chance of decay each throw, so a longer half-life. <span class="key">Throw once</span> does one throw; <span class="key">Start auto</span> throws repeatedly; <span class="key">Reset</span> starts over.</p>' +
+      '<h3>The graph</h3>' +
+      '<p>The number of dice remaining is plotted against throw number, with the best-fit <span class="key">exponential curve</span> N = N\u2080e<sup>\u2212\u03bbt</sup>. Tick <span class="key">calculated \u03bb</span> to read the decay constant and half-life measured from the data.</p>' +
+      '<h3>Probes &amp; markers</h3>' +
+      '<p><span class="key">Show probes</span> adds two draggable markers that read off the curve; the gap between them gently snaps to whole half-lives. <span class="key">Long-press</span> (or double-click) a probe handle to drop a permanent marker; long-press a marker to remove it.</p>' +
+      '<h3>Graphs window</h3>' +
+      '<p><span class="key">Show graphs</span> opens a window with four views: <span class="key">Dice remaining</span>, <span class="key">Activity</span> (decays per throw), <span class="key">Activity vs N</span> (a straight line whose gradient is the per-throw decay probability), and the <span class="key">ln graph</span> (a straight line whose gradient gives \u03bb and hence the half-life).</p>' +
+      '<h3>Repeat 1000\u00d7</h3>' +
+      '<p>Runs the experiment many times to show how the measured constants vary. See the <span class="key">?</span> beside that button for details.</p>' +
+      '<h3>Touch</h3>' +
+      '<p>Drag probes, markers and windows with a finger or Apple Pencil exactly as with a mouse.</p>';
+  }
+  document.getElementById('helpModalOverlay').style.display = 'flex';
+}
+function closeHelpModal() {
+  var ov = document.getElementById('helpModalOverlay');
+  if (ov) ov.style.display = 'none';
+}
+window.showHelpModal = showHelpModal;
+window.closeHelpModal = closeHelpModal;
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  var canvas = document.getElementById('graphCanvas');
+  var ctx = canvas.getContext('2d');
+  var diceInput = document.getElementById('diceInput');
+  var sidesInput = document.getElementById('sidesInput');
+  var throwBtn = document.getElementById('throwBtn');
+  var autoBtn = document.getElementById('autoBtn');
+  var resetBtn = document.getElementById('resetBtn');
+  var tableBody = document.getElementById('tableBody');
+  var fitReadout = document.getElementById('fitReadout');
+  var fitChk = document.getElementById('fitChk');
+  var calcChk = document.getElementById('calcChk');
+  var graphsChk = document.getElementById('graphsChk');
+  var probesChk = document.getElementById('probesChk');
+  var graphsTypeSelector = document.getElementById('graphsTypeSelector');
+  var graphsWindow = document.getElementById('graphsWindow');
+  var graphsHeader = document.getElementById('graphsHeader');
+  var graphsClose = document.getElementById('graphsClose');
+  var graphsResizeGrip = document.getElementById('graphsResizeGrip');
+  var graphsCanvas = document.getElementById('graphsCanvas');
+  var gwCtx = graphsCanvas.getContext('2d');
+  var repeatBtn = document.getElementById('repeatBtn');
+  var statsWindow = document.getElementById('statsWindow');
+  var statsHeader = document.getElementById('statsHeader');
+  var statsClose = document.getElementById('statsClose');
+  var statsResizeGrip = document.getElementById('statsResizeGrip');
+  var statsCanvas = document.getElementById('statsCanvas');
+  var swCtx = statsCanvas.getContext('2d');
+  var statsData = null;     // {lnVals, anVals, lnMean, lnSd, anMean, anSd}
+
+  var N0 = 600;                 // starting dice
+  var sides = 6;                // faces per die; decay = highest face (p = 1/sides)
+  var data = [];                // data[i] = dice remaining after throw i (data[0] = N0)
+  var running = false;
+  var timer = null;
+  var showFit = true;
+  var showCalc = false;
+  var showGraphs = false;
+  var runComplete = false;
+  var showProbes = false;
+  var probeThrow1 = 1, probeThrow2 = 4;     // throw positions of the two probes
+  var probeDrag = 0;                         // 0 none, 1 or 2 which probe is being dragged
+  var probeSnapN = 0;                         // >0 when gap is snapped to n half-lives
+  var plotGeom = null;                       // {px,py,pw,ph,maxThrow,yMax} stored by render()
+  var markers = [];                          // [{t: throw, col: colour}] dropped on the curve
+  var graphPreset = 'remaining';             // 'remaining' | 'activity' | 'ln'
+
+  /* ---- high-quality RNG: count sixes among n dice via crypto ---- */
+  function rollSixes(n) {
+    if (n <= 0) return 0;
+    var s = sides;                        // faces per die (4,6,8,10,12,20)
+    var limit = Math.floor(256 / s) * s;  // largest multiple of s <= 256 (reject above to avoid bias)
+    var decays = 0;
+    var buf = new Uint8Array(n <= 65536 ? n : 65536);
+    var done = 0;
+    while (done < n) {
+      var chunk = Math.min(n - done, buf.length);
+      var view = buf.subarray(0, chunk);
+      crypto.getRandomValues(view);
+      for (var i = 0; i < chunk; i++) {
+        var b = view[i];
+        if (b >= limit) {                 // rare reject -> reroll this single die
+          var one = new Uint8Array(1);
+          do { crypto.getRandomValues(one); } while (one[0] >= limit);
+          b = one[0];
+        }
+        if ((b % s) === (s - 1)) decays++; // landed on the highest face -> decay
+      }
+      done += chunk;
+    }
+    return decays;
+  }
+
+  /* ---- choose a 'nice' integer tick step (1,2,5,10,20,...) so that
+     'maxVal' is covered in at most ~maxTicks equal whole-number steps ---- */
+  function niceStep(maxVal, maxTicks) {
+    var raw = maxVal / maxTicks;
+    if (raw < 1) return 1;
+    var pow = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
+    var norm = raw / pow;                 // 1..10
+    var step;
+    if (norm <= 1) step = 1; else if (norm <= 2) step = 2; else if (norm <= 5) step = 5; else step = 10;
+    return Math.max(1, Math.round(step * pow));
+  }
+
+  /* round a value up to a tidy axis top (1, 2, 2.5, 5, 10 x 10^n) so the five
+     gridline labels come out clean. Used when the fit overshoots N0. */
+  function niceTop(v) {
+    if (v <= 0) return 1;
+    var pow = Math.pow(10, Math.floor(Math.log(v) / Math.LN10));
+    var n = v / pow;                       // 1..10
+    var step;
+    if (n <= 1) step = 1; else if (n <= 1.5) step = 1.5; else if (n <= 2) step = 2;
+    else if (n <= 2.5) step = 2.5; else if (n <= 3) step = 3; else if (n <= 4) step = 4;
+    else if (n <= 5) step = 5; else if (n <= 6) step = 6; else if (n <= 8) step = 8; else step = 10;
+    return step * pow;
+  }
+
+  /* round v UP to the next multiple of a fine step, giving a tight axis top
+     (little dead space) while keeping round tick values, e.g. 171 -> 180. */
+  function tightTop(v) {
+    if (v <= 0) return 1;
+    var target = v / 6;                    // aim for ~6 ticks
+    var pow = Math.pow(10, Math.floor(Math.log(target) / Math.LN10));
+    var n = target / pow, step;
+    if (n <= 1) step = 1; else if (n <= 1.5) step = 1.5; else if (n <= 2) step = 2;
+    else if (n <= 2.5) step = 2.5; else if (n <= 3) step = 3; else if (n <= 4) step = 4;
+    else if (n <= 5) step = 5; else step = 10;
+    step = step * pow;
+    var t = Math.ceil(v / step) * step;
+    if (t <= v) t += step;
+    return t;
+  }
+
+  /* ---- choose an axis scale so the largest label is a small number.
+     Returns {scale, label}: divide tick values by scale, and show '(x10^n)'
+     above the axis. No scaling (scale=1, label='') for yMax up to 1000. ---- */
+  function axisScale(yMax) {
+    if (yMax <= 1000) return { scale: 1, label: '' };
+    // Choose exp so the TOP label is a clean small number AND the five ticks
+    // (top/5 each) come out as whole numbers: aim for top in [2,20). e.g.
+    // 10000 -> x10^3 (ticks 0,2,4,6,8,10);  50000 -> x10^4 (0,1,2,3,4,5);
+    // 1,000,000 -> x10^5 (0,2,4,6,8,10).
+    var exp = Math.round(Math.log(yMax) / Math.LN10);
+    while (yMax / Math.pow(10, exp) >= 20) exp++;
+    while (yMax / Math.pow(10, exp) < 2) exp--;
+    var sup = ['\u2070','\u00b9','\u00b2','\u00b3','\u2074','\u2075','\u2076','\u2077','\u2078','\u2079'];
+    var es = '';
+    var en = exp;
+    if (en === 0) es = '\u2070';
+    else { while (en > 0) { es = sup[en % 10] + es; en = Math.floor(en / 10); } }
+    return { scale: Math.pow(10, exp), label: '(\u00d710' + es + ')' };
+  }
+  // format a scaled axis value: up to 2 dp, trailing zeros trimmed
+  function trimNum(x) {
+    var s = x.toFixed(2);
+    s = s.replace(/\.?0+$/, '');
+    return s;
+  }
+
+  /* ---- exponential best fit, matching Excel's exponential trendline.
+     Excel fits y = A*exp(-k*x) by least-squares on ln(y) WEIGHTED BY y^2, so
+     high-count points dominate and the low-count tail (1s and 2s) barely
+     affects the line. That is why an Excel exponential trendline fits a decay
+     perfectly at every scale, whereas a plain unweighted ln fit sags on the
+     tail. We reproduce that here: weight each point by N^2. The fit still
+     degrades honestly for small starting numbers (few points, more scatter). */
+  function computeFit() {
+    var i, sw = 0, swx = 0, swy = 0, swxx = 0, swxy = 0, count = 0;
+    for (i = 0; i < data.length; i++) {
+      if (data[i] > 0) {
+        var x = i, y = Math.log(data[i]), w = data[i] * data[i];   // weight = N^2 (Excel)
+        sw += w; swx += w * x; swy += w * y; swxx += w * x * x; swxy += w * x * y;
+        count++;
+      }
+    }
+    if (count < 2) return null;
+    var denom = sw * swxx - swx * swx;
+    if (Math.abs(denom) < 1e-9) return null;
+    var slope = (sw * swxy - swx * swy) / denom;   // = -k
+    var intercept = (swy - slope * swx) / sw;      // = ln(A)
+    return { k: -slope, A: Math.exp(intercept) };
+  }
+
+  /* ---- table ---- */
+  function addTableRow(throwNum, remaining) {
+    var prev = tableBody.querySelector('tr.latest');
+    if (prev) prev.classList.remove('latest');
+    var tr = document.createElement('tr');
+    tr.className = 'latest';
+    var td1 = document.createElement('td');
+    var td2 = document.createElement('td');
+    td1.textContent = throwNum;
+    td2.textContent = remaining;
+    if (throwNum === 0) { td1.className = 'throw0'; td2.className = 'throw0'; }
+    tr.appendChild(td1); tr.appendChild(td2);
+    tableBody.appendChild(tr);
+    // keep latest visible
+    tr.scrollIntoView({ block: 'nearest' });
+  }
+
+  function rebuildTable() {
+    tableBody.innerHTML = '';
+    for (var i = 0; i < data.length; i++) addTableRow(i, data[i]);
+  }
+
+  /* ---- one throw ---- */
+  function doThrow() {
+    var current = data[data.length - 1];
+    if (current <= 0) { stopAuto(); return; }
+    var decayed = rollSixes(current);
+    var remaining = current - decayed;
+    data.push(remaining);
+    // The run continues until the last die is gone, but the terminal zero is
+    // not shown in the table or plotted (ln(0) is undefined and it carries no
+    // useful information). Only add a table row for non-zero results.
+    if (remaining > 0) addTableRow(data.length - 1, remaining);
+    render();
+    if (remaining <= 0) { stopAuto(); throwBtn.disabled = true; runComplete = true; updateOptionAvailability(); }
+  }
+
+  /* ---- the lambda and ln-graph options are only meaningful once the whole
+     run is finished (all dice decayed), so they stay disabled until then ---- */
+  function updateOptionAvailability() {
+    calcChk.disabled = !runComplete;
+    graphsChk.disabled = !runComplete;
+    probesChk.disabled = !runComplete;
+    repeatBtn.disabled = !runComplete;
+  }
+
+  /* ---- auto run ---- */
+  function startAuto() {
+    if (running) return;
+    if (data[data.length - 1] <= 0) return;
+    running = true;
+    autoBtn.textContent = 'Stop auto';
+    autoBtn.classList.add('running');
+    throwBtn.disabled = true;
+    timer = setInterval(doThrow, 500);
+  }
+  function stopAuto() {
+    running = false;
+    autoBtn.textContent = 'Start auto';
+    autoBtn.classList.remove('running');
+    if (data[data.length - 1] > 0) throwBtn.disabled = false;
+    if (timer) { clearInterval(timer); timer = null; }
+  }
+
+  /* ---- graph ---- */
+  function render() {
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    var mL = 88, mR = 30, mT = 30, mB = 84;
+    var px = mL, py = mT, pw = canvas.width - mL - mR, ph = canvas.height - mT - mB;
+
+    // axis ranges. x-axis: pick a 'nice' integer tick step so labels are
+    // equally spaced whole numbers; maxThrow is a whole multiple of that step.
+    // Use the last NON-ZERO throw so the excluded terminal zero leaves no gap.
+    var lastNonZero = 0, li;
+    for (li = 0; li < data.length; li++) if (data[li] > 0) lastNonZero = li;
+    var lastThrow = Math.max(1, lastNonZero);
+    var xStep = niceStep(lastThrow, 10);            // aim for ~ up to 10 ticks
+    var maxThrow = Math.ceil((lastThrow + 0.0001) / xStep) * xStep;
+    if (maxThrow < xStep * 2) maxThrow = xStep * 2; // keep a little headroom early
+    // y-axis top: normally exactly N0. Only if the fitted intercept A clearly
+    // overshoots N0 (by more than ~2%) do we raise the top -- and then only to a
+    // tidy value just above A, not a coarse power-of-ten jump.
+    var yMax = N0;
+    var fitForTop = computeFit();
+    if (fitForTop && fitForTop.A > N0 * 1.02) {
+      // raise the top by whole tick-rows (each = N0/5) until it clears A, so the
+      // headroom is small and the existing 5 tick labels stay evenly spaced.
+      var row = N0 / 5;
+      yMax = N0;
+      while (yMax < fitForTop.A) yMax += row;
+    }
+
+    // grid + frame
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
+    var gi;
+    for (gi = 0; gi <= 5; gi++) {
+      var gy = py + ph - (gi/5)*ph;
+      ctx.beginPath(); ctx.moveTo(px, gy); ctx.lineTo(px+pw, gy); ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, py+ph); ctx.lineTo(px+pw, py+ph); ctx.stroke();
+    // arrowheads
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.beginPath(); ctx.moveTo(px+pw+8, py+ph); ctx.lineTo(px+pw, py+ph-4); ctx.lineTo(px+pw, py+ph+4); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(px, py-8); ctx.lineTo(px-4, py); ctx.lineTo(px+4, py); ctx.closePath(); ctx.fill();
+
+    // y ticks. Scale large counts to a sensible power of ten so labels stay small.
+    var ascM = axisScale(yMax);
+    ctx.font = '17px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    ctx.fillStyle = '#cbd5e1'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (gi = 0; gi <= 5; gi++) {
+      var v = yMax * gi / 5;
+      var ty = py + ph - (gi/5)*ph;
+      ctx.fillText(ascM.scale === 1 ? Math.round(v) : trimNum(v/ascM.scale), px - 10, ty);
+    }
+    // power-of-ten multiplier, horizontal, centred on the vertical axis, above it
+    if (ascM.label) {
+      ctx.fillStyle = '#cbd5e1'; ctx.font = 'bold 19px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText(ascM.label, px, py - 12);
+    }
+    // x ticks at equal integer intervals (step = xStep)
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (var tv = 0; tv <= maxThrow + 1e-9; tv += xStep) {
+      var tx = px + (tv / maxThrow) * pw;
+      if (tv > 0) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(tx, py + ph); ctx.lineTo(tx, py + ph + 7); ctx.stroke();
+        // faint vertical gridline
+        ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(tx, py); ctx.lineTo(tx, py + ph); ctx.stroke();
+      }
+      ctx.fillStyle = '#cbd5e1'; ctx.font = '17px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      ctx.fillText(tv, tx, py + ph + 12);
+    }
+    // axis labels
+    ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = 'italic 18px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('throw number', px + pw/2, py + ph + 38);
+    ctx.save();
+    ctx.translate(px - 60, py + ph/2); ctx.rotate(-Math.PI/2);
+    ctx.textBaseline = 'middle';
+    ctx.fillText('dice remaining', 0, 0);
+    ctx.restore();
+
+    // best-fit curve
+    if (showFit) {
+      var fit = computeFit();
+      if (fit) {
+        ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        var steps = 240, started = false;
+        for (var s = 0; s <= steps; s++) {
+          var th = maxThrow * s / steps;
+          var yv = fit.A * Math.exp(-fit.k * th);
+          var gx = px + (th / maxThrow) * pw;
+          var gy2 = py + ph - (yv / yMax) * ph;
+          // axis top now accommodates the fitted intercept, so draw the whole curve
+          if (!started) { ctx.moveTo(gx, gy2); started = true; } else ctx.lineTo(gx, gy2);
+        }
+        ctx.stroke();
+      }
+    }
+
+    // data crosses (skip the terminal zero / any non-positive value)
+    ctx.strokeStyle = '#34d399'; ctx.lineWidth = 2.2;
+    var r = 5;
+    for (var i = 0; i < data.length; i++) {
+      if (data[i] <= 0) continue;
+      var cx = px + (i / maxThrow) * pw;
+      var cy = py + ph - (data[i] / yMax) * ph;
+      ctx.beginPath();
+      ctx.moveTo(cx - r, cy - r); ctx.lineTo(cx + r, cy + r);
+      ctx.moveTo(cx + r, cy - r); ctx.lineTo(cx - r, cy + r);
+      ctx.stroke();
+    }
+
+    // store geometry for probe drawing / hit-testing
+    plotGeom = { px: px, py: py, pw: pw, ph: ph, maxThrow: maxThrow, yMax: yMax };
+
+    // dropped markers (persistent), then probes on top
+    drawMarkers();
+    if (showProbes) drawProbes();
+
+    // fit readout
+    updateFitReadout();
+
+    // graphs popout, if open
+    if (showGraphs) drawGraphsWindow();
+  }
+
+  /* ---- two draggable probes (SHM style). They move CONTINUOUSLY along the
+     throw axis and read their value off the fitted exponential curve
+     N = A*exp(-lambda*throw), so a half-life apart anywhere gives a 0.50 ratio.
+     A Delta readout shows the throw gap and N2/N1. ---- */
+  function probeThrowToPx(t) { return plotGeom.px + (t / plotGeom.maxThrow) * plotGeom.pw; }
+  function probePxToThrow(cx) {
+    var t = (cx - plotGeom.px) / plotGeom.pw * plotGeom.maxThrow;
+    if (t < 0) t = 0;
+    if (t > plotGeom.maxThrow) t = plotGeom.maxThrow;
+    return t;
+  }
+  // value on the fitted curve at continuous throw t (dice remaining)
+  function probeCurveAt(t) {
+    var fit = computeFit();
+    if (!fit) return 0;
+    return fit.A * Math.exp(-fit.k * t);
+  }
+  function probeHandleY() { return plotGeom.py + plotGeom.ph + 30; }
+
+  function drawProbes() {
+    if (!plotGeom) return;
+    var g = plotGeom;
+    var items = [
+      { t: probeThrow1, col: '#facc15', sub: '\u2081' },
+      { t: probeThrow2, col: '#22d3ee', sub: '\u2082' }
+    ];
+    var hy = probeHandleY();
+    var labels = [];
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      var dice = probeCurveAt(it.t);
+      var px2 = probeThrowToPx(it.t);
+      var dotY = g.py + g.ph - (dice / g.yMax) * g.ph;
+
+      // dashed vertical line from top of plot to handle
+      ctx.save();
+      ctx.globalAlpha = 0.9; ctx.lineWidth = 2; ctx.setLineDash([6,5]); ctx.strokeStyle = it.col;
+      ctx.beginPath(); ctx.moveTo(px2, g.py); ctx.lineTo(px2, hy); ctx.stroke();
+      ctx.restore();
+
+      // bottom handle: filled circle, white ring
+      ctx.save();
+      ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.beginPath(); ctx.arc(px2, hy, 9, 0, Math.PI*2);
+      ctx.fillStyle = it.col; ctx.fill(); ctx.stroke();
+      ctx.restore();
+
+      // on-curve dot
+      ctx.save();
+      ctx.fillStyle = it.col; ctx.shadowColor = it.col; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.arc(px2, dotY, 6, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+
+      labels.push({ text: '(' + it.t.toFixed(1) + ', ' + dice.toFixed(0) + ')', x: px2, col: it.col });
+    }
+
+    // coordinate labels at the top; on collision drop the SECOND one down a row
+    // (into the top of the plot) rather than pushing it up off-screen.
+    ctx.save();
+    ctx.font = 'bold 15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    ctx.textAlign = 'center';
+    var baseY = g.py - 4, ROW = 22;
+    var collide = Math.abs(labels[0].x - labels[1].x) < 90;
+    for (var l = 0; l < labels.length; l++) {
+      ctx.fillStyle = labels[l].col;
+      var lx = labels[l].x;
+      var w = ctx.measureText(labels[l].text).width/2;
+      if (lx - w < g.px) lx = g.px + w; if (lx + w > g.px + g.pw) lx = g.px + g.pw - w;
+      if (l === 1 && collide) {
+        // drop the second label just inside the plot, with a dark backing so it
+        // stays readable over the curve/gridlines
+        ctx.textBaseline = 'top';
+        var bw = ctx.measureText(labels[l].text).width;
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillRect(lx - bw/2 - 4, baseY + 4, bw + 8, 20);
+        ctx.restore();
+        ctx.fillStyle = labels[l].col;
+        ctx.fillText(labels[l].text, lx, baseY + 6);
+      } else {
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(labels[l].text, lx, baseY);
+      }
+    }
+    ctx.restore();
+
+    // ---- Delta-t double-ended dimension arrow between the probe bottoms ----
+    // (same style as the standing-waves / equilibrium dimension arrows)
+    // Determine if the current gap is (essentially) a whole number of half-lives.
+    probeSnapN = 0;
+    var fitH = computeFit();
+    if (fitH && fitH.k > 1e-9) {
+      var tHalfNow = Math.LN2 / fitH.k;
+      var gapNow = Math.abs(probeThrow2 - probeThrow1);
+      var nNow = Math.round(gapNow / tHalfNow);
+      if (nNow >= 1 && Math.abs(gapNow - nNow * tHalfNow) < tHalfNow * 0.02) probeSnapN = nNow;
+    }
+    var hp1 = probeThrowToPx(probeThrow1), hp2 = probeThrowToPx(probeThrow2);
+    var aL = Math.min(hp1, hp2), aR = Math.max(hp1, hp2);
+    var ay = probeHandleY() + 20;                  // arrow sits just below the handles
+    if (aR - aL > 14) {
+      // thin extension ticks from each handle down to the arrow line
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+      ctx.beginPath(); ctx.moveTo(hp1, probeHandleY()+9); ctx.lineTo(hp1, ay); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(hp2, probeHandleY()+9); ctx.lineTo(hp2, ay); ctx.stroke();
+      ctx.restore();
+      // the double-ended arrow
+      ctxDoubleArrow(aL + 2, ay, aR - 2, ay, 8, '#e5e7eb');
+
+      // label with dark background, centred BELOW the arrow (clear of it)
+      var dThrowArr = Math.abs(probeThrow2 - probeThrow1);
+      var lab;
+      if (probeSnapN > 0) {
+        lab = '\u0394t = ' + probeSnapN + ' T\u00bd = ' + dThrowArr.toFixed(1) + ' throws';
+      } else {
+        lab = '\u0394t = ' + dThrowArr.toFixed(1) + ' throws';
+      }
+      ctx.save();
+      ctx.font = 'bold 15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      var lw = ctx.measureText(lab).width;
+      var lcx = (aL + aR) / 2;
+      ctx.fillStyle = 'rgba(0,0,0,0.85)';
+      ctx.fillRect(lcx - lw/2 - 6, ay + 6, lw + 12, 20);
+      ctx.fillStyle = probeSnapN > 0 ? '#34d399' : '#e5e7eb';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(lab, lcx, ay + 16);
+      ctx.restore();
+    }
+
+  }
+
+  /* ---- persistent markers dropped on the curve ---- */
+  function markerDotXY(m) {
+    var g = plotGeom;
+    var dice = probeCurveAt(m.t);
+    return { x: g.px + (m.t / g.maxThrow) * g.pw,
+             y: g.py + g.ph - (dice / g.yMax) * g.ph, dice: dice };
+  }
+  function drawMarkers() {
+    if (!plotGeom || !markers.length) return;
+    var g = plotGeom;
+    for (var i = 0; i < markers.length; i++) {
+      var m = markers[i];
+      var pos = markerDotXY(m);
+      // dashed guide-lines to both axes (marker-coloured, clearly visible)
+      ctx.save();
+      ctx.setLineDash([6,4]); ctx.lineWidth = 2; ctx.strokeStyle = m.col; ctx.globalAlpha = 0.85;
+      ctx.beginPath(); ctx.moveTo(pos.x, pos.y); ctx.lineTo(pos.x, g.py + g.ph); ctx.stroke();  // to x-axis
+      ctx.beginPath(); ctx.moveTo(pos.x, pos.y); ctx.lineTo(g.px, pos.y); ctx.stroke();          // to y-axis
+      ctx.restore();
+      // marker dot
+      ctx.save();
+      ctx.fillStyle = m.col; ctx.shadowColor = m.col; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.arc(pos.x, pos.y, 6, 0, Math.PI*2); ctx.fill();
+      ctx.shadowBlur = 0; ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.stroke();
+      ctx.restore();
+      // coordinate label just above the marker, left-justified with it
+      ctx.save();
+      ctx.font = 'bold 14px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+      var txt = '(' + m.t.toFixed(1) + ', ' + pos.dice.toFixed(0) + ')';
+      var tw = ctx.measureText(txt).width;
+      ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(pos.x - 2, pos.y - 24, tw + 8, 19);
+      ctx.fillStyle = m.col; ctx.fillText(txt, pos.x + 2, pos.y - 8);
+      ctx.restore();
+    }
+  }
+  function markerHit(cx, cy) {
+    if (!plotGeom) return -1;
+    for (var i = markers.length - 1; i >= 0; i--) {
+      var pos = markerDotXY(markers[i]);
+      if (Math.abs(cx - pos.x) < 16 && Math.abs(cy - pos.y) < 16) return i;
+    }
+    return -1;
+  }
+
+  /* double-ended dimension arrow (equilibrium/standing-waves style) */
+  function ctxDoubleArrow(x1, y1, x2, y2, sz, col) {
+    ctx.save();
+    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    var a = Math.atan2(y2 - y1, x2 - x1);
+    ctx.beginPath(); ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - sz*Math.cos(a - Math.PI/6), y2 - sz*Math.sin(a - Math.PI/6));
+    ctx.lineTo(x2 - sz*Math.cos(a + Math.PI/6), y2 - sz*Math.sin(a + Math.PI/6));
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 + sz*Math.cos(a - Math.PI/6), y1 + sz*Math.sin(a - Math.PI/6));
+    ctx.lineTo(x1 + sz*Math.cos(a + Math.PI/6), y1 + sz*Math.sin(a + Math.PI/6));
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  /* ---- ln(dice) vs throw popout, with trendline and gradient working ---- */
+  /* ---- Graphs popout: dispatch to the selected preset (SHM style).
+     Each routine is fully self-contained and draws into the popout canvas. ---- */
+  function drawGraphsWindow() {
+    if (graphPreset === 'activity') { gwDrawActivity(); }
+    else if (graphPreset === 'avsn') { gwDrawAvsN(); }
+    else if (graphPreset === 'ln') { gwDrawLn(); }
+    else { gwDrawRemaining(); }
+  }
+
+  // shared: nice integer throw range from the data
+  function gwThrowRange() {
+    var lastNonZero = 0, i;
+    for (i = 0; i < data.length; i++) if (data[i] > 0) lastNonZero = i;
+    var lastThrow = Math.max(1, lastNonZero);
+    var xStep = niceStep(lastThrow, 8);
+    var maxThrow = Math.ceil((lastThrow + 0.0001) / xStep) * xStep;
+    if (maxThrow < xStep * 2) maxThrow = xStep * 2;
+    return { maxThrow: maxThrow, xStep: xStep };
+  }
+
+  // common axes drawer for the linear (remaining / activity) presets
+  function gwLinearAxes(yMax, yLabel, maxThrow, xStep) {
+    var W = graphsCanvas.width, H = graphsCanvas.height;
+    var mL = 78, mR = 30, mT = 28, mB = 60;
+    var px = mL, py = mT, pw = W - mL - mR, ph = H - mT - mB;
+    gwCtx.setTransform(1,0,0,1,0,0);
+    gwCtx.fillStyle = '#0c1426'; gwCtx.fillRect(0,0,W,H);
+    // grid
+    gwCtx.strokeStyle = 'rgba(255,255,255,0.06)'; gwCtx.lineWidth = 1;
+    var g;
+    for (g = 0; g <= 5; g++) { var gy = py+ph-(g/5)*ph; gwCtx.beginPath(); gwCtx.moveTo(px,gy); gwCtx.lineTo(px+pw,gy); gwCtx.stroke(); }
+    // frame + arrowheads
+    gwCtx.strokeStyle = 'rgba(255,255,255,0.35)'; gwCtx.lineWidth = 2;
+    gwCtx.beginPath(); gwCtx.moveTo(px,py-6); gwCtx.lineTo(px,py+ph); gwCtx.lineTo(px+pw+6,py+ph); gwCtx.stroke();
+    gwCtx.fillStyle = 'rgba(255,255,255,0.5)';
+    gwCtx.beginPath(); gwCtx.moveTo(px+pw+8,py+ph); gwCtx.lineTo(px+pw,py+ph-4); gwCtx.lineTo(px+pw,py+ph+4); gwCtx.closePath(); gwCtx.fill();
+    gwCtx.beginPath(); gwCtx.moveTo(px,py-8); gwCtx.lineTo(px-4,py); gwCtx.lineTo(px+4,py); gwCtx.closePath(); gwCtx.fill();
+    // y ticks. For large counts, scale to units of 10^3 so labels stay short.
+    var asc = axisScale(yMax);
+    gwCtx.font = '15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.fillStyle = '#cbd5e1'; gwCtx.textAlign = 'right'; gwCtx.textBaseline = 'middle';
+    for (g = 0; g <= 5; g++) {
+      var v = yMax*g/5; var ty = py+ph-(g/5)*ph;
+      var lbl = (asc.scale === 1) ? Math.round(v) : trimNum(v/asc.scale);
+      gwCtx.fillText(lbl, px-8, ty);
+    }
+    // power-of-ten multiplier, horizontal, centred on the vertical axis, above it
+    if (asc.label) {
+      gwCtx.fillStyle = '#cbd5e1'; gwCtx.font = 'bold 17px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'bottom';
+      gwCtx.fillText(asc.label, px, py - 10);
+    }
+    // x ticks
+    gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'top';
+    for (var tv = 0; tv <= maxThrow+1e-9; tv += xStep) {
+      var tx = px + (tv/maxThrow)*pw;
+      if (tv > 0) { gwCtx.strokeStyle = 'rgba(255,255,255,0.06)'; gwCtx.lineWidth = 1; gwCtx.beginPath(); gwCtx.moveTo(tx,py); gwCtx.lineTo(tx,py+ph); gwCtx.stroke(); }
+      gwCtx.fillStyle = '#cbd5e1'; gwCtx.fillText(tv, tx, py+ph+8);
+    }
+    // titles
+    gwCtx.fillStyle = 'rgba(255,255,255,0.92)'; gwCtx.font = 'italic 16px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'top';
+    gwCtx.fillText('throw number', px+pw/2, py+ph+30);
+    gwCtx.save(); gwCtx.translate(px-56, py+ph/2); gwCtx.rotate(-Math.PI/2);
+    gwCtx.textBaseline = 'middle'; gwCtx.fillText(yLabel, 0, 0); gwCtx.restore();
+    return { px:px, py:py, pw:pw, ph:ph };
+  }
+
+  function gwDrawRemaining() {
+    var rng = gwThrowRange(), maxThrow = rng.maxThrow;
+    var yMax = N0;
+    var fitTop = computeFit();
+    if (fitTop && fitTop.A > N0 * 1.02) { var rrow = N0/5; yMax = N0; while (yMax < fitTop.A) yMax += rrow; }
+    var ax = gwLinearAxes(yMax, 'dice remaining', maxThrow, rng.xStep);
+    var px = ax.px, py = ax.py, pw = ax.pw, ph = ax.ph;
+    // fit curve
+    if (showFit) {
+      var fit = computeFit();
+      if (fit) {
+        gwCtx.strokeStyle = '#fbbf24'; gwCtx.lineWidth = 2.4; gwCtx.beginPath();
+        var started = false;
+        for (var s = 0; s <= 240; s++) {
+          var th = maxThrow*s/240, yv = fit.A*Math.exp(-fit.k*th);
+          var gx = px+(th/maxThrow)*pw, gy = py+ph-(yv/yMax)*ph;
+          if (!started) { gwCtx.moveTo(gx,gy); started = true; } else gwCtx.lineTo(gx,gy);
+        }
+        gwCtx.stroke();
+      }
+    }
+    // crosses
+    gwCtx.strokeStyle = '#34d399'; gwCtx.lineWidth = 2.2; var r = 5;
+    for (var i = 0; i < data.length; i++) {
+      if (data[i] <= 0) continue;
+      var cx = px+(i/maxThrow)*pw, cy = py+ph-(data[i]/yMax)*ph;
+      gwCtx.beginPath();
+      gwCtx.moveTo(cx-r,cy-r); gwCtx.lineTo(cx+r,cy+r);
+      gwCtx.moveTo(cx+r,cy-r); gwCtx.lineTo(cx-r,cy+r);
+      gwCtx.stroke();
+    }
+  }
+
+  function gwDrawActivity() {
+    var rng = gwThrowRange(), maxThrow = rng.maxThrow;
+    // activity = decays this throw = N(i-1) - N(i)
+    var acts = [null], maxAct = 1, i;
+    for (i = 1; i < data.length; i++) { var a = data[i-1]-data[i]; acts.push(a); if (a > maxAct) maxAct = a; }
+    var yMax = tightTop(maxAct);
+    var ax = gwLinearAxes(yMax, 'decays per throw', maxThrow, rng.xStep);
+    var px = ax.px, py = ax.py, pw = ax.pw, ph = ax.ph;
+    // fit curve: expected decays in throw t = A e^{-k t}(e^{k}-1)
+    if (showFit) {
+      var fit = computeFit();
+      if (fit) {
+        var eK = Math.exp(fit.k);
+        gwCtx.strokeStyle = '#fbbf24'; gwCtx.lineWidth = 2.4; gwCtx.beginPath();
+        var started = false;
+        for (var s = 0; s <= 240; s++) {
+          var th = maxThrow*s/240, yv = fit.A*Math.exp(-fit.k*th)*(eK-1);
+          var gx = px+(th/maxThrow)*pw, gy = py+ph-(yv/yMax)*ph;
+          if (gy < py) { started = false; continue; }
+          if (!started) { gwCtx.moveTo(gx,gy); started = true; } else gwCtx.lineTo(gx,gy);
+        }
+        gwCtx.stroke();
+      }
+    }
+    // crosses
+    gwCtx.strokeStyle = '#34d399'; gwCtx.lineWidth = 2.2; var r = 5;
+    for (i = 1; i < acts.length; i++) {
+      if (acts[i] === null || acts[i] <= 0) continue;
+      var cx = px+(i/maxThrow)*pw, cy = py+ph-(acts[i]/yMax)*ph;
+      gwCtx.beginPath();
+      gwCtx.moveTo(cx-r,cy-r); gwCtx.lineTo(cx+r,cy+r);
+      gwCtx.moveTo(cx+r,cy-r); gwCtx.lineTo(cx-r,cy+r);
+      gwCtx.stroke();
+    }
+  }
+
+  /* ---- Activity vs N: the defining proportionality A = lambda*N.
+     Each throw gives a point (N present before the throw, decays that throw).
+     The points lie on a straight line through the origin; its gradient is the
+     decay constant. This is the same lambda the ln-graph gradient gives. ---- */
+  function gwDrawAvsN() {
+    var W = graphsCanvas.width, H = graphsCanvas.height;
+    gwCtx.setTransform(1,0,0,1,0,0);
+    gwCtx.fillStyle = '#0c1426'; gwCtx.fillRect(0,0,W,H);
+    var mL = 82, mR = 36, mT = 36, mB = 64;
+    var px = mL, py = mT, pw = W - mL - mR, ph = H - mT - mB;
+
+    // build points: x = N before the throw, y = decays in that throw
+    var pts = [], i, maxN = 1, maxA = 1;
+    for (i = 1; i < data.length; i++) {
+      var nBefore = data[i-1], dec = data[i-1] - data[i];
+      if (nBefore > 0) { pts.push({ n: nBefore, a: dec }); if (nBefore > maxN) maxN = nBefore; if (dec > maxA) maxA = dec; }
+    }
+    // axis tops: N up to N0, activity to a clean value above its max
+    var xMax = N0;
+    var yMax = tightTop(maxA);
+
+    // scales (reuse the power-of-ten helper on both axes)
+    var ascX = axisScale(xMax), ascY = axisScale(yMax);
+
+    // grid
+    gwCtx.strokeStyle = 'rgba(255,255,255,0.06)'; gwCtx.lineWidth = 1;
+    var g;
+    for (g = 0; g <= 5; g++) { var gy = py+ph-(g/5)*ph; gwCtx.beginPath(); gwCtx.moveTo(px,gy); gwCtx.lineTo(px+pw,gy); gwCtx.stroke(); }
+    for (g = 0; g <= 5; g++) { var gx = px+(g/5)*pw; gwCtx.beginPath(); gwCtx.moveTo(gx,py); gwCtx.lineTo(gx,py+ph); gwCtx.stroke(); }
+    // frame + arrowheads
+    gwCtx.strokeStyle = 'rgba(255,255,255,0.35)'; gwCtx.lineWidth = 2;
+    gwCtx.beginPath(); gwCtx.moveTo(px,py-6); gwCtx.lineTo(px,py+ph); gwCtx.lineTo(px+pw+6,py+ph); gwCtx.stroke();
+    gwCtx.fillStyle = 'rgba(255,255,255,0.5)';
+    gwCtx.beginPath(); gwCtx.moveTo(px+pw+8,py+ph); gwCtx.lineTo(px+pw,py+ph-4); gwCtx.lineTo(px+pw,py+ph+4); gwCtx.closePath(); gwCtx.fill();
+    gwCtx.beginPath(); gwCtx.moveTo(px,py-8); gwCtx.lineTo(px-4,py); gwCtx.lineTo(px+4,py); gwCtx.closePath(); gwCtx.fill();
+
+    // y ticks
+    gwCtx.font = '15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.fillStyle = '#cbd5e1'; gwCtx.textAlign = 'right'; gwCtx.textBaseline = 'middle';
+    for (g = 0; g <= 5; g++) { var v = yMax*g/5; var ty = py+ph-(g/5)*ph; gwCtx.fillText(ascY.scale===1?Math.round(v):trimNum(v/ascY.scale), px-8, ty); }
+    if (ascY.label) { gwCtx.font = 'bold 16px -apple-system,BlinkMacSystemFont,"Segoe UI"'; gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'bottom'; gwCtx.fillText(ascY.label, px, py-10); }
+    // x ticks
+    gwCtx.font = '15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.fillStyle = '#cbd5e1'; gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'top';
+    for (g = 0; g <= 5; g++) { var xv = xMax*g/5; var tx = px+(g/5)*pw; gwCtx.fillText(ascX.scale===1?Math.round(xv):trimNum(xv/ascX.scale), tx, py+ph+8); }
+    if (ascX.label) { gwCtx.font = 'bold 15px -apple-system,BlinkMacSystemFont,"Segoe UI"'; gwCtx.textAlign = 'left'; gwCtx.textBaseline = 'middle'; gwCtx.fillText(ascX.label, px+pw+10, py+ph); }
+    // titles
+    gwCtx.fillStyle = 'rgba(255,255,255,0.92)'; gwCtx.font = 'italic 16px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'top';
+    gwCtx.fillText('N (dice remaining)', px+pw/2, py+ph+28);
+    gwCtx.save(); gwCtx.translate(px-56, py+ph/2); gwCtx.rotate(-Math.PI/2);
+    gwCtx.textBaseline = 'middle'; gwCtx.fillText('activity (decays per throw)', 0, 0); gwCtx.restore();
+
+    function X(n) { return px + (n/xMax)*pw; }
+    function Y(a) { return py + ph - (a/yMax)*ph; }
+
+    // straight line through the origin, gradient lambda (from the fit: each
+    // throw the expected decays = N*(1 - e^{-k}) ). Slope m = 1 - e^{-k}.
+    // line of best fit through the origin: slope = sum(N*A)/sum(N*N)
+    var sNA = 0, sNN = 0;
+    for (i = 0; i < pts.length; i++) { sNA += pts[i].n * pts[i].a; sNN += pts[i].n * pts[i].n; }
+    if (pts.length && sNN > 0) {
+      var m = sNA / sNN;                          // decays per throw, per die present
+      gwCtx.strokeStyle = '#fbbf24'; gwCtx.lineWidth = 2.6;
+      gwCtx.beginPath(); gwCtx.moveTo(X(0), Y(0)); gwCtx.lineTo(X(xMax), Y(m*xMax)); gwCtx.stroke();
+
+      // two points ON the line for the gradient working: the origin and the
+      // far end at N = xMax (N0). These define the gradient students compute.
+      var n1 = 0, a1 = 0, n2 = xMax, a2 = m * xMax;
+      // highlight both endpoints
+      var ep = [ {n:n1,a:a1}, {n:n2,a:a2} ];
+      for (var e = 0; e < 2; e++) {
+        gwCtx.beginPath(); gwCtx.arc(X(ep[e].n), Y(ep[e].a), 7, 0, Math.PI*2);
+        gwCtx.fillStyle = '#fb923c'; gwCtx.shadowColor='#fb923c'; gwCtx.shadowBlur=10; gwCtx.fill(); gwCtx.shadowBlur=0;
+        gwCtx.lineWidth = 2; gwCtx.strokeStyle = '#fff'; gwCtx.stroke();
+      }
+      // coordinate labels by each endpoint
+      gwCtx.font = 'bold 14px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.fillStyle = '#fdba74';
+      gwCtx.textAlign = 'left'; gwCtx.textBaseline = 'top';
+      gwCtx.fillText('(' + Math.round(n1) + ', ' + Math.round(a1) + ')', X(n1)+12, Y(a1)+6);
+      var topLab = '(' + Math.round(n2) + ', ' + Math.round(a2) + ')';
+      var tlw = gwCtx.measureText(topLab).width;
+      var tlx = X(n2) - tlw - 12; if (tlx < px) tlx = px + 4;
+      gwCtx.textBaseline = 'bottom';
+      gwCtx.fillText(topLab, tlx, Y(a2)-8);
+
+      // gradient working, top-left of plot (clear of the line which rises to the right)
+      gwCtx.textAlign = 'left'; gwCtx.textBaseline = 'alphabetic';
+      var bx = px + 16, by = py + 26;
+      gwCtx.font = 'bold 18px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.fillStyle = '#e5e7eb';
+      gwCtx.fillText('activity is proportional to N', bx, by);
+      gwCtx.font = 'bold 16px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.fillText('gradient = (A\u2082 \u2212 A\u2081) / (N\u2082 \u2212 N\u2081)', bx, by+28);
+      gwCtx.font = '15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.fillStyle = '#cbd5e1';
+      gwCtx.fillText('= (' + Math.round(a2) + ' \u2212 ' + Math.round(a1) + ') / (' + Math.round(n2) + ' \u2212 ' + Math.round(n1) + ')', bx, by+52);
+      gwCtx.fillText('= ' + m.toFixed(3), bx, by+72);
+      gwCtx.font = 'bold 16px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.fillStyle = '#fbbf24';
+      gwCtx.fillText('= probability of decay per throw', bx, by+96);
+    }
+
+    // data points as crosses
+    gwCtx.strokeStyle = '#34d399'; gwCtx.lineWidth = 2.2; var r = 5;
+    for (i = 0; i < pts.length; i++) {
+      var cx = X(pts[i].n), cy = Y(pts[i].a);
+      gwCtx.beginPath();
+      gwCtx.moveTo(cx-r,cy-r); gwCtx.lineTo(cx+r,cy+r);
+      gwCtx.moveTo(cx+r,cy-r); gwCtx.lineTo(cx-r,cy+r);
+      gwCtx.stroke();
+    }
+  }
+
+  function gwDrawLn() {
+    var W = graphsCanvas.width, H = graphsCanvas.height;
+    gwCtx.setTransform(1,0,0,1,0,0);
+    gwCtx.fillStyle = '#0c1426'; gwCtx.fillRect(0,0,W,H);
+
+    var mL = 86, mR = 36, mT = 36, mB = 66;
+    var px = mL, py = mT, pw = W - mL - mR, ph = H - mT - mB;
+
+    var pts = [], i;
+    for (i = 0; i < data.length; i++) if (data[i] > 0) pts.push({ x: i, y: Math.log(data[i]) });
+
+    var lastThrow = pts.length ? pts[pts.length-1].x : 1;
+    var fitForRange = computeFit();
+    var axisCross = (fitForRange && fitForRange.k > 1e-9) ? (Math.log(fitForRange.A) / fitForRange.k) : lastThrow;
+    var maxThrow = Math.max(5, lastThrow, Math.ceil(axisCross * 1.05));
+    var yTop = Math.log(N0) * 1.05;
+
+    gwCtx.strokeStyle = 'rgba(255,255,255,0.06)'; gwCtx.lineWidth = 1;
+    var g;
+    for (g = 1; g <= 5; g++) { var gy = py + (g/5)*ph; gwCtx.beginPath(); gwCtx.moveTo(px,gy); gwCtx.lineTo(px+pw,gy); gwCtx.stroke(); }
+    gwCtx.strokeStyle = 'rgba(255,255,255,0.35)'; gwCtx.lineWidth = 2;
+    gwCtx.beginPath(); gwCtx.moveTo(px, py-6); gwCtx.lineTo(px, py+ph); gwCtx.lineTo(px+pw+6, py+ph); gwCtx.stroke();
+
+    gwCtx.font = '16px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.fillStyle = '#cbd5e1'; gwCtx.textAlign = 'right'; gwCtx.textBaseline = 'middle';
+    for (g = 0; g <= 5; g++) { var v = yTop*g/5; var ty = py+ph-(g/5)*ph; gwCtx.fillText(v.toFixed(1), px-9, ty); }
+    gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'top';
+    var xStep = niceStep(maxThrow, 8);
+    for (var tv = 0; tv <= maxThrow+1e-9; tv += xStep) { var tx = px + (tv/maxThrow)*pw; gwCtx.fillText(tv, tx, py+ph+10); }
+    gwCtx.fillStyle = 'rgba(255,255,255,0.92)'; gwCtx.font = 'italic 17px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'top';
+    gwCtx.fillText('throw number', px+pw/2, py+ph+34);
+    gwCtx.save(); gwCtx.translate(px-58, py+ph/2); gwCtx.rotate(-Math.PI/2);
+    gwCtx.textBaseline = 'middle'; gwCtx.fillText('ln(dice remaining)', 0, 0); gwCtx.restore();
+
+    function X(t) { return px + (t/maxThrow)*pw; }
+    function Y(l) { return py + ph - (l/yTop)*ph; }
+
+    var fit = computeFit();
+    if (fit && pts.length >= 2) {
+      var k = fit.k, lnA = Math.log(fit.A);
+      var x1 = 0, y1 = lnA;
+      var x2 = (k > 1e-9) ? (lnA / k) : maxThrow;
+      var y2 = lnA - k * x2;
+      gwCtx.strokeStyle = '#fbbf24'; gwCtx.lineWidth = 2.6;
+      gwCtx.beginPath(); gwCtx.moveTo(X(x1), Y(y1)); gwCtx.lineTo(X(x2), Y(y2)); gwCtx.stroke();
+      var ex = [ {x:x1,y:y1}, {x:x2,y:y2} ];
+      for (var e = 0; e < 2; e++) {
+        gwCtx.beginPath(); gwCtx.arc(X(ex[e].x), Y(ex[e].y), 7, 0, Math.PI*2);
+        gwCtx.fillStyle = '#fb923c'; gwCtx.shadowColor='#fb923c'; gwCtx.shadowBlur=10; gwCtx.fill(); gwCtx.shadowBlur=0;
+        gwCtx.lineWidth = 2; gwCtx.strokeStyle = '#fff'; gwCtx.stroke();
+      }
+      gwCtx.font = 'bold 15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.fillStyle = '#fdba74';
+      gwCtx.textAlign = 'left'; gwCtx.textBaseline = 'bottom';
+      gwCtx.fillText('(' + x1.toFixed(0) + ', ' + y1.toFixed(2) + ')', X(x1)+12, Y(y1)-6);
+      // bottom-right coordinate: left-justified with its point, but nudged left
+      // if it would run past the right edge of the plot
+      var c2 = '(' + x2.toFixed(1) + ', ' + y2.toFixed(2) + ')';
+      var c2w = gwCtx.measureText(c2).width;
+      var c2x = X(x2) + 10;
+      if (c2x + c2w > px + pw) c2x = px + pw - c2w;
+      gwCtx.fillText(c2, c2x, Y(y2)-14);
+      gwCtx.textAlign = 'left'; gwCtx.textBaseline = 'alphabetic';
+      var bx = px + pw - 330, by = py + 30;
+      gwCtx.font = 'bold 17px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.fillStyle = '#e5e7eb';
+      gwCtx.fillText('gradient = \u2212\u03bb = (y\u2082 \u2212 y\u2081) / (x\u2082 \u2212 x\u2081)', bx, by);
+      gwCtx.font = '16px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.fillStyle = '#cbd5e1';
+      gwCtx.fillText('= (' + y2.toFixed(2) + ' \u2212 ' + y1.toFixed(2) + ') / (' + x2.toFixed(1) + ' \u2212 ' + x1.toFixed(0) + ')', bx, by+26);
+      gwCtx.fillText('= \u2212' + k.toFixed(3), bx, by+50);
+      gwCtx.font = 'bold 18px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.fillStyle = '#fbbf24';
+      gwCtx.fillText('\u03bb = ' + k.toFixed(3) + ' per throw', bx, by+78);
+      // half-life working underneath
+      var thalf = Math.LN2 / k;
+      gwCtx.font = '16px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.fillStyle = '#cbd5e1';
+      gwCtx.fillText('half-life  t\u00bd = ln2 / \u03bb', bx, by+106);
+      gwCtx.fillText('= 0.693 / ' + k.toFixed(3), bx, by+128);
+      gwCtx.font = 'bold 17px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.fillStyle = '#fbbf24';
+      gwCtx.fillText('= ' + thalf.toFixed(2) + ' throws', bx, by+152);
+    }
+    gwCtx.strokeStyle = '#34d399'; gwCtx.lineWidth = 2.2; var r = 5;
+    for (i = 0; i < pts.length; i++) {
+      var cx = X(pts[i].x), cy = Y(pts[i].y);
+      if (cy < py-2 || cy > py+ph+2) continue;
+      gwCtx.beginPath();
+      gwCtx.moveTo(cx-r, cy-r); gwCtx.lineTo(cx+r, cy+r);
+      gwCtx.moveTo(cx+r, cy-r); gwCtx.lineTo(cx-r, cy+r);
+      gwCtx.stroke();
+    }
+  }
+
+  /* ---- popout drag + resize (SHM pattern, mouse + touch) ---- */
+  function attachPopupDragResize(win, header, grip, onResize) {
+    var st = { drag:false, rz:false, sx:0, sy:0, wl:0, wt:0, rw:0, rh:0 };
+    function startDrag(cx,cy){ var r=win.getBoundingClientRect(); st.drag=true; st.sx=cx; st.sy=cy; st.wl=r.left; st.wt=r.top; }
+    function moveDrag(cx,cy){ if(!st.drag)return; var nl=st.wl+(cx-st.sx), nt=st.wt+(cy-st.sy);
+      var minL=-(win.offsetWidth-80), maxL=window.innerWidth-80; if(nl<minL)nl=minL; if(nl>maxL)nl=maxL;
+      if(nt<0)nt=0; if(nt>window.innerHeight-36)nt=window.innerHeight-36; win.style.left=nl+'px'; win.style.top=nt+'px'; }
+    function startResize(cx,cy){ var r=win.getBoundingClientRect(); st.rz=true; st.sx=cx; st.sy=cy; st.rw=r.width; st.rh=r.height; }
+    function moveResize(cx,cy){ if(!st.rz)return; var nw=st.rw+(cx-st.sx), nh=st.rh+(cy-st.sy);
+      if(nw<380)nw=380; if(nw>window.innerWidth-20)nw=window.innerWidth-20; if(nh<300)nh=300; if(nh>window.innerHeight-20)nh=window.innerHeight-20;
+      win.style.width=nw+'px'; win.style.height=nh+'px'; if(onResize)onResize(); }
+    function endAll(){ st.drag=false; st.rz=false; }
+    header.addEventListener('mousedown', function(e){ if(e.target.tagName==='BUTTON')return; startDrag(e.clientX,e.clientY); e.preventDefault(); });
+    grip.addEventListener('mousedown', function(e){ startResize(e.clientX,e.clientY); e.preventDefault(); });
+    document.addEventListener('mousemove', function(e){ if(st.drag)moveDrag(e.clientX,e.clientY); else if(st.rz)moveResize(e.clientX,e.clientY); });
+    document.addEventListener('mouseup', endAll);
+    header.addEventListener('touchstart', function(e){ if(e.target.tagName==='BUTTON')return; var t=e.touches[0]; startDrag(t.clientX,t.clientY); e.preventDefault(); }, {passive:false});
+    grip.addEventListener('touchstart', function(e){ var t=e.touches[0]; startResize(t.clientX,t.clientY); e.preventDefault(); }, {passive:false});
+    document.addEventListener('touchmove', function(e){ if(st.drag){var t=e.touches[0]; moveDrag(t.clientX,t.clientY); e.preventDefault();} else if(st.rz){var t2=e.touches[0]; moveResize(t2.clientX,t2.clientY); e.preventDefault();} }, {passive:false});
+    document.addEventListener('touchend', endAll);
+    document.addEventListener('touchcancel', endAll);
+  }
+  attachPopupDragResize(graphsWindow, graphsHeader, graphsResizeGrip, drawGraphsWindow);
+  attachPopupDragResize(statsWindow, statsHeader, statsResizeGrip, drawStatsWindow);
+
+  /* ---- batch: run the whole decay many times, collect both lambda estimates.
+     Each run is an independent simulation at the current N0 (capped so it stays
+     responsive). For each run we compute:
+       - ln lambda: N^2-weighted least squares on ln(N) vs throw (the fit method)
+       - A-vs-N gradient: sum(N*A)/sum(N*N), the per-throw decay fraction
+     Returns the two value-arrays plus their means and sds. ---- */
+  function runBatch(n0, runs) {
+    var lnVals = [], anVals = [];
+    for (var r = 0; r < runs; r++) {
+      // simulate one full run
+      var seq = [n0], cur = n0;
+      while (cur > 0) { var dec = rollSixes(cur); cur = cur - dec; seq.push(cur); }
+      // ln lambda (weighted least squares, skip zeros)
+      var sw=0, sx=0, sy=0, sxx=0, sxy=0, i;
+      for (i = 0; i < seq.length; i++) {
+        if (seq[i] > 0) { var x=i, y=Math.log(seq[i]), w=seq[i]*seq[i];
+          sw+=w; sx+=w*x; sy+=w*y; sxx+=w*x*x; sxy+=w*x*y; }
+      }
+      var det = sw*sxx - sx*sx;
+      if (det !== 0) lnVals.push(-(sw*sxy - sx*sy)/det);
+      // A-vs-N gradient through origin
+      var sNA=0, sNN=0;
+      for (i = 1; i < seq.length; i++) { var nb=seq[i-1], a=seq[i-1]-seq[i]; if (nb>0){ sNA+=nb*a; sNN+=nb*nb; } }
+      if (sNN > 0) anVals.push(sNA/sNN);
+    }
+    return { lnVals: lnVals, anVals: anVals,
+             lnMean: meanOf(lnVals), lnSd: sdOf(lnVals),
+             anMean: meanOf(anVals), anSd: sdOf(anVals) };
+  }
+  function meanOf(a){ var s=0,i; for(i=0;i<a.length;i++)s+=a[i]; return a.length?s/a.length:0; }
+  function sdOf(a){ if(a.length<2)return 0; var m=meanOf(a),s=0,i; for(i=0;i<a.length;i++)s+=(a[i]-m)*(a[i]-m); return Math.sqrt(s/(a.length-1)); }
+
+  /* ---- two stacked histograms on a SHARED horizontal axis ---- */
+  function drawStatsWindow() {
+    if (!statsData) return;
+    var W = statsCanvas.width, H = statsCanvas.height;
+    swCtx.setTransform(1,0,0,1,0,0);
+    swCtx.fillStyle = '#0c1426'; swCtx.fillRect(0,0,W,H);
+
+    var d = statsData;
+
+    // too many dice: show a message asking the user to reduce N, don't plot
+    if (d.tooMany) {
+      swCtx.textAlign = 'center'; swCtx.textBaseline = 'middle';
+      swCtx.fillStyle = '#fbbf24'; swCtx.font = 'bold 22px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      swCtx.fillText('Too many dice for the repeat analysis', W/2, H/2 - 40);
+      swCtx.fillStyle = '#e5e7eb'; swCtx.font = '17px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      swCtx.fillText('The 1000-run spread is capped at 1000 dice (you entered ' + d.n0 + ').', W/2, H/2);
+      swCtx.fillText('Please reduce the number of dice to 1000 or fewer, then run again.', W/2, H/2 + 28);
+      return;
+    }
+
+    var p = 1 / sides;                         // per-throw decay probability
+    var TH = -Math.log(1 - p);                 // continuous decay constant lambda
+    var SIX = p;                               // A-vs-N gradient target
+    // FIXED shared x-range for a given die (not auto-scaled to each batch), so
+    // the distribution visibly narrows as the dice count rises. Centred on the
+    // two targets (p and lambda) with generous width for a noisy small-N run.
+    var ctr = (SIX + TH) / 2;
+    var span = Math.max(0.08, (TH - SIX) * 6 + 0.12);
+    var lo = Math.max(0, ctr - span/2), hi = ctr + span/2;
+
+    var mL = 60, mR = 30, mT = 40, mB = 56;
+    var pw = W - mL - mR;
+    var bandH = (H - mT - mB - 30) / 2;        // two stacked panels
+    var gap = 30;
+
+    function panel(vals, top, col, title, mean, sd) {
+      var bins = 50, counts = new Array(bins), b;
+      for (b = 0; b < bins; b++) counts[b] = 0;
+      for (var i = 0; i < vals.length; i++) {
+        var f = (vals[i] - lo) / (hi - lo);
+        var bi = Math.floor(f * bins); if (bi < 0) bi = 0; if (bi >= bins) bi = bins-1;
+        counts[bi]++;
+      }
+      var maxC = 1; for (b = 0; b < bins; b++) if (counts[b] > maxC) maxC = counts[b];
+      var baseY = top + bandH;
+      var titleSpace = 52;                       // keep bars clear of the two title rows
+      var barMax = bandH - titleSpace;
+      // bars
+      swCtx.fillStyle = col;
+      for (b = 0; b < bins; b++) {
+        if (!counts[b]) continue;
+        var bx = mL + (b/bins)*pw, bw = pw/bins;
+        var bh = (counts[b]/maxC) * barMax;
+        swCtx.globalAlpha = 0.55; swCtx.fillRect(bx, baseY - bh, Math.max(1, bw-0.5), bh); swCtx.globalAlpha = 1;
+      }
+      // baseline
+      swCtx.strokeStyle = 'rgba(255,255,255,0.3)'; swCtx.lineWidth = 1.5;
+      swCtx.beginPath(); swCtx.moveTo(mL, baseY); swCtx.lineTo(mL+pw, baseY); swCtx.stroke();
+
+      function toX(val){ return mL + ((val-lo)/(hi-lo))*pw; }
+
+      // mean: vertical line + clear diamond marker (start below the title rows)
+      var mx = toX(mean);
+      var mTop = top + 48;
+      swCtx.strokeStyle = col; swCtx.lineWidth = 2;
+      swCtx.beginPath(); swCtx.moveTo(mx, mTop); swCtx.lineTo(mx, baseY); swCtx.stroke();
+      var my = mTop;
+      swCtx.fillStyle = col; swCtx.strokeStyle = '#fff'; swCtx.lineWidth = 1.5;
+      swCtx.beginPath();
+      swCtx.moveTo(mx, my-7); swCtx.lineTo(mx+6, my); swCtx.lineTo(mx, my+7); swCtx.lineTo(mx-6, my);
+      swCtx.closePath(); swCtx.fill(); swCtx.stroke();
+
+      // standard-deviation double-ended arrow spanning mean-sd .. mean+sd
+      var x1 = toX(mean - sd), x2 = toX(mean + sd);
+      var ay = baseY - (bandH - 8) * 0.5;            // mid-height of the panel
+      swCtx.strokeStyle = '#fff'; swCtx.fillStyle = '#fff'; swCtx.lineWidth = 2;
+      swCtx.beginPath(); swCtx.moveTo(x1, ay); swCtx.lineTo(x2, ay); swCtx.stroke();
+      var hs = 7;
+      swCtx.beginPath(); swCtx.moveTo(x2, ay); swCtx.lineTo(x2-hs, ay-4); swCtx.lineTo(x2-hs, ay+4); swCtx.closePath(); swCtx.fill();
+      swCtx.beginPath(); swCtx.moveTo(x1, ay); swCtx.lineTo(x1+hs, ay-4); swCtx.lineTo(x1+hs, ay+4); swCtx.closePath(); swCtx.fill();
+      // small end caps
+      swCtx.beginPath(); swCtx.moveTo(x1, ay-7); swCtx.lineTo(x1, ay+7); swCtx.moveTo(x2, ay-7); swCtx.lineTo(x2, ay+7); swCtx.stroke();
+      // sd label on the arrow
+      swCtx.font = 'bold 13px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      swCtx.textAlign = 'center'; swCtx.textBaseline = 'bottom';
+      var lw = swCtx.measureText('\u00b1' + sd.toFixed(4)).width;
+      swCtx.fillStyle = 'rgba(0,0,0,0.75)'; swCtx.fillRect((x1+x2)/2 - lw/2 - 4, ay - 22, lw + 8, 17);
+      swCtx.fillStyle = '#fff'; swCtx.fillText('\u00b1' + sd.toFixed(4), (x1+x2)/2, ay - 6);
+
+      // title + stats
+      var pct = mean !== 0 ? (sd/mean*100) : 0;
+      swCtx.fillStyle = col; swCtx.font = 'bold 16px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      swCtx.textAlign = 'left'; swCtx.textBaseline = 'alphabetic';
+      swCtx.fillText(title, mL + 6, top + 18);
+      swCtx.fillStyle = '#e5e7eb'; swCtx.font = 'bold 15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      swCtx.fillText(mean.toFixed(4) + ' \u00b1 ' + sd.toFixed(4) + '  (\u00b1' + pct.toFixed(1) + '%)', mL + 6, top + 38);
+    }
+
+    panel(d.anVals, mT, '#34d399', 'A vs N gradient  \u2014  probability of decay per throw', d.anMean, d.anSd);
+    panel(d.lnVals, mT + bandH + gap, '#fbbf24', 'ln-plot \u03bb  \u2014  decay constant', d.lnMean, d.lnSd);
+
+    // prompt to the right of the top distribution (the piles sit left-of-centre,
+    // so the right portion of the top band is free)
+    swCtx.textAlign = 'center'; swCtx.textBaseline = 'middle';
+    var qx = mL + pw * 0.78, qy = mT + bandH * 0.5;
+    swCtx.fillStyle = '#f1f5f9'; swCtx.font = 'bold 21px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    swCtx.fillText('Do you expect these', qx, qy - 16);
+    swCtx.fillText('values to be different?', qx, qy + 14);
+
+    // shared x-axis labels at the very bottom
+    swCtx.strokeStyle = 'rgba(255,255,255,0.3)'; swCtx.lineWidth = 1.5;
+    var axisY = H - mB + 6;
+    swCtx.beginPath(); swCtx.moveTo(mL, axisY); swCtx.lineTo(mL+pw, axisY); swCtx.stroke();
+    swCtx.fillStyle = '#cbd5e1'; swCtx.font = '13px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    swCtx.textAlign = 'center'; swCtx.textBaseline = 'top';
+    for (var t = 0; t <= 5; t++) {
+      var val = lo + (hi-lo)*t/5; var tx = mL + (t/5)*pw;
+      swCtx.fillText(val.toFixed(3), tx, axisY + 5);
+    }
+    swCtx.fillStyle = 'rgba(255,255,255,0.9)'; swCtx.font = 'italic 14px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    swCtx.fillText('measured decay constant   (' + d.lnVals.length + ' runs of ' + d.n0 + ' dice)', mL+pw/2, axisY + 24);
+  }
+  function ln6_5(){ return Math.log(6/5); }
+
+  function runRepeat() {
+    if (!runComplete) return;
+    var n0 = N0;
+    if (n0 > 1000) {
+      // too many dice for a fast 1000-run batch: ask the user to reduce N
+      statsData = { tooMany: true, n0: n0 };
+      statsWindow.classList.add('open');
+      drawStatsWindow();
+      return;
+    }
+    var runs = 1000;
+    statsData = runBatch(n0, runs);
+    statsData.n0 = n0;
+    statsWindow.classList.add('open');
+    drawStatsWindow();
+  }
+  repeatBtn.addEventListener('click', runRepeat);
+  statsClose.addEventListener('click', function () { statsWindow.classList.remove('open'); });
+
+  function updateFitReadout() {
+    var fit = computeFit();
+    var html = '<span class="theory">N = N\u2080 e<sup>\u2212\u03bbt</sup></span>';
+    if (showCalc && fit) {
+      var halfThrows = Math.LN2 / fit.k;
+      html += ' &nbsp;|&nbsp; calculated <span class="fitk">\u03bb = ' + fit.k.toFixed(3) + '</span> from data'
+            + ' &nbsp;&rarr;&nbsp; half-life = ' + halfThrows.toFixed(2) + ' throws';
+    }
+    fitReadout.innerHTML = html;
+  }
+
+  /* ---- reset ---- */
+  function reset() {
+    stopAuto();
+    N0 = Math.max(1, Math.min(1000000, Math.round(parseFloat(diceInput.value) || 600)));
+    sides = parseInt(sidesInput.value, 10) || 6;
+    diceInput.value = N0;
+    data = [N0];
+    throwBtn.disabled = false;
+    runComplete = false;
+    // turn off and lock the post-run options
+    showCalc = false; calcChk.checked = false;
+    showGraphs = false; graphsChk.checked = false; graphsWindow.classList.remove('open');
+    showProbes = false; probesChk.checked = false; probeThrow1 = 1; probeThrow2 = 4;
+    markers = [];
+    statsWindow.classList.remove('open'); statsData = null;
+    graphPreset = 'remaining';
+    if (graphsTypeSelector) {
+      var gb = graphsTypeSelector.getElementsByClassName('graphs-type-btn');
+      for (var gi2 = 0; gi2 < gb.length; gi2++) gb[gi2].classList.toggle('active', gb[gi2].getAttribute('data-gtype') === 'remaining');
+    }
+    updateOptionAvailability();
+    rebuildTable();
+    render();
+  }
+
+  /* ---- events ---- */
+  throwBtn.addEventListener('click', function () { if (!running) doThrow(); });
+  autoBtn.addEventListener('click', function () { if (running) stopAuto(); else startAuto(); });
+  resetBtn.addEventListener('click', reset);
+  sidesInput.addEventListener('change', reset);
+  diceInput.addEventListener('change', reset);
+  fitChk.addEventListener('change', function (e) { showFit = e.target.checked; render(); if (showGraphs) drawGraphsWindow(); });
+  calcChk.addEventListener('change', function (e) { showCalc = e.target.checked; render(); });
+  graphsChk.addEventListener('change', function (e) {
+    showGraphs = e.target.checked;
+    graphsWindow.classList.toggle('open', showGraphs);
+    if (showGraphs) drawGraphsWindow();
+  });
+  graphsClose.addEventListener('click', function () {
+    showGraphs = false; graphsChk.checked = false; graphsWindow.classList.remove('open');
+  });
+  probesChk.addEventListener('change', function (e) { showProbes = e.target.checked; render(); });
+
+  function setGraphPreset(preset) {
+    graphPreset = preset;
+    var btns = graphsTypeSelector.getElementsByClassName('graphs-type-btn');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('active', btns[i].getAttribute('data-gtype') === preset);
+    }
+    if (showGraphs) drawGraphsWindow();
+  }
+  graphsTypeSelector.addEventListener('click', function (e) {
+    var t = e.target;
+    while (t && t !== graphsTypeSelector && !t.getAttribute('data-gtype')) t = t.parentNode;
+    if (t && t.getAttribute('data-gtype')) setGraphPreset(t.getAttribute('data-gtype'));
+  });
+
+  /* ---- probe dragging on the main canvas (mouse + touch) ---- */
+  function canvasXY(clientX, clientY) {
+    var rect = canvas.getBoundingClientRect();
+    return { x: (clientX - rect.left) * (canvas.width / rect.width),
+             y: (clientY - rect.top) * (canvas.height / rect.height) };
+  }
+  function probeHit(cx, cy) {
+    if (!showProbes || !plotGeom) return 0;
+    var hy = probeHandleY();
+    var p1 = probeThrowToPx(probeThrow1), p2 = probeThrowToPx(probeThrow2);
+    // generous vertical band around the handle, or anywhere along the line
+    var nearLineY = (cy > plotGeom.py - 10 && cy < hy + 20);
+    if (Math.abs(cx - p1) <= Math.abs(cx - p2)) {
+      if (Math.abs(cx - p1) < 22 && nearLineY) return 1;
+      if (Math.abs(cx - p2) < 22 && nearLineY) return 2;
+    } else {
+      if (Math.abs(cx - p2) < 22 && nearLineY) return 2;
+      if (Math.abs(cx - p1) < 22 && nearLineY) return 1;
+    }
+    return 0;
+  }
+  function probeStart(clientX, clientY) {
+    var pt = canvasXY(clientX, clientY);
+    var hit = probeHit(pt.x, pt.y);
+    if (hit) {
+      probeDrag = hit;
+      var t = probePxToThrow(pt.x);
+      if (hit === 1) probeThrow1 = t; else probeThrow2 = t;
+      render();
+      return true;
+    }
+    return false;
+  }
+  function probeMove(clientX, clientY) {
+    if (!probeDrag) return;
+    var pt = canvasXY(clientX, clientY);
+    var t = probePxToThrow(pt.x);          // raw finger position (fully continuous)
+
+    // Light half-life detents. The probe follows the finger exactly except in a
+    // narrow band around each n*T1/2, where it is eased a little toward the exact
+    // multiple. The pull is gentle and continuous (no jump), so dragging stays
+    // smooth; it only fully reads "n T1/2" in a tight band right at the multiple.
+    probeSnapN = 0;
+    var fit = computeFit();
+    if (fit && fit.k > 1e-9) {
+      var tHalf = Math.LN2 / fit.k;
+      var other = (probeDrag === 1) ? probeThrow2 : probeThrow1;
+      var signedGap = t - other;
+      var gap = Math.abs(signedGap);
+      var n = Math.round(gap / tHalf);
+      if (n >= 1) {
+        var target = n * tHalf;
+        var tSnap = other + (signedGap >= 0 ? target : -target);
+        if (tSnap >= 0 && tSnap <= plotGeom.maxThrow) {
+          var dist = Math.abs(gap - target);
+          var band = tHalf * 0.10;                  // narrow capture band (~10% of T1/2)
+          if (dist < band) {
+            if (dist < tHalf * 0.02) {
+              t = tSnap;                            // clean lock right at the multiple
+              probeSnapN = n;
+            } else {
+              // eased pull: gentle near the band edge, stronger toward centre,
+              // so the finger still leads but is guided in smoothly.
+              var u = 1 - dist / band;              // 0..1
+              t = t + (tSnap - t) * (u * u * u);
+            }
+          }
+        }
+      }
+    }
+    if (probeDrag === 1) probeThrow1 = t; else probeThrow2 = t;
+    render();
+  }
+  function probeEnd() { probeDrag = 0; render(); }
+
+  /* ---- marker placement / deletion via long-press (iPad) or double-click ---- */
+  var PROBE_COLS = { 1: '#facc15', 2: '#22d3ee' };
+  function dropMarkerFromProbe(which) {
+    var t = (which === 1) ? probeThrow1 : probeThrow2;
+    markers.push({ t: t, col: PROBE_COLS[which] || '#34d399' });
+    render();
+  }
+  // returns which probe handle is under the point (1 or 2), else 0
+  function probeHandleUnder(cx, cy) {
+    if (!showProbes || !plotGeom) return 0;
+    var hy = probeHandleY();
+    if (cy < hy - 16 || cy > hy + 16) return 0;
+    var p1 = probeThrowToPx(probeThrow1), p2 = probeThrowToPx(probeThrow2);
+    if (Math.abs(cx - p1) < 16) return 1;
+    if (Math.abs(cx - p2) < 16) return 2;
+    return 0;
+  }
+  // act on a long-press / double-action at a canvas point
+  function markerAction(cx, cy) {
+    var mi = markerHit(cx, cy);
+    if (mi >= 0) { markers.splice(mi, 1); render(); return true; }   // delete marker
+    var ph = probeHandleUnder(cx, cy);
+    if (ph) { dropMarkerFromProbe(ph); return true; }                // drop marker
+    return false;
+  }
+
+  // long-press machinery (shared by mouse + touch)
+  var lpTimer = null, lpStart = null;
+  function lpBegin(cx, cy) {
+    lpStart = { x: cx, y: cy };
+    if (lpTimer) clearTimeout(lpTimer);
+    lpTimer = setTimeout(function () {
+      lpTimer = null;
+      var pt = canvasXY(cx, cy);
+      markerAction(pt.x, pt.y);
+    }, 500);
+  }
+  function lpMoveCancel(cx, cy) {
+    if (lpTimer && lpStart && (Math.abs(cx - lpStart.x) > 8 || Math.abs(cy - lpStart.y) > 8)) {
+      clearTimeout(lpTimer); lpTimer = null;
+    }
+  }
+  function lpEnd() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }
+
+  canvas.addEventListener('mousedown', function (e) {
+    lpBegin(e.clientX, e.clientY);
+    if (probeStart(e.clientX, e.clientY)) e.preventDefault();
+  });
+  document.addEventListener('mousemove', function (e) {
+    lpMoveCancel(e.clientX, e.clientY);
+    if (probeDrag) probeMove(e.clientX, e.clientY);
+  });
+  document.addEventListener('mouseup', function () { lpEnd(); probeEnd(); });
+  // double-click: drop from a probe handle, or delete a marker
+  canvas.addEventListener('dblclick', function (e) {
+    var pt = canvasXY(e.clientX, e.clientY);
+    if (markerAction(pt.x, pt.y)) e.preventDefault();
+  });
+
+  canvas.addEventListener('touchstart', function (e) {
+    var t = e.touches[0];
+    lpBegin(t.clientX, t.clientY);
+    if (probeStart(t.clientX, t.clientY)) e.preventDefault();
+  }, { passive: false });
+  canvas.addEventListener('touchmove', function (e) {
+    var t = e.touches[0]; lpMoveCancel(t.clientX, t.clientY);
+    if (probeDrag) { probeMove(t.clientX, t.clientY); e.preventDefault(); }
+  }, { passive: false });
+  canvas.addEventListener('touchend', function () { lpEnd(); probeEnd(); });
+  canvas.addEventListener('touchcancel', function () { lpEnd(); probeEnd(); });
+
+  /* ---- init ---- */
+  reset();
+})();
+</script>
+</body>
+</html>
