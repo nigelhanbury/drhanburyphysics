@@ -321,7 +321,7 @@ function showHelpModal(topic) {
       '<h3>The graph</h3>' +
       '<p>The number of dice remaining is plotted against throw number, with the best-fit <span class="key">exponential curve</span> N = N\u2080e<sup>\u2212\u03bbt</sup>. Tick <span class="key">calculated \u03bb</span> to read the decay constant and half-life measured from the data.</p>' +
       '<h3>Probes &amp; markers</h3>' +
-      '<p><span class="key">Show probes</span> adds two draggable markers that read off the curve; the gap between them gently snaps to whole half-lives. <span class="key">Long-press</span> (or double-click) a probe handle to drop a permanent marker; long-press a marker to remove it.</p>' +
+      '<p><span class="key">Show probes</span> adds two draggable markers that read off the curve; the gap between them gently snaps to whole half-lives. <span class="key">Double-tap</span> (or double-click) a probe handle to drop a permanent marker; double-tap a marker to remove it.</p>' +
       '<h3>Graphs window</h3>' +
       '<p><span class="key">Show graphs</span> opens a window with four views: <span class="key">Dice remaining</span>, <span class="key">Activity</span> (decays per throw), <span class="key">Activity vs N</span> (a straight line whose gradient is the per-throw decay probability), and the <span class="key">ln graph</span> (a straight line whose gradient gives \u03bb and hence the half-life).</p>' +
       '<h3>Repeat 1000\u00d7</h3>' +
@@ -1585,7 +1585,9 @@ window.closeHelpModal = closeHelpModal;
   }
   function probeEnd() { probeDrag = 0; render(); }
 
-  /* ---- marker placement / deletion via long-press (iPad) or double-click ---- */
+  /* ---- marker placement / deletion via double-click (desktop) or
+     double-tap (iPad). No long-press: it caused accidental drops when
+     grabbing a probe handle. ---- */
   var PROBE_COLS = { 1: '#facc15', 2: '#22d3ee' };
   function dropMarkerFromProbe(which) {
     var t = (which === 1) ? probeThrow1 : probeThrow2;
@@ -1602,7 +1604,7 @@ window.closeHelpModal = closeHelpModal;
     if (Math.abs(cx - p2) < 16) return 2;
     return 0;
   }
-  // act on a long-press / double-action at a canvas point
+  // drop a marker (on a probe handle) or delete one (on an existing marker)
   function markerAction(cx, cy) {
     var mi = markerHit(cx, cy);
     if (mi >= 0) { markers.splice(mi, 1); render(); return true; }   // delete marker
@@ -1611,50 +1613,47 @@ window.closeHelpModal = closeHelpModal;
     return false;
   }
 
-  // long-press machinery (shared by mouse + touch)
-  var lpTimer = null, lpStart = null;
-  function lpBegin(cx, cy) {
-    lpStart = { x: cx, y: cy };
-    if (lpTimer) clearTimeout(lpTimer);
-    lpTimer = setTimeout(function () {
-      lpTimer = null;
-      var pt = canvasXY(cx, cy);
-      markerAction(pt.x, pt.y);
-    }, 500);
-  }
-  function lpMoveCancel(cx, cy) {
-    if (lpTimer && lpStart && (Math.abs(cx - lpStart.x) > 8 || Math.abs(cy - lpStart.y) > 8)) {
-      clearTimeout(lpTimer); lpTimer = null;
-    }
-  }
-  function lpEnd() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }
-
   canvas.addEventListener('mousedown', function (e) {
-    lpBegin(e.clientX, e.clientY);
     if (probeStart(e.clientX, e.clientY)) e.preventDefault();
   });
   document.addEventListener('mousemove', function (e) {
-    lpMoveCancel(e.clientX, e.clientY);
     if (probeDrag) probeMove(e.clientX, e.clientY);
   });
-  document.addEventListener('mouseup', function () { lpEnd(); probeEnd(); });
+  document.addEventListener('mouseup', function () { probeEnd(); });
   // double-click: drop from a probe handle, or delete a marker
   canvas.addEventListener('dblclick', function (e) {
     var pt = canvasXY(e.clientX, e.clientY);
     if (markerAction(pt.x, pt.y)) e.preventDefault();
   });
 
+  // touch: drag probes; detect a double-tap for marker drop/delete
+  var lastTapTime = 0, lastTapX = 0, lastTapY = 0;
   canvas.addEventListener('touchstart', function (e) {
     var t = e.touches[0];
-    lpBegin(t.clientX, t.clientY);
     if (probeStart(t.clientX, t.clientY)) e.preventDefault();
   }, { passive: false });
   canvas.addEventListener('touchmove', function (e) {
-    var t = e.touches[0]; lpMoveCancel(t.clientX, t.clientY);
+    var t = e.touches[0];
     if (probeDrag) { probeMove(t.clientX, t.clientY); e.preventDefault(); }
   }, { passive: false });
-  canvas.addEventListener('touchend', function () { lpEnd(); probeEnd(); });
-  canvas.addEventListener('touchcancel', function () { lpEnd(); probeEnd(); });
+  canvas.addEventListener('touchend', function (e) {
+    // double-tap detection: two taps < 320ms apart and < 24px apart
+    var ch = e.changedTouches[0];
+    if (ch) {
+      var now = Date.now();
+      if (now - lastTapTime < 320 &&
+          Math.abs(ch.clientX - lastTapX) < 24 &&
+          Math.abs(ch.clientY - lastTapY) < 24) {
+        var pt = canvasXY(ch.clientX, ch.clientY);
+        if (markerAction(pt.x, pt.y)) e.preventDefault();
+        lastTapTime = 0;                 // reset so a third tap doesn't re-trigger
+      } else {
+        lastTapTime = now; lastTapX = ch.clientX; lastTapY = ch.clientY;
+      }
+    }
+    probeEnd();
+  });
+  canvas.addEventListener('touchcancel', function () { probeEnd(); });
 
   /* ---- init ---- */
   reset();
