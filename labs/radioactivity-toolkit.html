@@ -1,0 +1,3338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Radioactivity Toolkit</title>
+<style>
+/* ============================================================= *
+ * Radioactivity — Nuclear section family theme                  *
+ * (matches Dice Decay / SHM / Wave Motion suite colours)        *
+ * Self-contained: nothing shared with other suite files.        *
+ * ============================================================= */
+:root {
+  --accent:#34d399; --accent-amber:#fbbf24;
+  --alpha:#fb7185; --beta:#38bdf8; --gamma:#a78bfa;
+  --bg0:#0a1322; --bg1:#152138;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { -webkit-text-size-adjust:100%; }
+body {
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:linear-gradient(160deg,#0a1322,#152138);
+  color:#e5e7eb; min-height:100vh;
+  display:flex; flex-direction:column; align-items:center; padding:8px 18px 26px;
+}
+.container {
+  background:rgba(8,14,26,0.55); border:1px solid rgba(255,255,255,0.12);
+  border-radius:20px; padding:16px 26px 28px; max-width:1180px; width:100%;
+  box-shadow:0 18px 60px rgba(0,0,0,0.5);
+}
+.app-header { text-align:center; margin-bottom:14px; position:relative; }
+.app-header h1 {
+  font-size:2.05em; font-weight:300; letter-spacing:1px; margin-bottom:4px;
+  display:inline-flex; align-items:center; justify-content:center;
+}
+.app-header .subtitle { font-size:1em; opacity:0.85; font-weight:300; }
+
+/* Tab bar (only one tab built so far; bar present for future modes). */
+.tab-bar { display:flex; justify-content:center; gap:12px; flex-wrap:wrap; padding:4px; margin-bottom:16px; }
+.main-tab {
+  position:relative; padding:11px 24px; border:none;
+  background:linear-gradient(145deg,#1c2c46,#13203a); color:#8aa0c0; border-radius:13px; cursor:pointer;
+  font-size:0.86em; font-weight:700; text-transform:uppercase; letter-spacing:1.1px;
+  transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
+  box-shadow:0 4px 14px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+}
+.main-tab.active {
+  background:linear-gradient(145deg,#0c3a3a,#062525); color:var(--accent);
+  transform:translateY(-2px); border:1px solid rgba(52,211,153,0.4);
+  box-shadow:0 8px 26px rgba(52,211,153,0.18), inset 0 1px 0 rgba(120,255,200,0.15);
+}
+
+/* Bench canvas */
+.bench-wrap { position:relative; }
+.run-overlay {
+  position:absolute; right:22px; bottom:20px;
+  min-width:120px; z-index:2;
+}
+.emission-overlay {
+  position:absolute; top:20px; right:22px;
+  display:flex; align-items:center; gap:8px;
+  background:rgba(10,18,32,0.66); border:1px solid rgba(52,211,153,0.30);
+  border-radius:8px; padding:7px 11px;
+}
+.emission-overlay .emission-lbl {
+  font-weight:600; font-size:0.62em; text-transform:uppercase; letter-spacing:1.1px; color:#9fd9c2;
+}
+.emission-overlay .reveal-content { min-width:30px; display:inline-flex; gap:4px; align-items:center; }
+.emission-overlay .hidden-q { color:#7c8aa3; font-style:italic; font-size:0.82em; }
+#absBench {
+  display:block; width:100%; height:360px; border-radius:12px;
+  background:radial-gradient(120% 140% at 50% 0%, #14233e 0%, #0a1322 70%);
+  box-shadow:0 0 0 1px rgba(255,255,255,0.08) inset; touch-action:none;
+}
+
+/* Counter readout */
+.counter-bar {
+  display:flex; justify-content:center; align-items:stretch; gap:14px;
+  margin:14px 0 4px; flex-wrap:wrap;
+}
+.counter-box {
+  min-width:210px; padding:10px 18px; border-radius:12px;
+  background:linear-gradient(135deg,rgba(12,58,58,0.5),rgba(6,37,37,0.6));
+  border:1px solid rgba(52,211,153,0.35); text-align:center;
+}
+.counter-box .lbl { font-size:0.7em; text-transform:uppercase; letter-spacing:1.2px; color:#9fd9c2; }
+.counter-box .val {
+  font-size:2.0em; font-weight:700; color:var(--accent);
+  font-variant-numeric:tabular-nums; line-height:1.15;
+}
+.counter-box .sub { font-size:0.82em; color:#cbd5e1; font-variant-numeric:tabular-nums; }
+.gate-box { min-width:180px; display:flex; flex-direction:column; justify-content:center; }
+.gate-progress {
+  height:6px; border-radius:4px; background:rgba(255,255,255,0.08); margin-top:8px; overflow:hidden;
+}
+.gate-progress > div { height:100%; width:0%; background:var(--accent); transition:none; }
+
+/* Reveal panel */
+.reveal-box {
+  min-width:210px; padding:10px 18px; border-radius:12px;
+  background:linear-gradient(135deg,rgba(40,40,70,0.4),rgba(20,20,38,0.55));
+  border:1px solid rgba(255,255,255,0.12); text-align:center;
+}
+.reveal-box .lbl { font-size:0.7em; text-transform:uppercase; letter-spacing:1.2px; color:#b8b8d8; }
+.reveal-content { margin-top:6px; font-size:1.05em; font-weight:700; letter-spacing:1px; }
+.reveal-content .hidden-q { color:#8aa0c0; font-weight:400; }
+.chip { display:inline-block; padding:2px 9px; border-radius:8px; margin:0 3px; font-weight:700; }
+.chip.a { background:rgba(251,113,133,0.18); color:var(--alpha); border:1px solid rgba(251,113,133,0.5); }
+.chip.b { background:rgba(56,189,248,0.16); color:var(--beta); border:1px solid rgba(56,189,248,0.5); }
+.chip.g { background:rgba(167,139,250,0.16); color:var(--gamma); border:1px solid rgba(167,139,250,0.5); }
+.chip.none { background:rgba(255,255,255,0.06); color:#9aa7bd; border:1px solid rgba(255,255,255,0.18); }
+
+/* Controls */
+.controls { display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin:16px 0 6px; }
+.control-group {
+  display:flex; flex-direction:column; align-items:center; gap:7px; padding:9px 14px;
+  background:linear-gradient(135deg,rgba(40,40,70,0.5),rgba(20,20,38,0.65));
+  border:1px solid rgba(255,255,255,0.1); border-radius:12px;
+  box-shadow:0 4px 14px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.controls label.grp-label { font-weight:600; font-size:0.7em; text-transform:uppercase; letter-spacing:1.1px; color:#b8b8d8; }
+select, .num-input {
+  font-size:0.92em; font-weight:600; text-align:center; color:#fff;
+  background:rgba(10,18,32,0.8); border:1px solid rgba(255,255,255,0.18);
+  border-radius:8px; padding:6px 9px; touch-action:manipulation;
+}
+select { min-width:150px; cursor:pointer; }
+input[type="range"] {
+  width:150px; touch-action:none; accent-color:var(--accent);
+}
+.slider-val { font-size:0.86em; color:var(--accent); font-weight:700; font-variant-numeric:tabular-nums; }
+
+.seg { display:inline-flex; border:1px solid rgba(255,255,255,0.18); border-radius:8px; overflow:hidden; }
+.seg button {
+  border:none; background:rgba(10,18,32,0.8); color:#9aa7bd; padding:6px 11px;
+  font-size:0.82em; font-weight:700; cursor:pointer; touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+.seg button.active { background:rgba(52,211,153,0.22); color:var(--accent); }
+.seg-help {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:14px; height:14px; margin-left:5px; border-radius:50%;
+  background:rgba(255,255,255,0.14); color:#cbd5e1; font-size:0.72em; font-weight:700;
+  cursor:pointer; vertical-align:middle;
+}
+.seg-help:hover { background:rgba(52,211,153,0.4); color:#fff; }
+#absReadingsInput {
+  width:64px; min-width:0; text-align:center; padding:6px 8px;
+  background:rgba(10,18,32,0.8); color:#e6f1ec; border:1px solid rgba(255,255,255,0.18);
+  border-radius:8px; font-size:0.95em; touch-action:manipulation;
+}
+
+.run-btn {
+  font-size:1.0em; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+  padding:12px 28px; border:none; border-radius:12px; cursor:pointer;
+  background:linear-gradient(145deg,#0c3a3a,#062525); color:var(--accent);
+  border:1px solid rgba(52,211,153,0.5); transition:all 0.2s;
+  box-shadow:0 6px 20px rgba(52,211,153,0.15); touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+.run-btn:hover { background:rgba(52,211,153,0.2); color:#fff; }
+.run-btn:disabled { opacity:0.45; cursor:not-allowed; }
+.run-btn.run-monitoring { opacity:0.6; border-style:dashed; }
+.ghost-btn {
+  font-size:0.82em; font-weight:700; padding:9px 16px; border-radius:10px; cursor:pointer;
+  background:rgba(255,255,255,0.05); color:#cbd5e1; border:1px solid rgba(255,255,255,0.18);
+  touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+}
+.ghost-btn:hover { background:rgba(255,255,255,0.1); color:#fff; }
+.ghost-btn:disabled { opacity:0.4; cursor:not-allowed; }
+.ghost-btn:disabled:hover { background:rgba(255,255,255,0.05); color:#cbd5e1; }
+
+/* Results table */
+.table-section { margin-top:18px; }
+.table-head-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:8px; }
+.table-head-row h2 { font-size:0.95em; font-weight:700; text-transform:uppercase; letter-spacing:1.4px; color:var(--accent); }
+.unit-toggle-wrap { display:flex; align-items:center; gap:8px; }
+.unit-toggle-wrap span { font-size:0.74em; text-transform:uppercase; letter-spacing:1px; color:#9aa7bd; }
+.table-wrap {
+  max-height:300px; overflow-y:auto; border:1px solid rgba(255,255,255,0.12);
+  border-radius:12px; background:linear-gradient(135deg,rgba(40,40,70,0.35),rgba(20,20,38,0.5));
+}
+table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+th, td { padding:8px 12px; text-align:center; font-size:0.92em; }
+thead th {
+  position:sticky; top:0; background:#0c3a3a; color:var(--accent);
+  font-size:0.72em; text-transform:uppercase; letter-spacing:1px; font-weight:700;
+  border-bottom:1px solid rgba(52,211,153,0.4);
+}
+tbody tr:nth-child(even) { background:rgba(255,255,255,0.03); }
+tbody tr.latest { background:rgba(52,211,153,0.14); }
+tbody td.abs-col { font-weight:600; }
+.empty-row td { color:#7c8aa3; font-style:italic; padding:20px; }
+.tbl-tag { display:inline-block; padding:1px 7px; border-radius:6px; font-size:0.82em; font-weight:700; }
+.tbl-tag.paper { background:rgba(255,255,255,0.08); color:#e5e7eb; }
+.tbl-tag.al { background:rgba(148,163,184,0.18); color:#cbd5e1; }
+.tbl-tag.pb { background:rgba(100,116,139,0.28); color:#e2e8f0; }
+.tbl-tag.none { background:rgba(52,211,153,0.12); color:#9fd9c2; }
+.row-del {
+  background:none; border:none; color:#8aa0c0; cursor:pointer; font-size:1.0em;
+  padding:2px 6px; border-radius:6px; touch-action:manipulation;
+}
+.row-del:hover { color:#fb7185; background:rgba(251,113,133,0.12); }
+
+/* Help button + modal (SHM-style) */
+.tab-help-btn {
+  width:26px; height:26px; border-radius:50%;
+  background:rgba(52,211,153,0.18); border:1px solid rgba(52,211,153,0.4);
+  color:var(--accent); font-size:15px; font-weight:bold; cursor:pointer;
+  margin-left:10px; transition:all 0.2s; touch-action:manipulation;
+  display:inline-flex; align-items:center; justify-content:center; vertical-align:middle;
+}
+.tab-help-btn:hover { background:rgba(52,211,153,0.4); color:#fff; box-shadow:0 0 10px rgba(52,211,153,0.4); }
+.help-modal-overlay {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:2000;
+  justify-content:center; align-items:center; backdrop-filter:blur(3px);
+}
+.help-modal {
+  background:linear-gradient(135deg,#1a2540 0%,#0f1525 100%);
+  border:1px solid rgba(52,211,153,0.3); border-radius:12px;
+  max-width:580px; max-height:82vh; overflow-y:auto; padding:20px 26px;
+  box-shadow:0 10px 40px rgba(0,0,0,0.5);
+}
+.help-modal h2 { color:var(--accent); margin:0 0 14px 0; font-size:1.3em; border-bottom:1px solid rgba(52,211,153,0.2); padding-bottom:10px; }
+.help-modal h3 { color:#80c0a0; margin:14px 0 6px 0; font-size:1em; }
+.help-modal p { color:#b0c0d0; margin:6px 0; font-size:0.9em; line-height:1.5; }
+.help-modal .key { color:#facc15; font-weight:600; }
+.help-modal .help-note {
+  background:rgba(52,211,153,0.08); border:1px solid rgba(52,211,153,0.28);
+  border-radius:8px; padding:10px 12px; margin:0 0 6px 0;
+}
+.help-modal .help-note p { color:#9fb4c9; margin:0; font-size:0.85em; line-height:1.5; }
+.help-modal .close-btn { float:right; background:none; border:none; color:#ff6666; font-size:21px; cursor:pointer; padding:0 5px; }
+.help-modal .close-btn:hover { color:#ff9999; }
+
+.hint { text-align:center; font-size:0.82em; color:#7c8aa3; font-style:italic; margin-top:10px; }
+/* graph preset selector (Dice Decay / SHM graphs-type-btn style) */
+.graphs-type-selector {
+  display:flex; flex-wrap:wrap; gap:6px; align-items:center;
+  justify-content:center; margin-bottom:8px;
+}
+.graphs-type-btn {
+  padding:5px 14px; border-radius:7px; border:1px solid rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.04); color:#bbb; font-size:0.82em;
+  font-weight:600; cursor:pointer; transition:all 0.15s; white-space:nowrap;
+  touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+}
+.graphs-type-btn:hover {
+  background:rgba(52,211,153,0.12); color:#34d399; border-color:rgba(52,211,153,0.35);
+}
+.graphs-type-btn.active {
+  background:rgba(52,211,153,0.22); color:#34d399; border-color:rgba(52,211,153,0.6);
+}
+.graphs-type-btn.disabled, .graphs-type-btn:disabled {
+  opacity:0.35; cursor:not-allowed;
+}
+.graphs-type-btn.disabled:hover, .graphs-type-btn:disabled:hover {
+  background:rgba(255,255,255,0.04); color:#bbb; border-color:rgba(255,255,255,0.15);
+}
+/* ---- Resizable graph popout (matches Dice Decay / SHM suite) ---- */
+.popout-window {
+  position: fixed; top: 90px; left: calc(50% - 320px);
+  width: 660px; height: 480px; min-width: 380px; min-height: 300px;
+  max-width: calc(100vw - 20px); max-height: calc(100vh - 20px);
+  background: linear-gradient(145deg, #12122a, #0c1426);
+  border: 1px solid rgba(52,211,153,0.5); border-radius: 14px;
+  display: none; flex-direction: column;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.65); z-index: 950;
+  -webkit-user-select: none; user-select: none;
+}
+.popout-window.open { display: flex; }
+.popout-header {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; padding: 9px 12px; cursor: move;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.popout-title { font-size: 0.82em; letter-spacing: 0.5px; color: #34d399; font-weight: 700; }
+.popout-body { flex: 1; min-height: 0; padding: 8px 6px 6px; position: relative; overflow: hidden; display:flex; flex-direction:column; }
+#absGraphsCanvas { width: 100%; flex:1; min-height:0; display: block; }
+.work-close {
+  background: none; border: none; color: #aaa; font-size: 16px;
+  cursor: pointer; padding: 2px 6px; border-radius: 6px; line-height: 1;
+}
+.work-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.popout-resize-grip {
+  position: absolute; right: 0; bottom: 0; width: 22px; height: 22px;
+  cursor: nwse-resize; touch-action: none;
+  background: linear-gradient(135deg, transparent 0 6px, rgba(52,211,153,0.55) 6px 7.5px, transparent 7.5px 11px, rgba(52,211,153,0.55) 11px 12.5px, transparent 12.5px 16px, rgba(52,211,153,0.55) 16px 17.5px, transparent 17.5px);
+  border-bottom-right-radius: 14px; opacity: 0.7; transition: opacity 0.15s;
+}
+.popout-resize-grip:hover { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="app-header">
+    <h1>Radioactivity Toolkit
+      <button class="tab-help-btn" onclick="showHelpModal('absorption')" title="Help">?</button>
+    </h1>
+  </div>
+
+  <!-- ===================== ABSORPTION TAB ===================== -->
+  <div id="absTab">
+
+    <div class="bench-wrap">
+      <canvas id="absBench" width="1120" height="360"></canvas>
+      <div class="emission-overlay">
+        <span class="emission-lbl">Emission</span>
+        <span class="reveal-content" id="absRevealContent"><span class="hidden-q">hidden</span></span>
+        <button class="ghost-btn" id="absRevealBtn">Reveal</button>
+      </div>
+      <button class="run-btn run-overlay" id="absRunBtn">Run</button>
+    </div>
+
+    <div class="controls">
+      <div class="control-group">
+        <label class="grp-label">Source</label>
+        <select id="absSourceSel"></select>
+      </div>
+      <div class="control-group">
+        <label class="grp-label">Absorber</label>
+        <select id="absAbsorberSel">
+          <option value="none">None</option>
+          <option value="idpaper">Paper (idealised)</option>
+          <option value="paper">Paper (real)</option>
+          <option value="al">Aluminium (3 mm)</option>
+          <option value="al5">Aluminium (5 cm)</option>
+          <option value="pb">Lead (5 cm)</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label class="grp-label">Measurement</label>
+        <div class="seg" id="absModeSeg">
+          <button data-mode="single" class="active">Single reading <span class="seg-help" data-help="single">?</span></button>
+          <button data-mode="time">Count rate vs time <span class="seg-help" data-help="time">?</span></button>
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="grp-label">Gate time</label>
+        <select id="absGateSel"></select>
+      </div>
+      <div class="control-group" id="absReadingsGroup" style="display:none;">
+        <label class="grp-label">Readings</label>
+        <input type="number" id="absReadingsInput" min="2" max="60" step="1" value="12">
+      </div>
+      <div class="control-group">
+        <label class="grp-label">Speed</label>
+        <div class="seg" id="absSpeedSeg">
+          <button data-speed="1" class="active">&times;1</button>
+          <button data-speed="10">&times;10</button>
+          <button data-speed="60">&times;60</button>
+          <button data-speed="0">Instant</button>
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="grp-label">Sound</label>
+        <button class="ghost-btn" id="absSoundBtn" aria-pressed="true">&#128266; On</button>
+      </div>
+    </div>
+
+    <div class="hint">Drag the source, absorber or detector to position them. See <span style="color:var(--accent);cursor:pointer;font-style:normal;" onclick="showHelpModal('absorption')">help</span> for the method.</div>
+
+    <div class="table-section">
+      <div class="table-head-row">
+        <h2>Results</h2>
+        <div class="unit-toggle-wrap">
+          <span>Count rate in</span>
+          <div class="seg" id="absUnitSeg">
+            <button data-unit="s" class="active">per second</button>
+            <button data-unit="min">per minute</button>
+            <button data-unit="hr">per hour</button>
+          </div>
+          <button class="ghost-btn" id="absGraphsBtn">Graphs</button>
+          <button class="ghost-btn" id="absClearBtn">Clear</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Source</th>
+              <th>Distance</th>
+              <th>Absorber</th>
+              <th>Gate</th>
+              <th>Time / s</th>
+              <th>Counts</th>
+              <th id="absRateHeader">Count rate / s&minus;&sup1;</th>
+              <th id="absAdjHeader">Adjusted count rate / s&minus;&sup1;</th>
+            </tr>
+          </thead>
+          <tbody id="absTableBody">
+            <tr class="empty-row"><td colspan="9">No runs yet &mdash; press Run to take a measurement.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Help modal -->
+<div id="helpModalOverlay" class="help-modal-overlay" onclick="if(event.target===this)closeHelpModal()">
+  <div class="help-modal">
+    <button class="close-btn" onclick="closeHelpModal()">&times;</button>
+    <div id="helpModalContent"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================= *
+ * Help modal (operational guidance only; SHM-suite style).      *
+ * Defined top-level so inline onclick can reach it.             *
+ * ============================================================= */
+function showHelpModal(topic) {
+  var c = document.getElementById('helpModalContent');
+  if (!c) return;
+  if (topic === 'mode-single') {
+    c.innerHTML =
+      '<h2>Single reading &mdash; Help</h2>' +
+      '<div class="help-note"><p>Takes one count over the chosen gate time and adds a single row to the table.</p></div>' +
+      '<h3>How to use it</h3>' +
+      '<p>Set the source, absorber, distance and gate time, then press <span class="key">Run</span>. The counter counts up to the gate time and logs the total and the count rate.</p>' +
+      '<h3>Why use it</h3>' +
+      '<p>This is for <span class="key">comparing setups</span> &mdash; one reading at a time. Change the absorber, the distance, or the source between readings and compare the count rates: this is how you identify which radiations a source gives out, and how you measure the inverse-square fall-off with distance.</p>' +
+      '<p>Measure the <span class="key">background</span> first (no source), so you can subtract it to get the count rate due to the source.</p>';
+    document.getElementById('helpModalOverlay').style.display = 'flex';
+    return;
+  }
+  if (topic === 'mode-time') {
+    c.innerHTML =
+      '<h2>Count rate vs time &mdash; Help</h2>' +
+      '<div class="help-note"><p>Takes several readings at the same setup, one after another, and records how the count rate changes over time.</p></div>' +
+      '<h3>How to use it</h3>' +
+      '<p>Leave everything fixed (do not move the source or detector). Set the <span class="key">gate time</span> (the length of each reading) and the <span class="key">number of readings</span>, then press <span class="key">Start</span>. The bench takes that many readings back to back and logs each one with its <span class="key">time</span>. Use the <span class="key">Speed</span> control to play it out in real time or to compress the wait.</p>' +
+      '<h3>Why use it</h3>' +
+      '<p>This is for watching how a count rate <span class="key">changes with time</span>, rather than comparing setups. Two main uses:</p>' +
+      '<p><span class="key">Half-life.</span> This mode uses <span class="key">Protactinium-234m</span>, a short-lived source that decays in about a minute. Each timed run begins by measuring the <span class="key">background</span> automatically (with the source absent), then the freshly-separated source decays: its count rate falls with time. Plot the background-corrected rate against time, or its logarithm, to find the half-life.</p>' +
+      '<p><span class="key">Showing the random nature of decay.</span> To see how individual readings scatter, use <span class="key">Single reading</span> mode and repeat the same measurement a few times on a steady source - the count fluctuates each time. Greater scatter appears at lower count rates (further away, or weaker signal), demonstrating that the uncertainty depends on the number of counts collected. The <span class="key">Count distribution</span> graph turns those repeats into a histogram and compares the spread with what randomness predicts.</p>' +
+      '<p>Remember to measure the <span class="key">background</span> first so it can be subtracted; near the end of a decay the corrected rate heads towards zero only once the background is removed.</p>';
+    document.getElementById('helpModalOverlay').style.display = 'flex';
+    return;
+  }
+  c.innerHTML =
+    '<h2>Absorption &amp; Identification &mdash; Help</h2>' +
+    '<div class="help-note"><p>The count rates are modelled for fresh sealed sources of typical school activity (a few tens of kBq), with any decay chains taken to be in radioactive equilibrium (the daughter products have fully grown in). Real sources read lower as they age &mdash; quickly for short-lived isotopes, slowly for long-lived ones. The distances and absorbers use real physics, and the gamma count rates are scaled to realistic laboratory values.</p></div>' +
+    '<h3>What you see</h3>' +
+    '<p>A radioactive <span class="key">source</span> on the left, a slot for an <span class="key">absorber</span> in the middle, and a <span class="key">Geiger&ndash;Muller tube</span> with a counter on the right. This is the bench used to find out which radiations a source gives out.</p>' +
+    '<h3>The controls</h3>' +
+    '<p><span class="key">Moving things</span> &mdash; you can drag all three items along the bench: the <span class="key">source</span>, the <span class="key">detector</span>, and the <span class="key">absorber</span> (drag it by the round handle below it). They behave as solid objects and gently snap to each centimetre, and the distance reads to 0.1&nbsp;cm so you can position them precisely.</p>' +
+    '<p><span class="key">Source</span> &mdash; pick an unknown source. What it emits is hidden until you press <span class="key">Reveal</span>.</p>' +
+    '<p><span class="key">Absorber</span> &mdash; place nothing, paper, aluminium or lead between the source and the tube. <span class="key">Paper (idealised)</span> is the textbook model: it stops alpha completely and lets all beta and gamma through. <span class="key">Paper (real)</span> behaves as real paper does &mdash; it stops alpha, but also absorbs some of a low-energy (soft) beta, so the count can drop a little more than the simple rule suggests. Switch between the two to see the difference.</p>' +
+    '<p><span class="key">Distance</span> &mdash; the source&ndash;tube separation. Keep it the same between readings for a fair test.</p>' +
+    '<p><span class="key">Gate time</span> &mdash; how long the counter counts for. Counting for longer gives a steadier reading.</p>' +
+    '<p><span class="key">Speed</span> &mdash; how fast the gate plays out on screen. The physics is unchanged; only the waiting is sped up.</p>' +
+    '<h3>Live monitor mode (have a play first)</h3>' +
+    '<p>Tap the round <span class="key">power switch</span> on the counter to switch it into <span class="key">live monitor</span> mode. The counter then runs continuously, like a switched-on Geiger counter: the total climbs and you hear a steady crackle. Move the tube, source or absorber and the counter speeds up or slows down, and the crackle changes &mdash; great for getting a feel for the apparatus before taking proper readings.</p>' +
+    '<p>While monitoring, the panel shows <span class="key">LIVE &mdash; monitor &mdash; not recorded</span> and the <span class="key">Run</span> button is switched off. Nothing here is logged. Tap the power switch again to turn monitor mode off; then use <span class="key">Run</span> to take real, recorded measurements.</p>' +
+    '<h3>How to use (recorded measurements)</h3>' +
+    '<p><span class="key">1.</span> Measure the <span class="key">background</span> first: choose <span class="key">No source</span> and run.</p>' +
+    '<p><span class="key">2.</span> Choose a source and run with <span class="key">no absorber</span>.</p>' +
+    '<p><span class="key">3.</span> Add <span class="key">paper</span>: a large drop means alpha is present (paper blocks alpha).</p>' +
+    '<p><span class="key">4.</span> Swap to <span class="key">aluminium</span>: a further large drop means beta is present.</p>' +
+    '<p><span class="key">5.</span> Swap to <span class="key">lead</span>: if a strong count survives paper and aluminium but drops through lead, gamma is present.</p>' +
+    '<p><span class="key">For the inverse-square experiment:</span> remove the absorber, keep the source fixed, and take readings at five or more different distances. The distance graphs then light up.</p>' +
+    '<h3>Graphs</h3>' +
+    '<p>Once you have recorded some readings, press <span class="key">Graphs</span> (above the table) to open a graph window. It can be dragged and resized. The graphs offered <span class="key">depend on what you have measured</span> &mdash; an option only lights up when your readings suit it; the others stay greyed out. This keeps each graph honest: it appears when, and only when, the data can support it.</p>' +
+    '<p><span class="key">Show uncertainties</span> &mdash; tick this box (top of the graph window) to add error bars to every graph, showing how confident each reading is. Short gates give big bars, long gates small ones; on the bar chart each bar also gains its percentage uncertainty. Use it to judge whether two readings really differ or are just scatter.</p>' +
+    '<p><span class="key">Count rate (bars)</span> &mdash; a bar for each reading, available once you have two or more readings taken at the <span class="key">same source and distance</span>. Repeat one setting to see how the count naturally scatters from reading to reading; or step through <span class="key">no absorber &rarr; paper &rarr; aluminium &rarr; lead</span> to see each radiation being stopped. The gate time may change between readings &mdash; count rate already allows for it, and each bar&rsquo;s uncertainty shows how much a longer gate tightens the reading. The background appears as its own bar and as a dashed line, so you can see how far each reading sits above it. If the source or the distance changes, the bars are not comparable and the graph explains what to fix.</p>' +
+    '<p><span class="key">Count distribution</span> &mdash; a histogram showing how repeat readings of the <span class="key">same setup</span> spread out, with the spread that randomness predicts drawn over it as a dashed curve. Repeat one reading 5 or more times, keeping everything fixed. The graph compares the spread of your counts with the prediction; the closer the agreement, the more clearly your data shows that decay is random.</p>' +
+    '<p><span class="key">Count rate vs distance</span>, <span class="key">Count rate vs 1/d&sup2;</span> and <span class="key">1/&radic;(count rate) vs distance</span> &mdash; these are for the <span class="key">inverse-square</span> investigation and appear once you have readings at three or more different distances. The first shows the fall-off, the second tests whether it follows an inverse-square law (a straight line if it does), and the third recovers the small distance offset of the apparatus from where the line crosses the axis. If the absorber or source changed between readings, a note warns you to check the table.</p>' +
+    '<p><span class="key">Count rate vs time</span> and <span class="key">ln(count rate) vs time</span> &mdash; these appear once a half-life run has been taken. The first shows the decay curve; the second straightens it to a line and works out the half-life on screen.</p>' +
+    '<h3>Reading the table</h3>' +
+    '<p>Each run adds a row. <span class="key">Counts</span> is the raw total; <span class="key">count rate</span> is counts divided by the gate time. Subtract the background count rate to get the rate due to the source. Once a background has been measured, the <span class="key">Adjusted</span> column shows each reading with the background already subtracted.</p>' +
+    '<p>The counts fluctuate each time, like a real detector. Look for <span class="key">significant</span> changes &mdash; bigger than the natural scatter of a few per cent &mdash; not tiny ones.</p>';
+  document.getElementById('helpModalOverlay').style.display = 'flex';
+}
+function closeHelpModal() {
+  var ov = document.getElementById('helpModalOverlay');
+  if (ov) ov.style.display = 'none';
+}
+window.showHelpModal = showHelpModal;
+window.closeHelpModal = closeHelpModal;
+</script>
+
+<!-- Resizable Graphs popout with presets (Dice Decay style) -->
+<div class="popout-window" id="absGraphsWindow">
+  <div class="popout-header" id="absGraphsHeader">
+    <span class="popout-title">Graphs</span>
+    <button class="work-close" id="absGraphsClose" title="Close">&times;</button>
+  </div>
+  <div class="graphs-type-selector" id="absGraphsTypeSelector" style="padding:8px 8px 0;"></div>
+  <div style="padding:4px 10px 0; font-size:0.82em; color:#9aa7bd;">
+    <label style="cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent;">
+      <input type="checkbox" id="absGraphsUncert" style="touch-action:manipulation; accent-color:var(--accent); vertical-align:-2px;">
+      Show uncertainties (counting statistics)
+    </label>
+  </div>
+  <div class="popout-body">
+    <canvas id="absGraphsCanvas" width="900" height="540"></canvas>
+  </div>
+  <div class="popout-resize-grip" id="absGraphsResizeGrip" title="Drag to resize"></div>
+</div>
+
+<script>
+/* ============================================================= *
+ * ABSORPTION TAB  (namespace: abs)                              *
+ * Fully self-contained. Models a G-M absorption bench with      *
+ * Poisson counting statistics.                                  *
+ * ============================================================= */
+(function () {
+  "use strict";
+
+  /* ---- Coordinate scaling helper (DC Circuit Builder pattern) ---- */
+  const canvasPoint = (canvas, clientX, clientY) => {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left) * canvas.width / rect.width,
+      y: (clientY - rect.top) * canvas.height / rect.height
+    };
+  };
+
+  /* ---- Physics model -------------------------------------------------
+     Count rate is built from first principles:
+
+       count rate = Activity * solidAngleFraction(window, d+eps)
+                    * intrinsicEfficiency(kind) * branching
+                    * absorberTransmission(kind) * airFactor(kind, d+eps)
+
+     where
+       Activity   : decays/s of the source (school sources ~tens-hundreds kBq)
+       solidAngle : fraction of 4pi the GM window subtends at the TRUE
+                    source-detector separation x = d + eps. This is the
+                    geometric inverse-square term; at bench distances it is
+                    ~1/x^2, and it self-regularises near contact (no blow-up).
+       eps        : fixed apparatus offset (source recessed behind its window
+                    + detection volume recessed inside the tube). Measured on
+                    our bench as 2 cm; students can recover it from a 1/sqrt(C)
+                    vs d plot (x-intercept = -eps).
+       efficiency : a GM tube counts ~95% of alphas / ~90% of betas that enter
+                    the window, but only ~1% of gamma photons. This is why an
+                    equally-active gamma source reads ~100x lower than alpha/beta.
+
+     Calibration: window diameter and activity are chosen (35 mm window,
+     ~76 kBq) so the simulated gamma rate matches real student data taken on
+     our bench (Cs-137 class source: ~4 /s at d=10 cm, ~15 /s at d=4 cm).
+     Window size cannot be derived from eps (independent quantities); it is a
+     typical end-window-tube value, picked with activity to reproduce the
+     measured gamma scale. The numbers are realistic ballpark figures, not a
+     fit to individual points.
+
+     Absorber transmission and air ranges are COMPUTED from real physics
+     (see transmission() and airFactor()); alpha by range, beta by mass-
+     thickness exponential (mu_m = 17*Emax^-1.43), gamma by NIST coefficients. */
+
+  const BACKGROUND = 0.5;            // counts/s, always present
+  const EPS_M = 0.020;               // apparatus offset, metres (2 cm, measured)
+  // The 2 cm geometric offset splits physically into ~1 cm of air in front of
+  // the source window (which the alpha must cross) and ~1 cm of detection depth
+  // recessed inside the GM tube (behind the window - the alpha is caught at the
+  // window, so this part is NOT air the alpha travels). The alpha's air path is
+  // therefore (source-side air + the measured gap to whatever intercepts it),
+  // NOT the full geometric separation. This does not affect the inverse-square
+  // geometry (which uses the full combined offset) or the 1/sqrt(C) vs d offset
+  // recovery (a combined value), only how far the alpha reaches.
+  const SRC_AIR_CM = 1.5;            // cm of air from the source's active layer
+                                     // out to its window. Distance d is measured
+                                     // from the WINDOW, so the alpha's total air
+                                     // path is this source-internal air + d.
+  const WINDOW_RADIUS_M = 0.0175;    // GM end-window radius (35 mm dia), assumed typical
+
+  // Intrinsic detection efficiency of the GM tube per radiation kind.
+  const EFFICIENCY = { alpha: 0.95, beta: 0.90, gamma: 0.01 };
+
+  // Fraction of 4pi subtended by a circular window of radius a at distance x
+  // (both metres). Omega = 2*pi*(1 - x/sqrt(x^2+a^2)); fraction = Omega/4pi.
+  function solidAngleFraction(x_m) {
+    const a = WINDOW_RADIUS_M;
+    const omega = 2 * Math.PI * (1 - x_m / Math.sqrt(x_m * x_m + a * a));
+    return omega / (4 * Math.PI);
+  }
+
+  // Absorber physical properties.
+  const ABSORBERS = {
+    none:   { label: 'None',      tag: 'none',  rho: 0,     t_cm: 0     },
+    idpaper:{ label: 'Paper',     tag: 'paper', rho: 0.90,  t_cm: 0.012 }, // idealised (alpha-only)
+    paper:  { label: 'Paper',     tag: 'paper', rho: 0.90,  t_cm: 0.012 }, // ~0.12 mm, real
+    al:     { label: 'Aluminium', tag: 'al',    rho: 2.70,  t_cm: 0.30  }, // 3 mm
+    al5:    { label: 'Aluminium', tag: 'al',    rho: 2.70,  t_cm: 5.0   }, // 5 cm (thick)
+    pb:     { label: 'Lead',      tag: 'pb',    rho: 11.35, t_cm: 5.0   }  // 5 cm
+  };
+  function massThickness(absKey) {
+    const a = ABSORBERS[absKey];
+    return a.rho * a.t_cm;        // g/cm^2
+  }
+
+  const ABSORBER_LABEL = { none: 'None', idpaper: 'Paper (idealised)', paper: 'Paper (real)', al: 'Aluminium 3 mm', al5: 'Aluminium 5 cm', pb: 'Lead' };
+  const ABSORBER_TAG   = { none: 'none', idpaper: 'paper', paper: 'paper', al: 'al', al5: 'al', pb: 'pb' };
+
+  // Alpha range in g/cm^2 (~5 MeV alpha in unit-density material ~0.004).
+  const ALPHA_RANGE = 0.004;
+
+  // Beta mass attenuation coefficient from endpoint energy (cm^2/g).
+  function betaMu(Emax) { return 17 * Math.pow(Emax, -1.43); }
+
+  // Gamma mass attenuation coefficient (cm^2/g) for a photon energy (MeV),
+  // per absorber. NIST-based anchor values, interpolated log-log in energy.
+  // Tables: {energyMeV: mu_m} for paper(~C/water-like), al, pb.
+  const GAMMA_MU_TABLE = {
+    paper: [[0.06,0.18],[0.66,0.086],[1.25,0.063]],
+    al:    [[0.06,0.28],[0.66,0.0745],[1.25,0.0573]],
+    pb:    [[0.06,7.2],[0.66,0.118],[1.25,0.0589]]
+  };
+  function gammaMu(absKey, E) {
+    if (absKey === 'none') return 0;
+    const tbl = GAMMA_MU_TABLE[absKey];
+    if (!tbl) return 0;
+    if (E <= tbl[0][0]) return tbl[0][1];
+    if (E >= tbl[tbl.length - 1][0]) return tbl[tbl.length - 1][1];
+    for (let i = 0; i < tbl.length - 1; i++) {
+      const [e0, m0] = tbl[i], [e1, m1] = tbl[i + 1];
+      if (E >= e0 && E <= e1) {
+        // log-log interpolation
+        const f = (Math.log(E) - Math.log(e0)) / (Math.log(e1) - Math.log(e0));
+        return Math.exp(Math.log(m0) + f * (Math.log(m1) - Math.log(m0)));
+      }
+    }
+    return tbl[tbl.length - 1][1];
+  }
+
+  // Transmission of one component through an absorber, from real physics.
+  function transmission(comp, absKey) {
+    if (absKey === 'none') return 1;
+    // Idealised paper: the textbook model - stops alpha completely, passes ALL
+    // beta and gamma untouched (no soft-beta absorption). A deliberate teaching
+    // idealisation; switch to real Paper to see the true partial beta absorption.
+    if (absKey === 'idpaper') {
+      return (comp.type === 'alpha') ? 0 : 1;
+    }
+    const xm = massThickness(absKey);
+    if (comp.type === 'alpha') {
+      return (xm > ALPHA_RANGE) ? 0 : 1;
+    }
+    if (comp.type === 'beta') {
+      return Math.exp(-betaMu(comp.Emax) * xm);
+    }
+    if (comp.type === 'gamma') {
+      return Math.exp(-gammaMu(absKey, comp.E) * xm);
+    }
+    return 1;
+  }
+
+  /* ---- Air path physics (distance) -----------------------------------
+     Air is treated as a real absorbing medium: the radiation crosses a path
+     of air whose mass thickness is rho_air * path_length, and each radiation
+     obeys its own attenuation law on that mass thickness - exactly parallel
+     to the solid-absorber treatment in transmission():
+
+       alpha : definite RANGE (not exponential). Geiger relation
+               R(cm) = 0.323 * E^1.5 in air. Detection falls smoothly to
+               zero across a ~1 cm straggling shoulder centred on R (energy
+               spread + range straggling), landing the cut-off in the
+               textbook 3-5 cm band once the apparatus offset is included.
+       beta  : EXPONENTIAL in air mass thickness, same mu_m = 17*Emax^-1.43
+               cm^2/g as for solids. Soft betas (e.g. Co-60 0.318 MeV) are
+               largely gone within tens of cm of air; hard betas (Y-90
+               2.28 MeV) survive the whole bench. This is the energy-
+               dependent reality behind the "~1 m in air" rule of thumb.
+       gamma : EXPONENTIAL in air mass thickness with the real NIST air
+               mass attenuation coefficient. The loss is sub-percent over a
+               metre (air is nearly transparent to gamma), so geometry
+               (inverse-square) dominates - but it is now computed, not
+               assumed.
+
+     x_cm is the true source-detector separation in centimetres. */
+  const RHO_AIR = 0.001205;            // g/cm^3 (dry air, ~20 C)
+
+  // NIST gamma mass attenuation coefficient for AIR (cm^2/g), log-log table.
+  const GAMMA_MU_AIR = [[0.06,0.0287],[0.6,0.00805],[1.0,0.00636],[1.25,0.00569]];
+  function gammaMuAir(E) {
+    const t = GAMMA_MU_AIR;
+    if (E <= t[0][0]) return t[0][1];
+    if (E >= t[t.length-1][0]) return t[t.length-1][1];
+    for (let i = 0; i < t.length-1; i++) {
+      const [e0,m0] = t[i], [e1,m1] = t[i+1];
+      if (E >= e0 && E <= e1) {
+        const f = (Math.log(E)-Math.log(e0)) / (Math.log(e1)-Math.log(e0));
+        return Math.exp(Math.log(m0) + f*(Math.log(m1)-Math.log(m0)));
+      }
+    }
+    return t[t.length-1][1];
+  }
+
+  function alphaAirRange_cm(Ealpha) { return 0.323 * Math.pow(Ealpha, 1.5); }
+
+  function airFactor(comp, x_cm, distance_cm) {
+    if (comp.type === 'alpha') {
+      // The alpha crosses the source-side air (SRC_AIR_CM) plus the measured
+      // gap to the detector - the tube-side recess is behind the window and
+      // is not air the alpha travels through. So its air path is shorter than
+      // the full geometric separation, letting it reach a bit further.
+      const airPath = SRC_AIR_CM + distance_cm;
+      const R = alphaAirRange_cm(comp.Ealpha);
+      const straggle = 0.5;                 // cm, half-width of the fall-off
+      if (airPath <= R - straggle) return 1;
+      if (airPath >= R + straggle) return 0;
+      const f = (airPath - (R - straggle)) / (2 * straggle);
+      return 0.5 * (1 + Math.cos(Math.PI * f));  // smooth cosine shoulder 1 -> 0
+    }
+    if (comp.type === 'beta') {
+      // exponential in air mass thickness, same mu_m as solids
+      const xm = RHO_AIR * x_cm;            // g/cm^2 of air
+      return Math.exp(-betaMu(comp.Emax) * xm);
+    }
+    if (comp.type === 'gamma') {
+      // exponential in air mass thickness with NIST air coefficient (tiny loss)
+      const xm = RHO_AIR * x_cm;
+      return Math.exp(-gammaMuAir(comp.E) * xm);
+    }
+    return 1;
+  }
+
+  /* Source catalogue: REAL isotopes with REAL emissions and energies.
+     A sample emits what its nuclide (plus any in-grown daughters) produces.
+     'emit' is the kind set used for the reveal chips; 'components' carries
+     the physics (each with its energy). 'activity' is in becquerel (decays/s)
+     at realistic school-source levels. Each component carries an intensity
+     'I' = the number of that particle/photon emitted per decay (branching);
+     defaults to 1. Multi-emitters are justified by real nuclear physics:
+     a de-excitation gamma accompanying a decay, a sealed-source capsule
+     absorbing the beta, or an in-grown daughter chain within the sample. */
+  const SOURCES = [
+    { id: 'none', name: 'No source (background)', short: 'No source', activity: 0, emit: [], components: [] },
+    { id: 'po210', name: 'Polonium-210', short: 'Po-210', activity: 80000, emit: ['alpha'],
+      components: [{ type: 'alpha', Ealpha: 5.30, I: 1.0 }] },
+    { id: 'sr90', name: 'Strontium-90', short: 'Sr-90', activity: 75000, emit: ['beta'],
+      // pure beta sample: Sr-90 (0.546) + in-grown Y-90 daughter (2.28), both beta-, no gamma
+      components: [{ type: 'beta', Emax: 0.546, I: 1.0 }, { type: 'beta', Emax: 2.28, I: 1.0 }] },
+    { id: 'cs137', name: 'Caesium-137 (sealed)', short: 'Cs-137', activity: 76000, emit: ['gamma'],
+      // sealed source: beta absorbed by capsule; useful output is the 0.662 MeV gamma (85% per decay, via Ba-137m)
+      components: [{ type: 'gamma', E: 0.662, I: 0.85 }] },
+    { id: 'am241', name: 'Americium-241', short: 'Am-241', activity: 80000, emit: ['alpha', 'gamma'],
+      // 5.49 MeV alpha (100%), plus a low-intensity 59.5 keV gamma (~36% per decay)
+      components: [{ type: 'alpha', Ealpha: 5.49, I: 1.0 }, { type: 'gamma', E: 0.0595, I: 0.36 }] },
+    { id: 'co60', name: 'Cobalt-60', short: 'Co-60', activity: 76000, emit: ['beta', 'gamma'],
+      // beta- 0.318 MeV (100%), two gammas 1.17 & 1.33 MeV (each ~100% per decay)
+      components: [{ type: 'beta', Emax: 0.318, I: 1.0 }, { type: 'gamma', E: 1.17, I: 1.0 }, { type: 'gamma', E: 1.33, I: 1.0 }] },
+    { id: 'ra226', name: 'Radium-226 (+ daughters)', short: 'Ra-226', activity: 80000, emit: ['alpha', 'beta', 'gamma'],
+      // chain-in-sample at secular equilibrium: alphas (Ra/Rn/Po, several per chain),
+      // beta- (Pb-214/Bi-214), gamma (Bi-214 ~0.609 MeV ~45% per decay)
+      components: [{ type: 'alpha', Ealpha: 4.87, I: 3.0 }, { type: 'beta', Emax: 1.51, I: 2.0 }, { type: 'gamma', E: 0.609, I: 0.45 }] },
+    { id: 'pa234m', name: 'Protactinium-234m (freshly separated)', short: 'Pa-234m', activity: 90000, emit: ['beta'],
+      // SHORT-LIVED beta source for the half-life experiment. Accepted half-life
+      // of Pa-234m is 1.159(11) min = 69.5 s (the precise measured value; often
+      // rounded to ~70 s / 1.17 min in textbooks). Only offered in 'Count rate
+      // vs time' mode; decays during a timed run. Pure beta- (Emax ~2.29 MeV).
+      decaying: true, halfLife_s: 69.5,
+      components: [{ type: 'beta', Emax: 2.29, I: 1.0 }] }
+  ];
+
+  /* Mean count rate (counts/s) for a source at the current distance through
+     the current absorber, built from first principles and summed over the
+     source's physical components. distance_cm is the MEASURED source-detector
+     separation (the apparatus offset eps is added to get the true path). */
+  /* Mean (expected) counts accumulated over one gate, accounting for decay
+     DURING the gate. For a constant source this is just rate * gate. For a
+     decaying source the rate falls across the gate, so the true accumulated
+     count is the integral of R0*exp(-lambda*t) over the gate:
+         N = (Rstart / lambda) * (1 - exp(-lambda*T))
+     evaluated from the current decay clock. This is exactly what the tube
+     records; a Poisson sample is then drawn around it for real statistics. */
+  function gateMeanCounts(source, absorberKey, distance_cm, gate_s) {
+    const rateNow = meanRate(source, absorberKey, distance_cm);   // at gate start
+    if (!source.decaying) return rateNow * gate_s;
+    const lambda = Math.LN2 / source.halfLife_s;
+    if (lambda <= 0) return rateNow * gate_s;
+    // background is constant (not decaying) - separate it out
+    const rateSignal = rateNow - BACKGROUND;                      // decaying part at gate start
+    const signalCounts = (rateSignal / lambda) * (1 - Math.exp(-lambda * gate_s));
+    const bgCounts = BACKGROUND * gate_s;
+    return signalCounts + bgCounts;
+  }
+
+  /* Effective activity now. For a decaying source (Pa-234m) the activity falls
+     as A0 * exp(-lambda * t) where t is the physics time since the timed run
+     started; lambda = ln2 / halfLife. Constant sources return A0 unchanged. */
+  function effectiveActivity(source) {
+    if (source.decaying) {
+      const lambda = Math.LN2 / source.halfLife_s;
+      return source.activity * Math.exp(-lambda * state.decayElapsed);
+    }
+    return source.activity;
+  }
+
+  function meanRate(source, absorberKey, distance_cm) {
+    let r = BACKGROUND;
+    if (!source.components.length) return r;
+    const x_cm = distance_cm + EPS_M * 100;          // true separation, cm
+    const x_m  = x_cm / 100;                          // true separation, m
+    const geom = solidAngleFraction(x_m);             // fraction of 4pi at the window
+    const A = effectiveActivity(source);              // decay-adjusted activity
+    for (const c of source.components) {
+      const eff = EFFICIENCY[c.type] || 0;
+      const I   = (typeof c.I === 'number') ? c.I : 1;   // particles/photons per decay
+      r += A * I * geom * eff
+           * transmission(c, absorberKey)               // solid-absorber attenuation
+           * airFactor(c, x_cm, distance_cm);            // air range / air attenuation
+    }
+    return r;
+  }
+
+  /* ---- Poisson sampling ----------------------------------------------
+     Knuth's algorithm for small means; normal approximation for large
+     means (mean > 30) to stay fast and avoid underflow over long gates. */
+  function poisson(mean) {
+    if (mean <= 0) return 0;
+    if (mean < 30) {
+      const L = Math.exp(-mean);
+      let k = 0, p = 1;
+      do { k++; p *= Math.random(); } while (p > L);
+      return k - 1;
+    }
+    // Normal approximation, rounded, clamped at 0.
+    const g = gaussian() * Math.sqrt(mean) + mean;
+    return Math.max(0, Math.round(g));
+  }
+  let _spare = null;
+  function gaussian() {
+    if (_spare !== null) { const s = _spare; _spare = null; return s; }
+    let u, v, s;
+    do { u = Math.random() * 2 - 1; v = Math.random() * 2 - 1; s = u * u + v * v; }
+    while (s >= 1 || s === 0);
+    const mul = Math.sqrt(-2 * Math.log(s) / s);
+    _spare = v * mul;
+    return u * mul;
+  }
+
+  /* ---- State ---- */
+  /* ---- Bench geometry (physical) ----------------------------------
+     The bench maps a real distance in cm to canvas pixels at a fixed
+     scale, so dragging the detector twice as far really doubles the
+     recorded distance. Source and detector each have a cm position
+     measured from the left datum; distance = detector - source. */
+  const CM_MIN = 2, CM_MAX = 44;          // allowed source->detector range
+  const PX_PER_CM = 22;                   // canvas px per cm (fixed scale)
+  const LEFT_DATUM_PX = 110;              // x-pixel of cm = 0 (source travel origin)
+
+  const state = {
+    sourceId: 'am241',
+    absorber: 'none',
+    srcCm: 6,          // source position (cm from datum)
+    detCm: 18,         // detector position (cm from datum); distance = detCm - srcCm
+    absCm: 12,         // absorber position (cm from datum); free between src & det
+    gate: 100,         // s
+    speed: 1,          // playback multiplier; 0 = instant
+    mode: 'single',    // 'single' | 'time' (measurement mode)
+    readings: 12,      // number of readings in a time-series run
+    decayElapsed: 0,   // s of physics time elapsed for a decaying source (time mode)
+    rateUnit: 's',     // s | min | hr
+    revealed: false,
+    running: false,
+    displayCount: 0,   // number currently shown on the detector device window
+    live: false,       // monitor (live) mode: free-running counter, not logged
+    liveCount: 0,      // free-running accumulated count in monitor mode
+    liveLastT: 0,      // timestamp for live accumulation
+    gateElapsed: 0,    // s of gate elapsed (for canvas gate panel)
+    gateTotal: 100,    // s total gate (for canvas gate panel)
+    gateFrac: 0,       // 0..1 progress (for canvas gate panel)
+    rows: []           // {n, sourceName, distance, absorber, gate, counts, rate, isBackground}
+  };
+  let rowCounter = 0;
+
+  function currentDistance() { return state.detCm - state.srcCm; }
+
+  /* ---- DOM ---- */
+  const bench      = document.getElementById('absBench');
+  const ctx        = bench.getContext('2d');
+  const sourceSel  = document.getElementById('absSourceSel');
+  const absorberSel= document.getElementById('absAbsorberSel');
+  const gateSel    = document.getElementById('absGateSel');
+  const speedSeg   = document.getElementById('absSpeedSeg');
+  const unitSeg    = document.getElementById('absUnitSeg');
+  const runBtn     = document.getElementById('absRunBtn');
+  const clearBtn   = document.getElementById('absClearBtn');
+  const revealBtn  = document.getElementById('absRevealBtn');
+  const soundBtn   = document.getElementById('absSoundBtn');
+  const revealCont = document.getElementById('absRevealContent');
+  const tableBody  = document.getElementById('absTableBody');
+  const rateHeader = document.getElementById('absRateHeader');
+  const adjHeader  = document.getElementById('absAdjHeader');
+
+  /* ---- Populate source dropdown ---- */
+  function populateSources() {
+    let html = '';
+    const timeMode = (state.mode === 'time');
+    for (let i = 0; i < SOURCES.length; i++) {
+      const s = SOURCES[i];
+      // Time mode is the decay experiment: offer ONLY the decaying source
+      // (Pa-234m). Background is captured automatically at the start of a run,
+      // and steady-source variability is shown by repeating a single reading,
+      // so constant sources and 'No source' are not needed here.
+      // Single mode offers everything EXCEPT the decaying source (a single
+      // reading of a fast-decaying source is meaningless).
+      if (timeMode) {
+        if (!s.decaying) continue;
+      } else {
+        if (s.decaying) continue;
+      }
+      html += '<option value="' + s.id + '">' + s.name + '</option>';
+    }
+    sourceSel.innerHTML = html;
+    // Snap to a valid source for the mode if the current one isn't offered.
+    if (!sourceSel.querySelector('option[value="' + state.sourceId + '"]')) {
+      state.sourceId = timeMode ? 'pa234m' : 'am241';
+    }
+    sourceSel.value = state.sourceId;
+  }
+  populateSources();
+
+  /* Gate options depend on the selected source. A fast-decaying source
+     (Pa-234m, ~72 s) only makes sense with SHORT gates - a long gate would
+     count for longer than the source survives - so it is offered 5/10/20/30 s.
+     Constant sources keep the full range (up to long gates for weak/distant
+     signals). The current gate is preserved if still valid, else snapped to a
+     sensible default. */
+  const GATES_DECAYING = [5, 10, 20, 30];
+  const GATES_CONSTANT = [10, 30, 60, 100, 300, 600, 1000];
+  function populateGates() {
+    const src = currentSource();
+    const list = (src && src.decaying) ? GATES_DECAYING : GATES_CONSTANT;
+    let html = '';
+    for (let i = 0; i < list.length; i++) {
+      html += '<option value="' + list[i] + '">' + list[i] + ' s</option>';
+    }
+    gateSel.innerHTML = html;
+    if (list.indexOf(state.gate) === -1) {
+      state.gate = (src && src.decaying) ? 10 : 100;
+    }
+    gateSel.value = String(state.gate);
+  }
+  populateGates();
+
+  function currentSource() {
+    for (let i = 0; i < SOURCES.length; i++) {
+      if (SOURCES[i].id === state.sourceId) return SOURCES[i];
+    }
+    return SOURCES[0];
+  }
+
+  /* ---- Reveal panel ---- */
+  function renderReveal() {
+    if (!state.revealed) {
+      revealCont.innerHTML = '<span class="hidden-q">hidden</span>';
+      revealBtn.textContent = 'Reveal';
+      return;
+    }
+    const src = currentSource();
+    if (src.emit.length === 0) {
+      revealCont.innerHTML = '<span class="chip none">background only</span>';
+    } else {
+      let html = '';
+      if (src.emit.indexOf('alpha') >= 0) html += '<span class="chip a">&alpha;</span>';
+      if (src.emit.indexOf('beta')  >= 0) html += '<span class="chip b">&beta;</span>';
+      if (src.emit.indexOf('gamma') >= 0) html += '<span class="chip g">&gamma;</span>';
+      revealCont.innerHTML = html;
+    }
+    revealBtn.textContent = 'Hide';
+  }
+
+  /* ---- Rate unit conversion ---- */
+  function rateInUnit(counts, gate) {
+    const perSec = counts / gate;
+    if (state.rateUnit === 'min') return perSec * 60;
+    if (state.rateUnit === 'hr')  return perSec * 3600;
+    return perSec;
+  }
+  function formatRate(v) {
+    // Sensible significant figures for projection.
+    if (v >= 1000) return Math.round(v).toLocaleString();
+    if (v >= 10)   return v.toFixed(0);
+    if (v >= 1)    return v.toFixed(1);
+    return v.toFixed(2);
+  }
+  // Signed version for the adjusted column: corrected rates can be slightly
+  // negative near background (real Poisson scatter), shown honestly.
+  function formatRateSigned(v) {
+    const sign = (v < 0) ? '\u2212' : '';     // proper minus glyph
+    const a = Math.abs(v);
+    let body;
+    if (a >= 1000) body = Math.round(a).toLocaleString();
+    else if (a >= 10) body = a.toFixed(0);
+    else if (a >= 1)  body = a.toFixed(1);
+    else body = a.toFixed(2);
+    return sign + body;
+  }
+  function rateHeaderText() {
+    if (state.rateUnit === 'min') return 'Count rate / min\u207b\u00b9';
+    if (state.rateUnit === 'hr')  return 'Count rate / hr\u207b\u00b9';
+    return 'Count rate / s\u207b\u00b9';
+  }
+
+  /* ---- Results table ---- */
+  function renderTable() {
+    rateHeader.innerHTML = rateHeaderText();
+    adjHeader.innerHTML = 'Adjusted ' + rateHeaderText().toLowerCase();
+    if (state.rows.length === 0) {
+      tableBody.innerHTML = '<tr class="empty-row"><td colspan="9">No runs yet &mdash; press Run to take a measurement.</td></tr>';
+      return;
+    }
+    const bg = backgroundEstimate();   // counts/s, or null
+    let html = '';
+    for (let i = 0; i < state.rows.length; i++) {
+      const r = state.rows[i];
+      const isLast = (i === state.rows.length - 1);
+      const tag = ABSORBER_TAG[r.absorber];
+      const rate = formatRate(rateInUnit(r.counts, r.gate));
+      // Adjusted = source rate minus background estimate. Not meaningful for
+      // background runs (that IS the background), or before any background
+      // has been measured. Honest sign: may be slightly negative near bg.
+      let adj;
+      if (r.isBackground || bg === null) {
+        adj = '&mdash;';
+      } else {
+        const corrPerSec = r.rate - bg;             // counts/s, may be < 0
+        const corr = (state.rateUnit === 'min') ? corrPerSec * 60
+                   : (state.rateUnit === 'hr')  ? corrPerSec * 3600
+                   : corrPerSec;
+        adj = formatRateSigned(corr);
+      }
+      // Time column: cumulative seconds for timed-series rows, dash for singles.
+      const timeCell = (typeof r.tMid === 'number') ? r.tMid.toFixed(0) : '&mdash;';
+      html +=
+        '<tr class="' + (isLast ? 'latest' : '') + '">' +
+        '<td>' + r.n + '</td>' +
+        '<td>' + r.sourceName + '</td>' +
+        '<td>' + r.distance.toFixed(1) + ' cm</td>' +
+        '<td class="abs-col"><span class="tbl-tag ' + tag + '">' + ABSORBER_LABEL[r.absorber] + '</span></td>' +
+        '<td>' + r.gate + ' s</td>' +
+        '<td>' + timeCell + '</td>' +
+        '<td>' + r.counts.toLocaleString() + '</td>' +
+        '<td>' + rate + '</td>' +
+        '<td>' + adj + '</td>' +
+        '</tr>';
+    }
+    tableBody.innerHTML = html;
+  }
+
+  function logRow(counts, tMid) {
+    rowCounter++;
+    const src = activeSource();
+    const isBackground = (src.id === 'none');   // background measured only with no source
+    state.rows.push({
+      n: rowCounter,
+      sourceName: src.name,
+      distance: Math.round(currentDistance() * 10) / 10,
+      absorber: state.absorber,
+      gate: state.gate,
+      counts: counts,
+      rate: counts / state.gate,                // counts/s for this run
+      isBackground: isBackground,
+      tMid: (typeof tMid === 'number') ? tMid : null   // time stamp (s) for series rows
+    });
+    renderTable();
+    // Update graph availability and live-refresh an open graphs window.
+    if (typeof updateGraphsAvailability === 'function') updateGraphsAvailability();
+    if (graphsWindow && graphsWindow.classList.contains('open')) { populateGraphPresets(); drawGraphsWindow(); }
+    // Scroll newest row into view.
+    const wrap = tableBody.parentElement.parentElement;
+    if (wrap) wrap.scrollTop = wrap.scrollHeight;
+  }
+
+  /* Pooled background estimate from all no-source runs taken so far:
+     total counts / total time (counts/s). Time-weighted, so a long background
+     run counts for more than a short one - the statistically correct pooling
+     for Poisson counts. Returns { rate, sigma, counts, time } or null if no
+     background run has been logged yet. sigma = sqrt(total counts)/total time. */
+  function backgroundStats() {
+    let sumN = 0, sumT = 0;
+    for (let i = 0; i < state.rows.length; i++) {
+      if (state.rows[i].isBackground) { sumN += state.rows[i].counts; sumT += state.rows[i].gate; }
+    }
+    if (sumT <= 0) return null;
+    return { rate: sumN / sumT, sigma: Math.sqrt(sumN) / sumT, counts: sumN, time: sumT };
+  }
+
+  function backgroundEstimate() {
+    const s = backgroundStats();
+    return s ? s.rate : null;
+  }
+
+  /* ---- Counter readout: count shown on the detector device window;
+     gate label + progress are drawn on the bench canvas (see drawGatePanel). ---- */
+  function setCounter(counts, elapsedGate, totalGate, finished) {
+    state.displayCount = counts;
+    state.gateElapsed = elapsedGate;
+    state.gateTotal = totalGate;
+    state.gateFrac = finished ? 1 : (totalGate > 0 ? Math.min(1, elapsedGate / totalGate) : 0);
+    drawBench();
+  }
+
+  /* ---- Geiger click audio (Web Audio, self-contained) ----------------
+     Synthesises the characteristic random clicking of a ratemeter. Clicks
+     are scheduled as a Poisson process at the live DISPLAYED count rate, so
+     a weak source gives sparse ticks and a strong source a dense crackle;
+     above an audible cap the clicks merge into continuous noise, exactly as
+     a real Geiger counter does. No external audio files - each click is a
+     short synthesised noise burst. Respects the Sound on/off toggle. */
+  const geiger = (function () {
+    let ctx = null;
+    let enabled = true;
+    let running = false;
+    let nextClickT = 0;          // scheduling clock (audio time)
+    let timer = null;
+    let liveRate = 0;            // counts/s currently being "heard"
+    const MAX_CLICK_RATE = 70;   // audible cap; above this -> crackle/merge
+
+    function ensureCtx() {
+      if (!ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        ctx = new AC();
+      }
+      if (ctx.state === 'suspended') ctx.resume();
+      return ctx;
+    }
+
+    // One short click: filtered noise burst with a fast decay envelope.
+    function click(when, gain) {
+      if (!ctx) return;
+      const dur = 0.012;
+      const n = Math.floor(ctx.sampleRate * dur);
+      const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) {
+        const env = Math.pow(1 - i / n, 3);     // sharp decay
+        d[i] = (Math.random() * 2 - 1) * env;
+      }
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = 2200; bp.Q.value = 0.8;
+      const g = ctx.createGain();
+      g.gain.value = gain;
+      src.connect(bp); bp.connect(g); g.connect(ctx.destination);
+      src.start(when);
+      src.stop(when + dur);
+    }
+
+    // Scheduler: look ahead ~120 ms and place clicks as a Poisson process at
+    // the (capped) live rate. Runs on a short interval timer.
+    function schedule() {
+      if (!running || !enabled || !ctx) return;
+      const horizon = ctx.currentTime + 0.12;
+      const effRate = Math.min(liveRate, MAX_CLICK_RATE);
+      // softer clicks when very dense so the crackle doesn't clip
+      const gain = effRate > 40 ? 0.18 : 0.32;
+      if (effRate <= 0) { nextClickT = ctx.currentTime; return; }
+      while (nextClickT < horizon) {
+        if (nextClickT > ctx.currentTime) click(nextClickT, gain);
+        // exponential inter-arrival time -> Poisson clicks
+        const u = Math.random();
+        nextClickT += -Math.log(1 - u) / effRate;
+      }
+    }
+
+    return {
+      setEnabled(on) {
+        enabled = on;
+        if (!on && timer) { clearInterval(timer); timer = null; }
+        if (on && running) this._startTimer();
+      },
+      isEnabled() { return enabled; },
+      _startTimer() {
+        if (timer) return;
+        timer = setInterval(schedule, 50);
+      },
+      start() {
+        if (!enabled) return;
+        if (!ensureCtx()) return;
+        running = true;
+        nextClickT = ctx.currentTime;
+        this._startTimer();
+      },
+      // live count rate the ear should hear (already speed-scaled by caller)
+      setRate(r) { liveRate = (r > 0) ? r : 0; },
+      stop() {
+        running = false;
+        liveRate = 0;
+        if (timer) { clearInterval(timer); timer = null; }
+      }
+    };
+  })();
+
+  /* ---- Run cycle ----
+     A measurement is one or more gated readings. 'Single reading' mode takes
+     one. 'Count rate vs time' mode takes state.readings back-to-back readings,
+     advancing the decay clock by one gate between them and logging each with a
+     mid-interval time stamp, so a decaying source (Pa-234m) traces a real decay
+     curve and constant sources show a flat, fluctuating line. */
+  let runAnim = null;
+  let _series = null;   // active time-series controller, or null
+
+  function startRun() {
+    if (state.running) return;
+    if (state.live) { state.live = false; geiger.stop(); }
+
+    if (state.mode === 'time') {
+      // A timed run is one self-contained experiment (background + decay series).
+      // Clear any existing rows first so the table and graph show only this run
+      // - mixing in old readings would corrupt the fit and the half-life.
+      state.rows = [];
+      rowCounter = 0;
+      renderTable();
+      updateGraphsAvailability();
+      if (graphsWindow.classList.contains('open')) drawGraphsWindow();
+      // A timed run opens with ONE background gate measured with the source
+      // absent (you measure background before the source is introduced - you
+      // cannot measure it with an active, decaying source in place). After the
+      // background gate the source is "freshly separated" and the decay series
+      // begins from a zeroed decay clock.
+      state.decayElapsed = 0;
+      _series = { i: 0, n: state.readings, bg: true };
+    } else {
+      _series = null;
+    }
+    beginReading();
+  }
+
+  /* The source in play for the current gate: during a timed run's opening
+     background gate the source is absent, so the tube sees background only. */
+  function activeSource() {
+    if (_series && _series.bg) return SOURCES[0];   // 'none' (background)
+    return currentSource();
+  }
+
+  function beginReading() {
+    state.running = true;
+    runBtn.disabled = true;
+    runBtn.textContent = (_series && _series.bg)
+      ? 'Background\u2026'
+      : (_series
+          ? ('Reading ' + (_series.i + 1) + ' of ' + _series.n + '\u2026')
+          : 'Counting\u2026');
+    lockControls(true);
+
+    const src = activeSource();
+    const totalGate = state.gate;
+    const gateStartDecay = state.decayElapsed;   // decay clock at the start of this gate
+
+    if (state.speed === 0) {
+      // Instant: the genuine accumulated count over the whole gate (decay
+      // integrated across the gate for a decaying source), Poisson-sampled.
+      const finalCounts = poisson(gateMeanCounts(src, state.absorber, currentDistance(), totalGate));
+      setCounter(finalCounts, totalGate, totalGate, true);
+      readingDone(finalCounts);
+      return;
+    }
+
+    const rate0 = meanRate(src, state.absorber, currentDistance());  // at gate start (for sound)
+    geiger.start();
+    geiger.setRate(rate0 * state.speed);
+
+    let physElapsed = 0, counts = 0, lastNow = performance.now();
+    function frame(now) {
+      if (!state.running) return;
+      const dtReal = (now - lastNow) / 1000;
+      lastNow = now;
+      let dtPhys = dtReal * state.speed;
+      if (physElapsed + dtPhys > totalGate) dtPhys = totalGate - physElapsed;
+      if (dtPhys > 0) {
+        // Advance the decay clock WITHIN the gate so the rate falls across it
+        // (a decaying source visibly slows even during one reading). For a
+        // constant source this is just the steady rate.
+        state.decayElapsed = gateStartDecay + physElapsed + dtPhys / 2;  // midpoint of this step
+        const rNow = meanRate(src, state.absorber, currentDistance());
+        counts += poisson(rNow * dtPhys);
+        physElapsed += dtPhys;
+        geiger.setRate(rNow * state.speed);
+      }
+      const done = physElapsed >= totalGate - 1e-9;
+      setCounter(counts, physElapsed, totalGate, done);
+      drawBench();
+      if (!done) { runAnim = requestAnimationFrame(frame); }
+      else {
+        state.decayElapsed = gateStartDecay;   // restore; readingDone advances by full gate
+        readingDone(counts);
+      }
+    }
+    runAnim = requestAnimationFrame(frame);
+  }
+
+  // One reading finished: log it (with a time stamp if in a series), then either
+  // advance the series to the next reading or finish.
+  function readingDone(finalCounts) {
+    geiger.stop();
+    setCounter(finalCounts, state.gate, state.gate, true);
+
+    if (_series && _series.bg) {
+      // Opening background gate just finished: log it as a background row (no
+      // time stamp - it sits before the decay clock starts), then the source is
+      // freshly separated and the decay series begins from t = 0.
+      logRow(finalCounts);
+      _series.bg = false;
+      state.decayElapsed = 0;
+      if (state.speed === 0) { beginReading(); }
+      else { setTimeout(beginReading, 120); }
+      return;
+    }
+
+    if (_series) {
+      // Time stamp at the MIDPOINT of this counting interval (best estimate of
+      // the time the mean rate applies to): i*gate + gate/2.
+      const tMid = _series.i * state.gate + state.gate / 2;
+      logRow(finalCounts, tMid);
+      _series.i++;
+      // advance the decay clock by one full gate for the next reading
+      state.decayElapsed += state.gate;
+      if (_series.i < _series.n) {
+        if (state.speed === 0) { beginReading(); }
+        else { setTimeout(beginReading, 120); }
+        return;
+      }
+      _series = null;
+    } else {
+      logRow(finalCounts);
+    }
+    finishRun();
+  }
+
+  function finishRun() {
+    state.running = false;
+    state.decayElapsed = 0;
+    runBtn.disabled = false;
+    runBtn.textContent = (state.mode === 'time') ? 'Start' : 'Run';
+    lockControls(false);
+    drawBench();
+  }
+
+  function lockControls(lock) {
+    // Source, absorber and gate define the measurement and must not change
+    // mid-run. Speed is playback-only (it does not affect the physics), so it
+    // stays live - the teacher can speed up or slow down a count in progress.
+    sourceSel.disabled = lock;
+    absorberSel.disabled = lock;
+    gateSel.disabled = lock;
+    if (readingsInput) readingsInput.disabled = lock;
+    const modeBtns = modeSeg ? modeSeg.querySelectorAll('button') : [];
+    for (let i = 0; i < modeBtns.length; i++) modeBtns[i].disabled = lock;
+  }
+
+  /* ============================================================= *
+   * Bench drawing  (geometry-driven; no radiation animation so the *
+   * apparatus gives nothing away)                                  *
+   * ============================================================= */
+
+  // Vertical layout constants
+  function benchSurfaceY() { return bench.height * 0.70; }
+  function deviceMidY()    { return bench.height * 0.44; }
+
+  // cm -> canvas x
+  function cmToX(cm) { return LEFT_DATUM_PX + cm * PX_PER_CM; }
+
+  // Handle hit regions (computed each draw, used by drag code)
+  let _srcHandle = { x: 0, y: 0, r: 26 };
+  let _detHandle = { x: 0, y: 0, r: 30 };
+  let _absHandle = null;
+  let _absHandleY = 0;
+  let _liveToggle = null;
+
+  function drawBench() {
+    const W = bench.width, H = bench.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const benchY = benchSurfaceY();
+    const midY = deviceMidY();
+
+    // Bench surface
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    ctx.fillRect(0, benchY, W, H - benchY);
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, benchY); ctx.lineTo(W, benchY); ctx.stroke();
+
+    const src = currentSource();
+    const srcX = cmToX(state.srcCm);
+    const detX = cmToX(state.detCm);
+    // Keep the absorber within the beam, respecting solid edges.
+    if (state.absorber !== 'none') {
+      const lo = absMinCm();   // flush against source allowed
+      const hi = absMaxCm();
+      if (lo <= hi) {
+        if (state.absCm < lo) state.absCm = lo;
+        if (state.absCm > hi) state.absCm = hi;
+      } else {
+        state.absCm = (state.srcCm + state.detCm) / 2;
+      }
+    }
+    const absX = cmToX(state.absCm);   // absorber freely positioned in the beam
+
+    // Beam baseline (faint guide, no moving marks)
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+    ctx.setLineDash([2, 6]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(srcX + 14, midY); ctx.lineTo(detX, midY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    drawAbsorber(absX, midY, benchY);
+    drawSource(srcX, midY, benchY, src);
+    drawDetector(detX, midY, benchY);
+    drawDistanceDim(srcX, detX, benchY);
+    drawGatePanel();
+
+    _srcHandle = { x: srcX, y: midY, r: 26 };
+    _detHandle = { x: detX, y: midY, r: 30 };
+    _absHandle = (state.absorber === 'none') ? null : { x: absX, y: _absHandleY, r: 18 };
+  }
+
+  /* Gate label + progress bar, drawn top-left on the canvas (replaces the
+     old HTML gate panel to save vertical space). */
+  function drawGatePanel() {
+    const x = 22, y = 20, w = 150, h = 54;
+    // panel
+    ctx.fillStyle = 'rgba(10,18,32,0.66)';
+    ctx.strokeStyle = 'rgba(52,211,153,0.30)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x, y, w, h, 8); else ctx.rect(x, y, w, h);
+    ctx.fill(); ctx.stroke();
+    // label
+    ctx.fillStyle = '#9fd9c2';
+    ctx.font = '600 10px -apple-system,sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('GATE', x + 12, y + 17);
+    // elapsed / total
+    ctx.fillStyle = '#e6f1ec';
+    ctx.font = '600 15px -apple-system,sans-serif';
+    ctx.fillText(state.gateElapsed.toFixed(1) + ' / ' + state.gateTotal.toFixed(0) + ' s', x + 12, y + 35);
+    // progress track + fill
+    const tx = x + 12, ty = y + 44, tw = w - 24, th = 5;
+    ctx.fillStyle = 'rgba(255,255,255,0.10)';
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(tx, ty, tw, th, 3); else ctx.rect(tx, ty, tw, th);
+    ctx.fill();
+    ctx.fillStyle = '#34d399';
+    ctx.beginPath();
+    const fw = Math.max(0, Math.min(1, state.gateFrac)) * tw;
+    if (ctx.roundRect) ctx.roundRect(tx, ty, fw, th, 3); else ctx.rect(tx, ty, fw, th);
+    ctx.fill();
+  }
+
+  // True while a timed run's opening background gate is being counted (source
+  // not yet introduced - the holder is shown empty so it is clear the count is
+  // genuine background, not the source).
+  function isBackgroundPhase() { return !!(_series && _series.bg); }
+
+  function drawSource(x, y, benchY, src) {
+    const grabbed = (_dragging === 'src');
+    const bgPhase = isBackgroundPhase();
+    // Stand
+    ctx.fillStyle = '#1f2d47';
+    ctx.fillRect(x - 5, y, 10, benchY - y);
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    // The source POSITION (srcX) is the WINDOW (aperture facing the detector),
+    // since distance is measured from the window. The drum body sits BEHIND the
+    // window, drawn shifted 11px left so the aperture (local +11) lands on srcX.
+    // Visual only - currentDistance() and the physics are unchanged.
+    const drumX = x - 11;
+    ctx.fillRect(drumX - 22, benchY - 6, 44, 6);
+    // Source holder (small drum) — neutral colour so emission is hidden
+    ctx.save();
+    ctx.translate(drumX, y);
+    ctx.fillStyle = bgPhase ? '#2c3650' : '#46506a';   // dimmer when empty
+    ctx.strokeStyle = grabbed ? 'rgba(52,211,153,0.9)' : 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = grabbed ? 3 : 2;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(-15, -16, 26, 32, 6);
+    else ctx.rect(-15, -16, 26, 32);
+    ctx.fill(); ctx.stroke();
+    if (bgPhase) {
+      // Empty holder: show a hollow recess instead of the source aperture.
+      ctx.fillStyle = '#19223a';
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(-9, -10, 16, 20, 4);
+      else ctx.rect(-9, -10, 16, 20);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1; ctx.stroke();
+    } else {
+      // little aperture facing the detector
+      ctx.fillStyle = '#2a3346';
+      ctx.beginPath(); ctx.ellipse(11, 0, 3, 9, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+    // Label + drag affordance (over the drum body, at drumX)
+    if (bgPhase) {
+      ctx.fillStyle = '#9fb4c9';
+      ctx.font = '600 12px -apple-system,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('source removed', drumX, y - 28);
+      ctx.fillStyle = '#7c8aa3';
+      ctx.font = 'italic 10px -apple-system,sans-serif';
+      ctx.fillText('measuring background', drumX, y - 16);
+    } else {
+      ctx.fillStyle = grabbed ? '#34d399' : '#cbd5e1';
+      ctx.font = '600 13px -apple-system,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(src.short || 'Source', drumX, y - 28);
+      drawGrabDots(drumX, y - 16);
+    }
+  }
+
+  function drawAbsorber(x, y, benchY) {
+    if (state.absorber === 'none') {
+      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+      ctx.setLineDash([4, 5]); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, y - 50); ctx.lineTo(x, benchY); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(255,255,255,0.28)';
+      ctx.font = 'italic 12px -apple-system,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('(no absorber)', x, y - 58);
+      return;
+    }
+    let w, col, edge, label;
+    if (state.absorber === 'idpaper') { w = 6; col = '#eef0e6'; edge = '#9fb8a0'; label = 'Paper (ideal)'; }
+    else if (state.absorber === 'paper') { w = 6;  col = '#e8e3d4'; edge = '#bcb49a'; label = 'Paper'; }
+    else if (state.absorber === 'al') { w = 14; col = '#aab4c2'; edge = '#7c8a9c'; label = 'Aluminium 3 mm'; }
+    else if (state.absorber === 'al5') { w = 30; col = '#aab4c2'; edge = '#7c8a9c'; label = 'Aluminium 5 cm'; }
+    else { w = 30; col = '#5c6675'; edge = '#3b424e'; label = 'Lead 5 cm'; }
+
+    const grabbed = (_dragging === 'abs');
+    const top = y - 54, bot = benchY;
+    ctx.fillStyle = col;
+    ctx.strokeStyle = grabbed ? 'rgba(52,211,153,0.9)' : edge;
+    ctx.lineWidth = grabbed ? 3 : 2;
+    ctx.beginPath(); ctx.rect(x - w / 2, top, w, bot - top); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.fillRect(x + w / 2 - 4, top, 4, bot - top);
+    ctx.fillStyle = grabbed ? '#34d399' : '#cbd5e1';
+    ctx.font = '600 12px -apple-system,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, x, top - 8);
+
+    // Circular drag handle just below the bench line (probe-handle style):
+    // a clear, non-overlapping grab target so the absorber is always grabbable.
+    const hy = bot + 16;
+    ctx.beginPath();
+    ctx.arc(x, hy, 9, 0, 2 * Math.PI);
+    ctx.fillStyle = grabbed ? '#34d399' : '#7c8a9c';
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.lineWidth = 2;
+    ctx.fill(); ctx.stroke();
+    // grip ticks
+    ctx.strokeStyle = grabbed ? '#0b3b2c' : '#2a3346';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x - 3, hy - 3); ctx.lineTo(x - 3, hy + 3);
+    ctx.moveTo(x,     hy - 3); ctx.lineTo(x,     hy + 3);
+    ctx.moveTo(x + 3, hy - 3); ctx.lineTo(x + 3, hy + 3);
+    ctx.stroke();
+    _absHandleY = hy;
+  }
+
+  /* Detector = G-M tube + a physical counter box wired to it, with a
+     recessed window showing the running count. The whole assembly moves
+     together as one draggable unit. */
+  function drawDetector(x, y, benchY) {
+    const grabbed = (_dragging === 'det');
+    // Stand under the tube
+    ctx.fillStyle = '#1f2d47';
+    ctx.fillRect(x + 16, y + 6, 10, benchY - (y + 6));
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(x, benchY - 6, 44, 6);
+
+    // G-M tube body (faces the source: window on its LEFT end)
+    ctx.save();
+    ctx.translate(x, y);
+    const grd = ctx.createLinearGradient(0, -15, 0, 15);
+    grd.addColorStop(0, '#9aa7bd'); grd.addColorStop(0.5, '#cbd5e1'); grd.addColorStop(1, '#7c8aa3');
+    ctx.fillStyle = grd;
+    ctx.strokeStyle = grabbed ? 'rgba(52,211,153,0.9)' : 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = grabbed ? 3 : 2;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(0, -14, 64, 28, 8);
+    else ctx.rect(0, -14, 64, 28);
+    ctx.fill(); ctx.stroke();
+    // mica window facing source
+    ctx.beginPath(); ctx.ellipse(0, 0, 5, 14, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#2a3a52'; ctx.fill();
+    ctx.strokeStyle = 'rgba(52,211,153,0.5)'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.restore();
+
+    // Counter device box sitting to the RIGHT of the tube
+    const boxX = x + 78, boxTop = y - 26, boxW = 96, boxH = 58;
+    // cable from tube to box
+    ctx.strokeStyle = '#2a3346'; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x + 64, y + 6);
+    ctx.bezierCurveTo(x + 72, y + 22, boxX - 6, boxTop + boxH + 8, boxX + 8, boxTop + boxH);
+    ctx.stroke();
+    // box body
+    ctx.save();
+    const bgrd = ctx.createLinearGradient(0, boxTop, 0, boxTop + boxH);
+    bgrd.addColorStop(0, '#243349'); bgrd.addColorStop(1, '#16203a');
+    ctx.fillStyle = bgrd;
+    ctx.strokeStyle = grabbed ? 'rgba(52,211,153,0.9)' : 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = grabbed ? 3 : 2;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(boxX, boxTop, boxW, boxH, 8);
+    else ctx.rect(boxX, boxTop, boxW, boxH);
+    ctx.fill(); ctx.stroke();
+    // recessed count window
+    const winX = boxX + 9, winY = boxTop + 12, winW = boxW - 18, winH = 26;
+    ctx.fillStyle = '#06140f';
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(winX, winY, winW, winH, 4);
+    else ctx.rect(winX, winY, winW, winH);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 1; ctx.stroke();
+    // the count, seven-segment-ish green
+    ctx.fillStyle = '#34d399';
+    ctx.font = '700 19px ui-monospace,Menlo,Consolas,monospace';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(state.displayCount), winX + winW - 7, winY + winH / 2 + 1);
+    ctx.textBaseline = 'alphabetic';
+    // "COUNTS" caption (or RATE-monitor hint when live)
+    ctx.fillStyle = '#7c8aa3';
+    ctx.font = '600 8px -apple-system,sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(state.live ? 'COUNTS (live)' : 'COUNTS', winX + 1, boxTop + boxH - 5);
+    ctx.restore();
+
+    // LIVE power toggle + lamp, top-right corner of the counter box.
+    const tgX = boxX + boxW - 16, tgY = boxTop + 10;
+    ctx.beginPath();
+    ctx.arc(tgX, tgY, 6, 0, 2 * Math.PI);
+    ctx.fillStyle = state.live ? '#34d399' : '#3b4658';
+    ctx.fill();
+    ctx.strokeStyle = state.live ? '#0b3b2c' : '#5c6675';
+    ctx.lineWidth = 1.5; ctx.stroke();
+    // power glyph
+    ctx.strokeStyle = state.live ? '#06140f' : '#9fb0c4';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.arc(tgX, tgY + 0.5, 3, -Math.PI * 0.4, Math.PI * 1.4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(tgX, tgY - 3.5); ctx.lineTo(tgX, tgY); ctx.stroke();
+    _liveToggle = { x: tgX, y: tgY, r: 12 };
+
+    // Label above
+    ctx.fillStyle = grabbed ? '#34d399' : '#cbd5e1';
+    ctx.font = '600 13px -apple-system,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('G-M tube + counter', x + 40, y - 22);
+    drawGrabDots(x + 32, y - 12);
+
+    // LIVE lamp + 'not recorded' caption when in monitor mode.
+    if (state.live) {
+      ctx.fillStyle = '#34d399';
+      ctx.font = '700 9px -apple-system,sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('\u25CF LIVE', boxX, boxTop - 8);
+      ctx.fillStyle = '#9fb4c9';
+      ctx.font = 'italic 9px -apple-system,sans-serif';
+      ctx.fillText('monitor \u2014 not recorded', boxX + 42, boxTop - 8);
+    }
+  }
+
+  // Small "grippable" dots to signal a handle is draggable.
+  function drawGrabDots(cx, cy) {
+    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath(); ctx.arc(cx + i * 5, cy, 1.4, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  function drawDistanceDim(srcX, detX, benchY) {
+    const y = benchY + 24;
+    ctx.strokeStyle = 'rgba(52,211,153,0.7)';
+    ctx.fillStyle = 'rgba(52,211,153,0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(srcX, y); ctx.lineTo(detX, y); ctx.stroke();
+    arrowHead(srcX, y, -1); arrowHead(detX, y, 1);
+    ctx.strokeStyle = 'rgba(52,211,153,0.3)';
+    ctx.beginPath(); ctx.moveTo(srcX, benchY); ctx.lineTo(srcX, y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(detX, benchY); ctx.lineTo(detX, y); ctx.stroke();
+    ctx.fillStyle = '#9fd9c2';
+    ctx.font = '600 14px -apple-system,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(currentDistance().toFixed(1) + ' cm', (srcX + detX) / 2, y + 17);
+  }
+  function arrowHead(x, y, dir) {
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + dir * 8, y - 4);
+    ctx.lineTo(x + dir * 8, y + 4);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  /* ---- Idle redraw loop (cheap; no animation, just keeps the canvas in
+     sync after drags/state changes without per-event redraw bookkeeping). */
+  function idleLoop() {
+    if (state.live && !state.running) {
+      // Accumulate genuine Poisson counts at the live rate; counter climbs.
+      const now = performance.now();
+      const dt = Math.min(0.1, (now - state.liveLastT) / 1000);  // s, capped
+      state.liveLastT = now;
+      const rate = meanRate(currentSource(), state.absorber, currentDistance());
+      if (dt > 0) state.liveCount += poisson(rate * dt);
+      state.displayCount = state.liveCount;
+      geiger.setRate(rate);                     // crackle density tracks live rate
+    }
+    if (!state.running) drawBench();
+    requestAnimationFrame(idleLoop);
+  }
+
+  /* ============================================================= *
+   * Event wiring                                                  *
+   * ============================================================= */
+  sourceSel.addEventListener('change', () => {
+    state.sourceId = sourceSel.value;
+    state.revealed = false;       // re-hide when source changes
+    populateGates();              // gate options depend on the source
+    renderReveal();
+    drawBench();
+  });
+  absorberSel.addEventListener('change', () => {
+    const wasNone = (state.absorber === 'none');
+    state.absorber = absorberSel.value;
+    // When an absorber is freshly placed (from None), centre it in the beam;
+    // the student can then drag it anywhere between source and detector.
+    if (wasNone && state.absorber !== 'none') {
+      state.absCm = Math.round((state.srcCm + state.detCm) / 2);
+    }
+    drawBench();
+  });
+
+  /* ---- Dragging the source / detector along the bench --------------
+     DC Circuit Builder touch pattern: canvasPoint scaling, generous hit
+     radius, both mouse and touch with {passive:false}+preventDefault and
+     a single-touch guard, touchcancel mirroring mouseup. No long-press or
+     double-tap (pure drag). Locked while a run is in progress. */
+  let _dragging = null;     // 'src' | 'det' | 'abs' | null
+  let _grabDx = 0;          // offset (cm) between grab point and handle centre
+
+  function hitHandle(px, py) {
+    // Absorber grip handle (circle below the bench) - clear, separate target.
+    if (_absHandle) {
+      const ax = px - _absHandle.x, ay = py - _absHandle.y;
+      if (ax * ax + ay * ay <= _absHandle.r * _absHandle.r) return 'abs';
+    }
+    // Detector (its box extends right and is larger).
+    let dx = px - _detHandle.x, dy = py - _detHandle.y;
+    if (dx * dx + dy * dy <= (_detHandle.r * _detHandle.r) ||
+        (px >= _detHandle.x - 6 && px <= _detHandle.x + 180 &&
+         py >= _detHandle.y - 30 && py <= _detHandle.y + 40)) {
+      return 'det';
+    }
+    dx = px - _srcHandle.x; dy = py - _srcHandle.y;
+    if (dx * dx + dy * dy <= (_srcHandle.r * _srcHandle.r) ||
+        (px >= _srcHandle.x - 22 && px <= _srcHandle.x + 18 &&
+         py >= _srcHandle.y - 20 && py <= _srcHandle.y + 40)) {
+      return 'src';
+    }
+    return null;
+  }
+
+  function dragStart(px, py) {
+    if (state.running) return false;
+    // Live monitor toggle (power switch on the counter) - tap to flip.
+    if (_liveToggle) {
+      const lx = px - _liveToggle.x, ly = py - _liveToggle.y;
+      if (lx * lx + ly * ly <= _liveToggle.r * _liveToggle.r) {
+        toggleLive();
+        return true;
+      }
+    }
+    const hit = hitHandle(px, py);
+    if (!hit) return false;
+    _dragging = hit;
+    const cm = (px - LEFT_DATUM_PX) / PX_PER_CM;
+    _grabDx = cm - (hit === 'src' ? state.srcCm : hit === 'det' ? state.detCm : state.absCm);
+    drawBench();
+    return true;
+  }
+
+  /* Live monitor mode: free-running counter that climbs continuously at the
+     live count rate, never logged. Toggling on resets the count to 0 and
+     starts the Geiger crackle; toggling off freezes the number and stops
+     the sound. The rate of climb (and crackle density) tracks the current
+     geometry and absorber, so moving the tube or dropping in a material
+     changes how fast the counter rises - just like a real ratemeter. */
+  function toggleLive() {
+    state.live = !state.live;
+    if (state.live) {
+      state.liveCount = 0;
+      state.displayCount = 0;
+      state.liveLastT = performance.now();
+      if (geiger.isEnabled()) { geiger.start(); }
+      // Can't take a formal measurement while monitoring - disable Run.
+      runBtn.disabled = true;
+      runBtn.classList.add('run-monitoring');
+      runBtn.textContent = 'Monitoring\u2026';
+    } else {
+      geiger.stop();
+      runBtn.disabled = false;
+      runBtn.classList.remove('run-monitoring');
+      runBtn.textContent = 'Run';
+    }
+    drawBench();
+  }
+
+  /* Soft magnetic snap to whole cm: the position follows the cursor
+     continuously (smooth), but when within SNAP_WIN of a cm mark it is
+     eased onto that mark, so it glides and clicks gently into each cm. */
+  function softSnapCm(cm) {
+    const SNAP_WIN = 0.3;             // cm: within this of a mark, magnet engages
+    const nearest = Math.round(cm);
+    const d = cm - nearest;
+    if (Math.abs(d) <= SNAP_WIN) {
+      // ease toward the mark: cubic pull, strongest near the mark
+      const t = d / SNAP_WIN;         // -1..1
+      return nearest + d * (t * t);   // pulls in, reaching the mark at d=0
+    }
+    return cm;
+  }
+
+  function dragMove(px, py) {
+    if (!_dragging) return;
+    let cm = (px - LEFT_DATUM_PX) / PX_PER_CM - _grabDx;
+    cm = softSnapCm(cm);              // smooth follow + soft cm magnet
+    if (_dragging === 'src') {
+      const maxCm = state.detCm - CM_MIN;
+      if (cm < 0) cm = 0;
+      if (cm > maxCm) cm = maxCm;
+      state.srcCm = cm;
+      // Source is solid: push the absorber ahead of it if it would overlap.
+      if (state.absorber !== 'none') {
+        const minAbs = absMinCm();
+        if (state.absCm < minAbs) state.absCm = minAbs;
+      }
+    } else if (_dragging === 'det') {
+      const minCm = state.srcCm + CM_MIN;
+      const maxCm = state.srcCm + CM_MAX;
+      if (cm < minCm) cm = minCm;
+      if (cm > maxCm) cm = maxCm;
+      state.detCm = cm;
+      // Detector is solid: push the absorber back if it would overlap.
+      if (state.absorber !== 'none') {
+        const maxAbs = absMaxCm();
+        if (state.absCm > maxAbs) state.absCm = maxAbs;
+      }
+    } else {
+      // Absorber as a solid object: its near edge may sit flush against the
+      // source (so paper can intercept the alpha at the window); its far edge
+      // stops just short of the tube with a small visible gap.
+      const minCm = absMinCm();
+      const maxCm = absMaxCm();
+      if (minCm <= maxCm) {
+        if (cm < minCm) cm = minCm;
+        if (cm > maxCm) cm = maxCm;
+      } else {
+        cm = (state.srcCm + state.detCm) / 2;            // too tight: sit mid-beam
+      }
+      state.absCm = cm;
+    }
+    drawBench();
+  }
+
+  /* Half-width of the current absorber slab, in cm (for solid-object clamps). */
+  function absHalfCm() {
+    const a = state.absorber;
+    const halfPx = (a === 'paper' || a === 'idpaper') ? 3
+                 : (a === 'al')    ? 7
+                 : 15;                                    // al5 / pb (30px wide)
+    return halfPx / PX_PER_CM;
+  }
+
+  /* Minimum absorber centre (cm) so its near edge sits flush against the
+     source holder window - no air gap, so paper can intercept the alpha right
+     as it emerges. Half the slab width keeps the graphic from overlapping the
+     holder. */
+  function absMinCm() {
+    const SRC_EDGE = 11 / PX_PER_CM;        // source holder front face
+    return state.srcCm + SRC_EDGE + absHalfCm();
+  }
+  /* Maximum absorber centre (cm) so its far edge stops just short of the tube
+     with a small visible gap. */
+  function absMaxCm() {
+    const GAP = 0.25;
+    return state.detCm - absHalfCm() - GAP;
+  }
+
+  function dragEnd() {
+    if (_dragging) {
+      // Settle to 0.1 cm. The soft magnet has already eased the position onto
+      // a whole cm if it was released near one; otherwise it honestly rests at
+      // the in-between value (read to 1 dp).
+      state.srcCm = Math.round(state.srcCm * 10) / 10;
+      state.detCm = Math.round(state.detCm * 10) / 10;
+      state.absCm = Math.round(state.absCm * 10) / 10;
+      _dragging = null;
+      drawBench();
+    }
+  }
+
+  // Mouse
+  bench.addEventListener('mousedown', (e) => {
+    const p = canvasPoint(bench, e.clientX, e.clientY);
+    if (dragStart(p.x, p.y)) e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!_dragging) return;
+    const p = canvasPoint(bench, e.clientX, e.clientY);
+    dragMove(p.x, p.y);
+  });
+  document.addEventListener('mouseup', dragEnd);
+
+  // Touch (DC pattern)
+  bench.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const p = canvasPoint(bench, t.clientX, t.clientY);
+    if (dragStart(p.x, p.y)) e.preventDefault();
+  }, { passive: false });
+  bench.addEventListener('touchmove', (e) => {
+    if (!_dragging) return;
+    if (e.touches.length !== 1) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    const p = canvasPoint(bench, t.clientX, t.clientY);
+    dragMove(p.x, p.y);
+  }, { passive: false });
+  bench.addEventListener('touchend', (e) => { e.preventDefault(); dragEnd(); }, { passive: false });
+  bench.addEventListener('touchcancel', dragEnd, { passive: true });
+
+  gateSel.addEventListener('change', () => {
+    state.gate = parseInt(gateSel.value, 10);
+    if (!state.running) setCounter(state.displayCount, 0, state.gate, false);
+  });
+
+  speedSeg.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn || btn.disabled) return;
+    const segBtns = speedSeg.querySelectorAll('button');
+    for (let i = 0; i < segBtns.length; i++) segBtns[i].classList.remove('active');
+    btn.classList.add('active');
+    state.speed = parseInt(btn.getAttribute('data-speed'), 10);
+  });
+
+  unitSeg.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    const segBtns = unitSeg.querySelectorAll('button');
+    for (let i = 0; i < segBtns.length; i++) segBtns[i].classList.remove('active');
+    btn.classList.add('active');
+    state.rateUnit = btn.getAttribute('data-unit');
+    renderTable();
+  });
+
+  revealBtn.addEventListener('click', () => {
+    state.revealed = !state.revealed;
+    renderReveal();
+  });
+
+  const modeSeg = document.getElementById('absModeSeg');
+  const readingsGroup = document.getElementById('absReadingsGroup');
+  const readingsInput = document.getElementById('absReadingsInput');
+
+  modeSeg.addEventListener('click', (e) => {
+    // A tap on the "?" opens that mode's help; a tap elsewhere selects the mode.
+    const help = e.target.closest('.seg-help');
+    if (help) {
+      e.stopPropagation();
+      showHelpModal(help.getAttribute('data-help') === 'time' ? 'mode-time' : 'mode-single');
+      return;
+    }
+    const btn = e.target.closest('button');
+    if (!btn || btn.disabled) return;
+    const segBtns = modeSeg.querySelectorAll('button');
+    for (let i = 0; i < segBtns.length; i++) segBtns[i].classList.remove('active');
+    btn.classList.add('active');
+    state.mode = btn.getAttribute('data-mode');
+    readingsGroup.style.display = (state.mode === 'time') ? '' : 'none';
+    runBtn.textContent = (state.mode === 'time') ? 'Start' : 'Run';
+    populateSources();          // show/hide decaying sources for this mode
+    populateGates();            // gate options may change with the source
+    populateGraphPresets();     // graph presets depend on the mode
+    updateGraphsAvailability();
+    if (graphsWindow.classList.contains('open')) drawGraphsWindow();
+    drawBench();
+  });
+
+  readingsInput.addEventListener('change', () => {
+    let n = parseInt(readingsInput.value, 10);
+    if (isNaN(n) || n < 2) n = 2;
+    if (n > 60) n = 60;
+    readingsInput.value = n;
+    state.readings = n;
+  });
+
+  runBtn.addEventListener('click', startRun);
+
+  soundBtn.addEventListener('click', () => {
+    const on = !geiger.isEnabled();
+    geiger.setEnabled(on);
+    soundBtn.innerHTML = on ? '\uD83D\uDD0A On' : '\uD83D\uDD07 Off';
+    soundBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    // If monitoring live, reflect the change immediately.
+    if (state.live) { if (on) geiger.start(); else geiger.stop(); }
+  });
+
+  clearBtn.addEventListener('click', () => {
+    state.rows = [];
+    rowCounter = 0;
+    renderTable();
+    setCounter(0, 0, state.gate, false);
+    updateGraphsAvailability();
+    if (graphsWindow.classList.contains('open')) drawGraphsWindow();
+  });
+
+  /* ---- Init ---- */
+  /* ============================================================= *
+   * Graphs popout (Dice Decay style): Count rate vs time and      *
+   * ln(count rate) vs time, with on-canvas lambda & half-life.    *
+   * Only available once a timed decay series exists.              *
+   * ============================================================= */
+  const graphsBtn      = document.getElementById('absGraphsBtn');
+  const graphsWindow   = document.getElementById('absGraphsWindow');
+  const graphsHeader   = document.getElementById('absGraphsHeader');
+  const graphsClose    = document.getElementById('absGraphsClose');
+  const graphsGrip     = document.getElementById('absGraphsResizeGrip');
+  const graphsCanvas   = document.getElementById('absGraphsCanvas');
+  const graphsTypeSel  = document.getElementById('absGraphsTypeSelector');
+  const graphsUncertChk = document.getElementById('absGraphsUncert');
+  const gwCtx          = graphsCanvas.getContext('2d');
+  let graphPreset      = 'cr';     // 'cr' | 'ln'
+  let showUncert       = false;    // 'Show uncertainties' toggle, shared across presets
+
+  graphsUncertChk.addEventListener('change', () => {
+    showUncert = graphsUncertChk.checked;
+    drawGraphsWindow();
+  });
+
+  /* The timed decay series available for plotting: the source rows of a time
+     run (those with a time stamp), background-corrected. Returns an array of
+     { t, rate, counts } with rate = background-corrected counts/s (>0 only, so
+     ln is defined). */
+  function seriesPoints() {
+    const bgS = backgroundStats();            // { rate, sigma } or null
+    const bgRate = bgS ? bgS.rate : 0;
+    const bgVar = bgS ? bgS.sigma * bgS.sigma : 0;
+    const pts = [];
+    for (let i = 0; i < state.rows.length; i++) {
+      const r = state.rows[i];
+      if (r.isBackground) continue;           // skip the background row
+      if (typeof r.tMid !== 'number') continue; // only timed-series rows
+      const corr = r.rate - bgRate;           // background-corrected count rate
+      // Poisson counting uncertainty: sigma(N)=sqrt(N), so sigma(rate)=sqrt(N)/t;
+      // background sigma added in quadrature (verified vs Monte Carlo).
+      const sigma = Math.sqrt(r.counts / (r.gate * r.gate) + bgVar);
+      if (corr > 0) pts.push({ t: r.tMid, rate: corr, counts: r.counts, sigma: sigma });
+    }
+    return pts;
+  }
+
+  function hasTimeData() { return seriesPoints().length >= 2; }
+
+  /* Single-reading rows that have a source present (background excluded),
+     background-corrected, for the count-rate-vs-distance plot. Each point is
+     { d, rate, counts, gate, absorber, sourceName }. We do NOT filter by absorber or
+     source - if the experimenter changed something other than distance, the
+     points reflect that (a fair-testing lesson); a notice flags it and they
+     inspect the table. */
+  function distancePoints() {
+    const bgS = backgroundStats();
+    const bgRate = bgS ? bgS.rate : 0;
+    const bgVar = bgS ? bgS.sigma * bgS.sigma : 0;
+    const pts = [];
+    for (let i = 0; i < state.rows.length; i++) {
+      const r = state.rows[i];
+      if (r.isBackground) continue;             // not a distance reading
+      if (typeof r.tMid === 'number') continue; // exclude timed-series rows
+      const corr = r.rate - bgRate;
+      const sigma = Math.sqrt(r.counts / (r.gate * r.gate) + bgVar);
+      if (corr > 0) pts.push({ d: r.distance, rate: corr, counts: r.counts, gate: r.gate, absorber: r.absorber, sourceName: r.sourceName, sigma: sigma });
+    }
+    return pts;
+  }
+
+  /* True if the distance dataset has >= 3 points spanning >= 2 distinct
+     distances (a real, plottable distance experiment). */
+  function hasDistanceData() {
+    const pts = distancePoints();
+    if (pts.length < 3) return false;
+    const TOL = 0.05;
+    for (let i = 1; i < pts.length; i++) {
+      if (Math.abs(pts[i].d - pts[0].d) > TOL) return true;
+    }
+    return false;
+  }
+
+  /* Which non-distance variables changed across the distance dataset (for the
+     fair-testing notice). Returns a short list e.g. ['absorber','source']. */
+  function distanceVariedFlags() {
+    const pts = distancePoints();
+    const flags = [];
+    if (pts.length) {
+      let absVaried = false, srcVaried = false;
+      for (let i = 1; i < pts.length; i++) {
+        if (pts[i].absorber !== pts[0].absorber) absVaried = true;
+        if (pts[i].sourceName !== pts[0].sourceName) srcVaried = true;
+      }
+      if (absVaried) flags.push('absorber');
+      if (srcVaried) flags.push('source');
+    }
+    return flags;
+  }
+
+  /* Data for the absorber bar chart: one bar per single-reading row (raw,
+     UNCORRECTED count rate), background included as its own bar. Repeats are
+     kept as separate bars so the scatter shows. Returns { ok, reason, bars,
+     bgRate } where ok is false (with a reason) unless the readings form a valid
+     absorber comparison: same source, same distance, same gate, with the only
+     deliberately-varied quantity being the absorber. If anything else varies
+     the chart is not drawn (an unfair comparison would mislead). */
+  function absorberBarData() {
+    // gather single-reading rows (exclude timed-series rows)
+    const src = [];          // source-present readings
+    let bgRate = null, bgSigma = null;
+    for (let i = 0; i < state.rows.length; i++) {
+      const r = state.rows[i];
+      if (typeof r.tMid === 'number') continue;     // skip decay-series rows
+      if (r.isBackground) { bgRate = r.rate; bgSigma = Math.sqrt(r.counts) / r.gate; continue; }
+      src.push(r);
+    }
+    if (src.length < 2) return { ok: false, reason: 'few', bars: [], bgRate: bgRate };
+
+    // validity: source and distance must be constant across the readings (the
+    // fair-test core). The ABSORBER may change (that is the experiment) and the
+    // GATE may change too: count RATE already normalises for gate time, so the
+    // rates stay comparable - the differing PRECISION is expressed honestly by
+    // the counting-uncertainty whiskers (sqrt(N)/gate per bar).
+    const TOLD = 0.05;
+    let distVaried = false, srcVaried = false, gateVaried = false;
+    for (let i = 1; i < src.length; i++) {
+      if (Math.abs(src[i].distance - src[0].distance) > TOLD) distVaried = true;
+      if (src[i].sourceName !== src[0].sourceName) srcVaried = true;
+      if (src[i].gate !== src[0].gate) gateVaried = true;
+    }
+    if (distVaried || srcVaried) {
+      return { ok: false, reason: 'varied', bars: [], bgRate: bgRate };
+    }
+
+    // build bars in table order; background (if any) first as the baseline.
+    // Bars show RAW (uncorrected) rates, so each bar's counting uncertainty
+    // is simply sqrt(N)/gate for its own reading - no background quadrature.
+    // When gates differ between readings, each label carries its gate so the
+    // bars stay self-explanatory.
+    const bars = [];
+    if (bgRate !== null) bars.push({ label: 'Background', rate: bgRate, isBg: true, sigma: bgSigma });
+    for (let i = 0; i < src.length; i++) {
+      let lab = ABSORBER_LABEL[src[i].absorber] || src[i].absorber;
+      if (gateVaried) lab += ' \u00b7 ' + src[i].gate + ' s';
+      bars.push({ label: lab, rate: src[i].rate, isBg: false, sigma: Math.sqrt(src[i].counts) / src[i].gate });
+    }
+    return { ok: true, reason: '', bars: bars, bgRate: bgRate };
+  }
+
+  /* The bars preset is offered as soon as there are two or more single
+     readings with a source present, even if they are not yet a fair set:
+     selecting it then shows WHY on the canvas, rather than hiding the
+     explanation behind a greyed-out button. */
+  function hasAbsorberData() {
+    let k = 0;
+    for (let i = 0; i < state.rows.length; i++) {
+      const r = state.rows[i];
+      if (typeof r.tMid === 'number' || r.isBackground) continue;
+      k++;
+    }
+    return k >= 2;
+  }
+
+  /* ---- Count distribution: repeats of one identical setup ---------------
+     Gathers the LARGEST group of readings taken at one setup (same source,
+     distance, absorber and gate). Single readings qualify; timed-series rows
+     qualify too when the source is NON-decaying, since a steady source makes
+     every gate of a time run an identical repeat - the quickest way to
+     collect 20 or more. Decaying-source series rows are excluded (their mean
+     drifts). Background runs form their own group. ---- */
+  function sourceByName(name) {
+    for (let i = 0; i < SOURCES.length; i++) if (SOURCES[i].name === name) return SOURCES[i];
+    return null;
+  }
+
+  function histGroupData() {
+    const groups = {};
+    let candidates = 0;
+    for (let i = 0; i < state.rows.length; i++) {
+      const r = state.rows[i];
+      if (typeof r.tMid === 'number' && !r.isBackground) {
+        const s = sourceByName(r.sourceName);
+        if (!s || s.decaying) continue;        // drifting mean: not repeats
+      }
+      candidates++;
+      const key = r.sourceName + '|' + r.distance.toFixed(1) + '|' + r.absorber + '|' + r.gate;
+      if (!groups[key]) groups[key] = { counts: [], last: 0, sourceName: r.sourceName, distance: r.distance, absorber: r.absorber, gate: r.gate, isBackground: r.isBackground };
+      groups[key].counts.push(r.counts);
+      groups[key].last = i;
+    }
+    let best = null;
+    for (const k in groups) {
+      const g = groups[k];
+      if (!best || g.counts.length > best.counts.length ||
+          (g.counts.length === best.counts.length && g.last > best.last)) best = g;
+    }
+    if (!best || best.counts.length < 5) {
+      return { ok: false, reason: 'few', n: best ? best.counts.length : 0, candidates: candidates };
+    }
+    return { ok: true, reason: '', group: best, candidates: candidates };
+  }
+
+  /* Clickable once two or more qualifying readings exist, so the empty-state
+     message can explain what to collect (reachable-refusal pattern). */
+  function hasHistData() { return histGroupData().candidates >= 2; }
+
+  /* The full set of graph presets, always shown so the options are visible up
+     front. Each tab greys out individually until its data exists (see
+     presetAvailable). Order: time graphs, distance graphs, then the bar chart. */
+  function presetsForMode() {
+    return [
+      { id: 'cr', label: 'Count rate vs time' },
+      { id: 'ln', label: 'ln(count rate) vs time' },
+      { id: 'crdist', label: 'Count rate vs distance' },
+      { id: 'crinvd2', label: 'Count rate vs 1/d\u00b2' },
+      { id: 'invsqrtc', label: '1/\u221a(count rate) vs distance' },
+      { id: 'absorber', label: 'Count rate (bars)' },
+      { id: 'histo', label: 'Count distribution' }
+    ];
+  }
+
+  /* Whether a given preset currently has data to plot (so its tab can be
+     enabled/disabled individually). */
+  function presetAvailable(id) {
+    if (id === 'cr' || id === 'ln') return hasTimeData();
+    if (id === 'crdist' || id === 'crinvd2' || id === 'invsqrtc') return hasDistanceData();
+    if (id === 'absorber') return hasAbsorberData();
+    if (id === 'histo') return hasHistData();
+    return true;
+  }
+
+  function populateGraphPresets() {
+    const presets = presetsForMode();
+    // prefer to land on an AVAILABLE preset: keep the current one if it is still
+    // offered AND has data; else pick the first available; else the first.
+    let curOk = false;
+    for (let i = 0; i < presets.length; i++) if (presets[i].id === graphPreset) curOk = true;
+    if (!curOk || !presetAvailable(graphPreset)) {
+      let picked = null;
+      for (let i = 0; i < presets.length; i++) if (presetAvailable(presets[i].id)) { picked = presets[i].id; break; }
+      graphPreset = picked || presets[0].id;
+    }
+    let html = '';
+    for (let i = 0; i < presets.length; i++) {
+      const avail = presetAvailable(presets[i].id);
+      html += '<button class="graphs-type-btn' + (presets[i].id === graphPreset ? ' active' : '') +
+              (avail ? '' : ' disabled') + '"' + (avail ? '' : ' disabled') +
+              ' data-gtype="' + presets[i].id + '">' + presets[i].label + '</button>';
+    }
+    graphsTypeSel.innerHTML = html;
+  }
+
+  function updateGraphsAvailability() {
+    // The Graphs button is always enabled: pressing it opens the window so the
+    // full set of graph options is visible (greyed until their data exists).
+    graphsBtn.disabled = false;
+  }
+
+  /* Exponential best fit on the series, matching the Dice Decay / Excel method:
+     least squares on ln(rate) vs time WEIGHTED BY counts^2, so high-count
+     points dominate and the noisy low-count tail barely pulls the line.
+     Returns { k (=lambda, per second), A (rate at t=0) } or null. */
+  function computeSeriesFit() {
+    const pts = seriesPoints();
+    let sw = 0, swx = 0, swy = 0, swxx = 0, swxy = 0, count = 0;
+    for (let i = 0; i < pts.length; i++) {
+      const x = pts[i].t, y = Math.log(pts[i].rate), w = pts[i].counts * pts[i].counts;
+      sw += w; swx += w * x; swy += w * y; swxx += w * x * x; swxy += w * x * y;
+      count++;
+    }
+    if (count < 2) return null;
+    const denom = sw * swxx - swx * swx;
+    if (Math.abs(denom) < 1e-9) return null;
+    const slope = (sw * swxy - swx * swy) / denom;   // = -k
+    const intercept = (swy - slope * swx) / sw;      // = ln(A)
+    return { k: -slope, A: Math.exp(intercept) };
+  }
+
+  /* Cubic SMOOTHING spline (C. H. Reinsch, Numer. Math. 1967), weighted by
+     the Poisson standard error of each reading. Finds the natural cubic
+     spline f that minimises the bending energy  integral of f''(x)^2  subject
+     to the weighted chi-squared  sum(((y_i - f(x_i)) / sigma_i)^2) <= n  (the
+     classic "discrepancy principle": the smoothest curve that is statistically
+     consistent with the data). Unlike an INTERPOLATING spline it is not forced
+     through the Poisson scatter, so it cannot wobble - any wobble would mean
+     more curvature than necessary, contradicting the minimisation. It passes
+     within about one standard error of every point, exactly like a hand-drawn
+     curve of best fit. It makes NO physical claim (not an inverse-square fit),
+     so it is honest for gamma, beta or alpha data alike.
+
+     xs must be strictly increasing; sigs are 1-standard-error values (>0).
+     Returns an evaluator f(x). Implementation: solve the Reinsch system
+     (R + lambda * Q^T W^-1 Q) gamma = Q^T y  for the knot second derivatives
+     gamma (banded LDL^T, pentadiagonal), with lambda found by geometric
+     bisection so the resulting chi-squared equals n. */
+  function smoothingSpline(xs, ys, sigs) {
+    const n = xs.length;
+    if (n < 3) {                                   // 1-2 points: straight line
+      const x0 = xs[0], y0 = ys[0];
+      const sl = (n === 2) ? (ys[1] - ys[0]) / (xs[1] - xs[0]) : 0;
+      return function (t) { return y0 + sl * (t - x0); };
+    }
+    const m = n - 2;
+    const h = new Array(n - 1);
+    for (let i = 0; i < n - 1; i++) h[i] = xs[i + 1] - xs[i];
+    const v = new Array(n);                        // sigma^2 (= W^-1 diagonal)
+    for (let i = 0; i < n; i++) v[i] = sigs[i] * sigs[i];
+
+    // Bands of R (tridiagonal) and B = Q^T diag(v) Q (pentadiagonal), m x m,
+    // plus the right-hand side Q^T y (second divided differences of y).
+    const R0 = new Array(m), R1 = new Array(m).fill(0);
+    const B0 = new Array(m), B1 = new Array(m).fill(0), B2 = new Array(m).fill(0);
+    const rhs = new Array(m);
+    for (let jj = 0; jj < m; jj++) {
+      const j = jj + 1;                            // interior knot index
+      const a = 1 / h[j - 1], b = 1 / h[j];
+      R0[jj] = (h[j - 1] + h[j]) / 3;
+      if (jj < m - 1) R1[jj] = h[j] / 6;
+      B0[jj] = v[j - 1] * a * a + v[j] * (a + b) * (a + b) + v[j + 1] * b * b;
+      if (jj < m - 1) {
+        const c = 1 / h[j + 1];
+        B1[jj] = -b * (v[j] * (a + b) + v[j + 1] * (b + c));
+      }
+      if (jj < m - 2) B2[jj] = v[j + 1] * b / h[j + 1];
+      rhs[jj] = (ys[j + 1] - ys[j]) * b - (ys[j] - ys[j - 1]) * a;
+    }
+
+    // Solve (R + lambda*B) g = rhs by banded LDL^T; return knot values f,
+    // full gamma (natural ends = 0) and the weighted chi-squared.
+    function solveChi(lambda) {
+      const A0 = new Array(m), A1 = new Array(m), A2 = new Array(m);
+      for (let i = 0; i < m; i++) {
+        A0[i] = R0[i] + lambda * B0[i];
+        A1[i] = R1[i] + lambda * B1[i];
+        A2[i] = lambda * B2[i];
+      }
+      const d = new Array(m), l1 = new Array(m).fill(0), l2 = new Array(m).fill(0), z = new Array(m);
+      for (let i = 0; i < m; i++) {
+        if (i >= 2) l2[i] = A2[i - 2] / d[i - 2];
+        if (i >= 1) l1[i] = (A1[i - 1] - (i >= 2 ? l2[i] * l1[i - 1] * d[i - 2] : 0)) / d[i - 1];
+        d[i] = A0[i] - (i >= 1 ? l1[i] * l1[i] * d[i - 1] : 0) - (i >= 2 ? l2[i] * l2[i] * d[i - 2] : 0);
+        if (!(d[i] > 1e-300)) d[i] = 1e-300;       // PD in exact arithmetic; guard rounding
+        z[i] = rhs[i] - (i >= 1 ? l1[i] * z[i - 1] : 0) - (i >= 2 ? l2[i] * z[i - 2] : 0);
+      }
+      const g = new Array(m);
+      for (let i = m - 1; i >= 0; i--) {
+        g[i] = z[i] / d[i] - (i + 1 < m ? l1[i + 1] * g[i + 1] : 0) - (i + 2 < m ? l2[i + 2] * g[i + 2] : 0);
+      }
+      const gam = new Array(n).fill(0);            // natural spline: gamma = 0 at ends
+      for (let i = 0; i < m; i++) gam[i + 1] = g[i];
+      const f = new Array(n);
+      let chi2 = 0;
+      for (let i = 0; i < n; i++) {                // residual y - f = lambda * v * (Q gamma)
+        const t1 = (i < n - 1) ? (gam[i + 1] - gam[i]) / h[i] : 0;
+        const t2 = (i > 0) ? (gam[i] - gam[i - 1]) / h[i - 1] : 0;
+        const res = lambda * v[i] * (t1 - t2);
+        f[i] = ys[i] - res;
+        const s = (sigs[i] > 0) ? res / sigs[i] : 0;
+        chi2 += s * s;
+      }
+      return { f: f, gam: gam, chi2: chi2 };
+    }
+
+    // Discrepancy principle: chi2(lambda) is monotone increasing, so bisect
+    // (geometrically) for chi2 = n. If even the smoothest end of the range
+    // already satisfies chi2 <= n, take it (data consistent with ~a line).
+    let s2 = 0; for (let i = 0; i < n; i++) s2 += v[i];
+    s2 = Math.max(s2 / n, 1e-12);
+    const hbar = (xs[n - 1] - xs[0]) / (n - 1);
+    const lref = (hbar * hbar * hbar) / s2;        // dimensional scale of lambda
+    let lo = lref * 1e-8, hi = lref * 1e8;
+    let sol = solveChi(hi);
+    if (sol.chi2 > n) {
+      for (let it = 0; it < 60; it++) {
+        const mid = Math.sqrt(lo * hi);
+        if (solveChi(mid).chi2 > n) hi = mid; else lo = mid;
+      }
+      sol = solveChi(Math.sqrt(lo * hi));
+    }
+
+    // Natural cubic spline evaluator from knot values f and 2nd derivatives.
+    const fk = sol.f, gam = sol.gam;
+    return function (t) {
+      let i = n - 2;
+      if (t <= xs[0]) i = 0;
+      else { for (let k = 0; k < n - 1; k++) { if (t <= xs[k + 1]) { i = k; break; } } }
+      const hh = h[i], A = (xs[i + 1] - t) / hh, B = (t - xs[i]) / hh;
+      return A * fk[i] + B * fk[i + 1] +
+             ((A * A * A - A) * gam[i] + (B * B * B - B) * gam[i + 1]) * hh * hh / 6;
+    };
+  }
+
+  /* Format a y-axis tick value with enough decimals to avoid duplicate labels
+     when the scale is small (e.g. an empty graph with max 1, or a low count
+     rate). */
+  function fmtTick(v, top) {
+    const dp = (top < 2) ? 2 : (top < 10) ? 1 : 0;
+    return v.toFixed(dp);
+  }
+
+  function hasAnyReadings() { return state.rows && state.rows.length > 0; }
+
+  /* Shared 'no readings yet' message. Returns true if drawn (no readings), so
+     drawGraphsWindow returns early before any preset-specific message. */
+  function drawEmptyPrompt() {
+    if (hasAnyReadings()) return false;
+    const W = graphsCanvas.width, H = graphsCanvas.height;
+    gwCtx.setTransform(1, 0, 0, 1, 0, 0);
+    gwCtx.fillStyle = '#0c1426'; gwCtx.fillRect(0, 0, W, H);
+    gwCtx.fillStyle = '#9fb4c9'; gwCtx.font = '600 16px -apple-system,sans-serif';
+    gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'middle';
+    gwCtx.fillText('No readings yet', W / 2, H / 2 - 12);
+    gwCtx.fillStyle = '#7c8aa3'; gwCtx.font = '14px -apple-system,sans-serif';
+    gwCtx.fillText('Record some readings - each graph above lights up when its data is available.', W / 2, H / 2 + 12);
+    return true;
+  }
+
+  function niceStepG(maxVal, maxTicks) {
+    const raw = maxVal / maxTicks;
+    if (raw <= 0) return 1;
+    const pow = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
+    const norm = raw / pow;
+    let step;
+    if (norm <= 1) step = 1; else if (norm <= 2) step = 2; else if (norm <= 5) step = 5; else step = 10;
+    return step * pow;
+  }
+
+  /* ---- Counting-uncertainty error bars (shared by all presets) --------
+     Vertical I-beam at pixel x, spanning yTopPix..yBotPix, clamped to the
+     plot area [pyTop, pyBot]. A cap is drawn only on an UNCLAMPED end, so a
+     bar running off the plot visibly does so instead of gaining a false cap. */
+  function gwErrorBar(cx, yTopPix, yBotPix, pyTop, pyBot, color) {
+    const capW = 5;
+    let t = yTopPix, b = yBotPix;
+    const clampT = (t < pyTop), clampB = (b > pyBot);
+    if (clampT) t = pyTop;
+    if (clampB) b = pyBot;
+    if (b <= t) return;
+    gwCtx.strokeStyle = color; gwCtx.lineWidth = 1.6;
+    gwCtx.beginPath();
+    gwCtx.moveTo(cx, t); gwCtx.lineTo(cx, b);
+    if (!clampT) { gwCtx.moveTo(cx - capW, t); gwCtx.lineTo(cx + capW, t); }
+    if (!clampB) { gwCtx.moveTo(cx - capW, b); gwCtx.lineTo(cx + capW, b); }
+    gwCtx.stroke();
+  }
+
+  /* One-line caption, top-right of the plot, shown when error bars are on. */
+  function gwUncertCaption(px, py, pw) {
+    gwCtx.fillStyle = '#9aa7bd';
+    gwCtx.font = '12px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.textAlign = 'right'; gwCtx.textBaseline = 'bottom';
+    gwCtx.fillText('Error bars: counting uncertainty (from \u00b1\u221aN in the counts)', px + pw, py - 8);
+  }
+
+  /* Notices above the distance graphs: the fair-testing warning (anything
+     other than distance varied) and a no-background warning. Without a
+     background the rates are plotted uncorrected; the 1/d\u00b2 line then gains
+     a y-intercept equal to the background, and the 1/\u221aC line curves at
+     large d, so the epsilon read from its intercept is biased. */
+  function gwDistanceNotices(px, pw) {
+    gwCtx.font = 'bold 14px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'top';
+    let y = 8;
+    const flags = distanceVariedFlags();
+    if (flags.length) {
+      const what = flags.join(' and ');
+      gwCtx.fillStyle = '#fbbf24';
+      gwCtx.fillText('\u26a0 ' + what.charAt(0).toUpperCase() + what.slice(1) + ' changed \u2014 check the table', px + pw / 2, y);
+      y += 17;
+    }
+    if (backgroundStats() === null) {
+      gwCtx.fillStyle = '#fbbf24';
+      gwCtx.fillText('\u26a0 No background measured \u2014 rates are uncorrected', px + pw / 2, y);
+    }
+  }
+
+  function drawGraphsWindow() {
+    const rect = graphsCanvas.getBoundingClientRect();
+    const w = Math.max(300, Math.round(rect.width)), h = Math.max(200, Math.round(rect.height));
+    if (graphsCanvas.width !== w)  graphsCanvas.width = w;
+    if (graphsCanvas.height !== h) graphsCanvas.height = h;
+    if (drawEmptyPrompt()) return;
+    if (graphPreset === 'ln') gwDrawLn();
+    else if (graphPreset === 'crdist') gwDrawCRvsDist();
+    else if (graphPreset === 'crinvd2') gwDrawCRvsInvD2();
+    else if (graphPreset === 'invsqrtc') gwDrawInvSqrtC();
+    else if (graphPreset === 'absorber') gwDrawAbsorberBars();
+    else if (graphPreset === 'histo') gwDrawHist();
+    else gwDrawCR();
+  }
+
+  /* ---- Count rate vs time: corrected rate (crosses) + exponential fit ---- */
+  function gwDrawCR() {
+    const W = graphsCanvas.width, H = graphsCanvas.height;
+    gwCtx.setTransform(1, 0, 0, 1, 0, 0);
+    gwCtx.fillStyle = '#0c1426'; gwCtx.fillRect(0, 0, W, H);
+    const pts = seriesPoints();
+    const mL = 86, mR = 36, mT = 30, mB = 60;
+    const px = mL, py = mT, pw = W - mL - mR, ph = H - mT - mB;
+
+    let tMax = 5, rMax = 1;
+    for (let i = 0; i < pts.length; i++) { if (pts[i].t > tMax) tMax = pts[i].t; if (pts[i].rate > rMax) rMax = pts[i].rate; }
+    const fit = computeSeriesFit();
+    if (fit && fit.A > rMax) rMax = fit.A;
+    const yTop = rMax * 1.08;
+    tMax = tMax * 1.05;
+
+    function X(t) { return px + (t / tMax) * pw; }
+    function Y(v) { return py + ph - (v / yTop) * ph; }
+
+    gwCtx.strokeStyle = 'rgba(255,255,255,0.06)'; gwCtx.lineWidth = 1;
+    for (let g = 1; g <= 5; g++) { const gy = py + (g / 5) * ph; gwCtx.beginPath(); gwCtx.moveTo(px, gy); gwCtx.lineTo(px + pw, gy); gwCtx.stroke(); }
+    gwCtx.strokeStyle = 'rgba(255,255,255,0.35)'; gwCtx.lineWidth = 2;
+    gwCtx.beginPath(); gwCtx.moveTo(px, py - 6); gwCtx.lineTo(px, py + ph); gwCtx.lineTo(px + pw + 6, py + ph); gwCtx.stroke();
+
+    gwCtx.font = '15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.fillStyle = '#cbd5e1'; gwCtx.textAlign = 'right'; gwCtx.textBaseline = 'middle';
+    for (let g = 0; g <= 5; g++) { const v = yTop * g / 5; const ty = py + ph - (g / 5) * ph; gwCtx.fillText(fmtTick(v, yTop), px - 9, ty); }
+    gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'top';
+    const xStep = niceStepG(tMax, 8);
+    for (let tv = 0; tv <= tMax + 1e-9; tv += xStep) { gwCtx.fillText(tv.toFixed(0), X(tv), py + ph + 9); }
+    gwCtx.fillStyle = 'rgba(255,255,255,0.92)'; gwCtx.font = 'italic 16px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.fillText('time / s', px + pw / 2, py + ph + 32);
+    gwCtx.save(); gwCtx.translate(px - 60, py + ph / 2); gwCtx.rotate(-Math.PI / 2);
+    gwCtx.textBaseline = 'middle'; gwCtx.fillText('count rate / s\u207B\u00B9', 0, 0); gwCtx.restore();
+
+    if (fit) {
+      gwCtx.strokeStyle = '#fbbf24'; gwCtx.lineWidth = 2.4; gwCtx.beginPath();
+      let started = false;
+      for (let s = 0; s <= 240; s++) {
+        const th = tMax * s / 240, yv = fit.A * Math.exp(-fit.k * th);
+        const gx = X(th), gy = Y(yv);
+        if (!started) { gwCtx.moveTo(gx, gy); started = true; } else gwCtx.lineTo(gx, gy);
+      }
+      gwCtx.stroke();
+    }
+    if (showUncert && pts.length) {
+      for (let i = 0; i < pts.length; i++) {
+        const ex = X(pts[i].t);
+        gwErrorBar(ex, Y(pts[i].rate + pts[i].sigma), Y(pts[i].rate - pts[i].sigma), py, py + ph, 'rgba(52,211,153,0.7)');
+      }
+      gwUncertCaption(px, py, pw);
+    }
+    gwCtx.strokeStyle = '#34d399'; gwCtx.lineWidth = 2.2; const r = 5;
+    for (let i = 0; i < pts.length; i++) {
+      const cx = X(pts[i].t), cy = Y(pts[i].rate);
+      gwCtx.beginPath();
+      gwCtx.moveTo(cx - r, cy - r); gwCtx.lineTo(cx + r, cy + r);
+      gwCtx.moveTo(cx + r, cy - r); gwCtx.lineTo(cx - r, cy + r);
+      gwCtx.stroke();
+    }
+    if (!pts.length) {
+      gwCtx.fillStyle = '#9fb4c9'; gwCtx.font = '600 16px -apple-system,sans-serif';
+      gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'middle';
+      gwCtx.fillText('No time data available', px + pw / 2, py + ph / 2 - 12);
+      gwCtx.fillStyle = '#7c8aa3'; gwCtx.font = '14px -apple-system,sans-serif';
+      gwCtx.fillText('Switch to "Count rate vs time" mode and run a decay series.', px + pw / 2, py + ph / 2 + 12);
+    }
+  }
+
+  /* ---- Count rate vs distance: background-corrected rate (crosses) vs the
+     source-tube distance, in the same style as the time graphs, with a smooth
+     curve of best fit (weighted smoothing spline - see smoothingSpline above;
+     it makes no physical claim). If anything other than
+     distance varied across the readings, a notice names the variable so the
+     student can inspect the table (a fair-testing lesson). ---- */
+  function gwDrawCRvsDist() {
+    const W = graphsCanvas.width, H = graphsCanvas.height;
+    gwCtx.setTransform(1, 0, 0, 1, 0, 0);
+    gwCtx.fillStyle = '#0c1426'; gwCtx.fillRect(0, 0, W, H);
+    const pts = distancePoints();
+    const mL = 86, mR = 36, mT = 42, mB = 60;
+    const px = mL, py = mT, pw = W - mL - mR, ph = H - mT - mB;
+
+    // safety net: need more than two points to show the fall-off meaningfully
+    if (pts.length < 3) {
+      gwCtx.fillStyle = '#9fb4c9'; gwCtx.font = '600 16px -apple-system,sans-serif';
+      gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'middle';
+      gwCtx.fillText('More than 2 data points needed', W / 2, H / 2 - 12);
+      gwCtx.fillStyle = '#7c8aa3'; gwCtx.font = '14px -apple-system,sans-serif';
+      gwCtx.fillText('Take readings at three or more different distances.', W / 2, H / 2 + 12);
+      return;
+    }
+
+    let dMax = 1, rMax = 1;
+    for (let i = 0; i < pts.length; i++) { if (pts[i].d > dMax) dMax = pts[i].d; if (pts[i].rate > rMax) rMax = pts[i].rate; }
+    const yTop = rMax * 1.08; dMax = dMax * 1.05;
+
+    function X(d) { return px + (d / dMax) * pw; }
+    function Y(v) { return py + ph - (v / yTop) * ph; }
+
+    gwCtx.strokeStyle = 'rgba(255,255,255,0.06)'; gwCtx.lineWidth = 1;
+    for (let g = 1; g <= 5; g++) { const gy = py + (g / 5) * ph; gwCtx.beginPath(); gwCtx.moveTo(px, gy); gwCtx.lineTo(px + pw, gy); gwCtx.stroke(); }
+    gwCtx.strokeStyle = 'rgba(255,255,255,0.35)'; gwCtx.lineWidth = 2;
+    gwCtx.beginPath(); gwCtx.moveTo(px, py - 6); gwCtx.lineTo(px, py + ph); gwCtx.lineTo(px + pw + 6, py + ph); gwCtx.stroke();
+
+    gwCtx.font = '15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.fillStyle = '#cbd5e1'; gwCtx.textAlign = 'right'; gwCtx.textBaseline = 'middle';
+    for (let g = 0; g <= 5; g++) { const v = yTop * g / 5; const ty = py + ph - (g / 5) * ph; gwCtx.fillText(fmtTick(v, yTop), px - 9, ty); }
+    gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'top';
+    const xStep = niceStepG(dMax, 8);
+    for (let dv = 0; dv <= dMax + 1e-9; dv += xStep) { gwCtx.fillText(dv.toFixed(0), X(dv), py + ph + 9); }
+    gwCtx.fillStyle = 'rgba(255,255,255,0.92)'; gwCtx.font = 'italic 16px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.fillText('distance / cm', px + pw / 2, py + ph + 32);
+    gwCtx.save(); gwCtx.translate(px - 60, py + ph / 2); gwCtx.rotate(-Math.PI / 2);
+    gwCtx.textBaseline = 'middle'; gwCtx.fillText('count rate / s\u207B\u00B9', 0, 0); gwCtx.restore();
+
+    // notices: fair-testing + missing background
+    gwDistanceNotices(px, pw);
+
+    // smooth curve of best fit (Reinsch cubic SMOOTHING spline): the
+    // smoothest curve that is statistically consistent with the Poisson
+    // counting uncertainty of each reading (sigma = sqrt(counts)/gate, the
+    // standard error of a count rate), via the discrepancy principle
+    // chi-squared = number of points. It hugs the data to within about one
+    // standard error but is NOT forced through the scatter, so it cannot
+    // wobble - unlike an interpolating spline, which must flex its curvature
+    // back and forth to thread Poisson-scattered points. The smoothing is
+    // done in LOG-LOG space, where any power-law fall-off is nearly straight:
+    // this removes the violent curvature at small d (which a natural spline's
+    // zero-curvature end condition cannot follow in linear space) and makes
+    // the curve positive by construction. Like a hand-drawn best-fit curve it
+    // makes NO physical claim (no inverse-square exponent is assumed - the
+    // spline traces whatever shape the data makes), so it is honest for
+    // gamma, beta or alpha data alike. Points are sorted by distance and any
+    // readings at the same distance are averaged first (uncertainties
+    // combined as standard error of the mean).
+    const byD = {};
+    for (let i = 0; i < pts.length; i++) {
+      const key = pts[i].d.toFixed(2);
+      if (!byD[key]) byD[key] = { d: pts[i].d, sum: 0, varSum: 0, n: 0 };
+      const sig = (pts[i].counts > 0 && pts[i].gate > 0)
+        ? Math.sqrt(pts[i].counts) / pts[i].gate          // Poisson SE of the rate
+        : Math.max(0.05 * pts[i].rate, 0.5);              // fallback for odd rows
+      byD[key].sum += pts[i].rate; byD[key].varSum += sig * sig; byD[key].n++;
+    }
+    const uniq = [];
+    for (const key in byD) uniq.push({
+      d: byD[key].d,
+      rate: byD[key].sum / byD[key].n,
+      sig: Math.sqrt(byD[key].varSum) / byD[key].n
+    });
+    uniq.sort(function (a, b) { return a.d - b.d; });
+    if (uniq.length >= 2) {
+      // transform to log-log: x = ln d, y = ln rate, sigma_lny = sigma/rate
+      const xs = [], ys = [], ss = [];
+      for (let i = 0; i < uniq.length; i++) {
+        xs.push(Math.log(Math.max(uniq[i].d, 0.05)));
+        ys.push(Math.log(uniq[i].rate));
+        ss.push(Math.max(uniq[i].sig / uniq[i].rate, 1e-6));
+      }
+      const g = smoothingSpline(xs, ys, ss);
+      const d0 = uniq[0].d, d1 = uniq[uniq.length - 1].d;
+      gwCtx.save();
+      gwCtx.beginPath(); gwCtx.rect(px, py, pw, ph); gwCtx.clip();  // never leave the panel
+      gwCtx.strokeStyle = '#fbbf24'; gwCtx.lineWidth = 2.4; gwCtx.beginPath();
+      // running minimum: count rate always FALLS with distance (true for any
+      // source), so the trend curve is kept non-increasing - this clips the
+      // slight upstream "ringing" a spline can show just before a very sharp
+      // drop (e.g. the alpha range cut-off) into a natural flat shelf.
+      let runMin = Infinity;
+      for (let s = 0; s <= 240; s++) {
+        const t = d0 + (d1 - d0) * s / 240;
+        let yv = Math.exp(g(Math.log(Math.max(t, 0.05))));        // back-transform
+        if (yv < runMin) runMin = yv; else yv = runMin;
+        if (s === 0) gwCtx.moveTo(X(t), Y(yv)); else gwCtx.lineTo(X(t), Y(yv));
+      }
+      gwCtx.stroke();
+      gwCtx.restore();
+    }
+
+    // counting-uncertainty error bars (under the crosses)
+    if (showUncert) {
+      for (let i = 0; i < pts.length; i++) {
+        const ex = X(pts[i].d);
+        gwErrorBar(ex, Y(pts[i].rate + pts[i].sigma), Y(pts[i].rate - pts[i].sigma), py, py + ph, 'rgba(52,211,153,0.7)');
+      }
+      gwUncertCaption(px, py, pw);
+    }
+
+    // data crosses (identical style to the time graphs)
+    gwCtx.strokeStyle = '#34d399'; gwCtx.lineWidth = 2.2; const r = 5;
+    for (let i = 0; i < pts.length; i++) {
+      const cx = X(pts[i].d), cy = Y(pts[i].rate);
+      gwCtx.beginPath();
+      gwCtx.moveTo(cx - r, cy - r); gwCtx.lineTo(cx + r, cy + r);
+      gwCtx.moveTo(cx + r, cy - r); gwCtx.lineTo(cx - r, cy + r);
+      gwCtx.stroke();
+    }
+  }
+
+  /* ---- Count rate vs 1/d^2: the inverse-square TEST. Plots background-
+     corrected count rate against 1/d^2 using the MEASURED distance d (no epsilon
+     correction - this plot deliberately tests what the raw measured data says).
+     A standard least-squares straight line is drawn as the reference: if the
+     crosses lie on it, inverse-square holds; systematic departure shows it does
+     not, and to what extent. Same style as the other graphs. ---- */
+  function gwDrawCRvsInvD2() {
+    const W = graphsCanvas.width, H = graphsCanvas.height;
+    gwCtx.setTransform(1, 0, 0, 1, 0, 0);
+    gwCtx.fillStyle = '#0c1426'; gwCtx.fillRect(0, 0, W, H);
+    const raw = distancePoints();
+    const mL = 86, mR = 36, mT = 42, mB = 60;
+    const px = mL, py = mT, pw = W - mL - mR, ph = H - mT - mB;
+
+    // build (x = 1/d^2, y = corrected rate); need d > 0
+    const pts = [];
+    for (let i = 0; i < raw.length; i++) { if (raw[i].d > 0) pts.push({ x: 1 / (raw[i].d * raw[i].d), y: raw[i].rate, sigma: raw[i].sigma }); }
+
+    if (pts.length < 3) {
+      gwCtx.fillStyle = '#9fb4c9'; gwCtx.font = '600 16px -apple-system,sans-serif';
+      gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'middle';
+      gwCtx.fillText('More than 2 data points needed', W / 2, H / 2 - 12);
+      gwCtx.fillStyle = '#7c8aa3'; gwCtx.font = '14px -apple-system,sans-serif';
+      gwCtx.fillText('Take readings at three or more different distances.', W / 2, H / 2 + 12);
+      return;
+    }
+
+    let xMax = 0, yMax = 1;
+    for (let i = 0; i < pts.length; i++) { if (pts[i].x > xMax) xMax = pts[i].x; if (pts[i].y > yMax) yMax = pts[i].y; }
+    const xTop = xMax * 1.08, yTop = yMax * 1.08;
+
+    function X(v) { return px + (v / xTop) * pw; }
+    function Y(v) { return py + ph - (v / yTop) * ph; }
+
+    // standard least-squares line y = a + b x
+    let n = pts.length, sx = 0, sy = 0, sxx = 0, sxy = 0;
+    for (let i = 0; i < n; i++) { sx += pts[i].x; sy += pts[i].y; sxx += pts[i].x * pts[i].x; sxy += pts[i].x * pts[i].y; }
+    const denom = n * sxx - sx * sx;
+    let b = 0, a = 0, haveFit = false;
+    if (Math.abs(denom) > 1e-12) { b = (n * sxy - sx * sy) / denom; a = (sy - b * sx) / n; haveFit = true; }
+
+    // gridlines + axes
+    gwCtx.strokeStyle = 'rgba(255,255,255,0.06)'; gwCtx.lineWidth = 1;
+    for (let g = 1; g <= 5; g++) { const gy = py + (g / 5) * ph; gwCtx.beginPath(); gwCtx.moveTo(px, gy); gwCtx.lineTo(px + pw, gy); gwCtx.stroke(); }
+    gwCtx.strokeStyle = 'rgba(255,255,255,0.35)'; gwCtx.lineWidth = 2;
+    gwCtx.beginPath(); gwCtx.moveTo(px, py - 6); gwCtx.lineTo(px, py + ph); gwCtx.lineTo(px + pw + 6, py + ph); gwCtx.stroke();
+
+    gwCtx.font = '15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.fillStyle = '#cbd5e1'; gwCtx.textAlign = 'right'; gwCtx.textBaseline = 'middle';
+    for (let g = 0; g <= 5; g++) { const v = yTop * g / 5; const ty = py + ph - (g / 5) * ph; gwCtx.fillText(fmtTick(v, yTop), px - 9, ty); }
+    gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'top';
+    const xStep = niceStepG(xTop, 6);
+    for (let xv = 0; xv <= xTop + 1e-12; xv += xStep) { gwCtx.fillText(xv.toFixed(xv < 0.1 ? 3 : 2), X(xv), py + ph + 9); }
+    gwCtx.fillStyle = 'rgba(255,255,255,0.92)'; gwCtx.font = 'italic 16px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.fillText('1 / distance\u00b2  (cm\u207B\u00b2)', px + pw / 2, py + ph + 32);
+    gwCtx.save(); gwCtx.translate(px - 60, py + ph / 2); gwCtx.rotate(-Math.PI / 2);
+    gwCtx.textBaseline = 'middle'; gwCtx.fillText('count rate / s\u207B\u00B9', 0, 0); gwCtx.restore();
+
+    // notices: fair-testing + missing background
+    gwDistanceNotices(px, pw);
+
+    // least-squares straight line across the plotted x-range
+    if (haveFit) {
+      const x0 = 0, x1 = xTop;
+      let y0 = a + b * x0, y1 = a + b * x1;
+      // clip the drawn segment to the visible y-range so it never leaves the panel
+      gwCtx.save();
+      gwCtx.beginPath(); gwCtx.rect(px, py, pw, ph); gwCtx.clip();
+      gwCtx.strokeStyle = '#fbbf24'; gwCtx.lineWidth = 2.4;
+      gwCtx.beginPath(); gwCtx.moveTo(X(x0), Y(y0)); gwCtx.lineTo(X(x1), Y(y1)); gwCtx.stroke();
+      gwCtx.restore();
+    }
+
+    // counting-uncertainty error bars (under the crosses)
+    if (showUncert) {
+      for (let i = 0; i < pts.length; i++) {
+        const ex = X(pts[i].x);
+        gwErrorBar(ex, Y(pts[i].y + pts[i].sigma), Y(pts[i].y - pts[i].sigma), py, py + ph, 'rgba(52,211,153,0.7)');
+      }
+      gwUncertCaption(px, py, pw);
+    }
+
+    // data crosses (identical style to the other graphs)
+    gwCtx.strokeStyle = '#34d399'; gwCtx.lineWidth = 2.2; const r = 5;
+    for (let i = 0; i < pts.length; i++) {
+      const cx = X(pts[i].x), cy = Y(pts[i].y);
+      gwCtx.beginPath();
+      gwCtx.moveTo(cx - r, cy - r); gwCtx.lineTo(cx + r, cy + r);
+      gwCtx.moveTo(cx + r, cy - r); gwCtx.lineTo(cx - r, cy + r);
+      gwCtx.stroke();
+    }
+  }
+
+  /* ---- 1/sqrt(count rate) vs distance: the inverse-square LINEARISATION with
+     apparatus-offset recovery. For C = k/(d+eps)^2, 1/sqrt(C) = (d+eps)/sqrt(k),
+     a straight line in measured d whose x-intercept is -eps. So extrapolating
+     the least-squares line back to 1/sqrt(C)=0 reads the apparatus offset eps
+     straight off the d-axis. For gamma the points are straight and eps comes out
+     ~2 cm; for beta the points CURVE (air attenuation breaks the k/(d+eps)^2
+     form) and the straight-line intercept is meaningless - the curvature is the
+     honest signal it is not pure inverse-square. Same style as the other graphs;
+     the eps working is drawn on canvas like the half-life working. ---- */
+  function gwDrawInvSqrtC() {
+    const W = graphsCanvas.width, H = graphsCanvas.height;
+    gwCtx.setTransform(1, 0, 0, 1, 0, 0);
+    gwCtx.fillStyle = '#0c1426'; gwCtx.fillRect(0, 0, W, H);
+    const raw = distancePoints();
+    const mL = 86, mR = 36, mT = 42, mB = 60;
+    const px = mL, py = mT, pw = W - mL - mR, ph = H - mT - mB;
+
+    const pts = [];
+    for (let i = 0; i < raw.length; i++) {
+      if (raw[i].d > 0 && raw[i].rate > 0) {
+        // y = C^(-1/2)  =>  sigma_y = sigma_C / (2 C^(3/2))
+        const sy2 = raw[i].sigma / (2 * Math.pow(raw[i].rate, 1.5));
+        pts.push({ d: raw[i].d, y: 1 / Math.sqrt(raw[i].rate), sigmaY: sy2 });
+      }
+    }
+
+    if (pts.length < 3) {
+      gwCtx.fillStyle = '#9fb4c9'; gwCtx.font = '600 16px -apple-system,sans-serif';
+      gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'middle';
+      gwCtx.fillText('More than 2 data points needed', W / 2, H / 2 - 12);
+      gwCtx.fillStyle = '#7c8aa3'; gwCtx.font = '14px -apple-system,sans-serif';
+      gwCtx.fillText('Take readings at three or more different distances.', W / 2, H / 2 + 12);
+      return;
+    }
+
+    // least-squares line y = a + b d
+    let n = pts.length, sx = 0, sy = 0, sxx = 0, sxy = 0;
+    for (let i = 0; i < n; i++) { sx += pts[i].d; sy += pts[i].y; sxx += pts[i].d * pts[i].d; sxy += pts[i].d * pts[i].y; }
+    const denom = n * sxx - sx * sx;
+    let b = 0, a = 0, haveFit = false, xIntercept = 0;
+    if (Math.abs(denom) > 1e-12) { b = (n * sxy - sx * sy) / denom; a = (sy - b * sx) / n; haveFit = true; if (Math.abs(b) > 1e-12) xIntercept = -a / b; }
+
+    // axis ranges. x extends into NEGATIVE d so the x-intercept (= -eps) shows.
+    let dMax = 0, yMax = 0;
+    for (let i = 0; i < n; i++) { if (pts[i].d > dMax) dMax = pts[i].d; if (pts[i].y > yMax) yMax = pts[i].y; }
+    const dMin = -4;                          // show back to -4 cm for the intercept
+    dMax = dMax * 1.05;
+    const yTop = yMax * 1.10;
+    const xSpan = dMax - dMin;
+
+    function X(d) { return px + ((d - dMin) / xSpan) * pw; }
+    function Y(v) { return py + ph - (v / yTop) * ph; }
+
+    // gridlines
+    gwCtx.strokeStyle = 'rgba(255,255,255,0.06)'; gwCtx.lineWidth = 1;
+    for (let g = 1; g <= 5; g++) { const gy = py + (g / 5) * ph; gwCtx.beginPath(); gwCtx.moveTo(px, gy); gwCtx.lineTo(px + pw, gy); gwCtx.stroke(); }
+    // axes: y-axis sits at d = 0 (not the panel's left edge, since x goes negative)
+    const xZero = X(0);
+    gwCtx.strokeStyle = 'rgba(255,255,255,0.35)'; gwCtx.lineWidth = 2;
+    gwCtx.beginPath(); gwCtx.moveTo(xZero, py - 6); gwCtx.lineTo(xZero, py + ph); gwCtx.stroke();      // y-axis at d=0
+    gwCtx.beginPath(); gwCtx.moveTo(px, py + ph); gwCtx.lineTo(px + pw + 6, py + ph); gwCtx.stroke();  // x-axis (1/sqrtC = 0)
+
+    // y labels
+    gwCtx.font = '15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.fillStyle = '#cbd5e1'; gwCtx.textAlign = 'right'; gwCtx.textBaseline = 'middle';
+    for (let g = 0; g <= 5; g++) { const v = yTop * g / 5; const ty = py + ph - (g / 5) * ph; gwCtx.fillText(v.toFixed(3), xZero - 9, ty); }
+    // x labels (including negatives)
+    gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'top';
+    const xStep = niceStepG(dMax, 7);
+    for (let dv = Math.ceil(dMin / xStep) * xStep; dv <= dMax + 1e-9; dv += xStep) {
+      gwCtx.fillStyle = (Math.abs(dv) < 1e-9) ? '#cbd5e1' : '#cbd5e1';
+      gwCtx.fillText(dv.toFixed(0), X(dv), py + ph + 9);
+    }
+    gwCtx.fillStyle = 'rgba(255,255,255,0.92)'; gwCtx.font = 'italic 16px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.fillText('distance / cm', px + pw / 2, py + ph + 32);
+    gwCtx.save(); gwCtx.translate(px - 60, py + ph / 2); gwCtx.rotate(-Math.PI / 2);
+    gwCtx.textBaseline = 'middle'; gwCtx.fillText('1 / \u221a(count rate)', 0, 0); gwCtx.restore();
+
+    // notices: fair-testing + missing background
+    gwDistanceNotices(px, pw);
+
+    // least-squares line, drawn from the x-intercept across to dMax
+    if (haveFit) {
+      const xa = Math.max(dMin, Math.min(xIntercept, dMax)), xb = dMax;
+      gwCtx.save();
+      gwCtx.beginPath(); gwCtx.rect(px, py, pw, ph); gwCtx.clip();
+      gwCtx.strokeStyle = '#fbbf24'; gwCtx.lineWidth = 2.4;
+      gwCtx.beginPath(); gwCtx.moveTo(X(dMin), Y(a + b * dMin)); gwCtx.lineTo(X(dMax), Y(a + b * dMax)); gwCtx.stroke();
+      gwCtx.restore();
+      // mark the x-intercept where the line crosses 1/sqrtC = 0
+      if (xIntercept > dMin && xIntercept < dMax) {
+        gwCtx.beginPath(); gwCtx.arc(X(xIntercept), Y(0), 7, 0, Math.PI * 2);
+        gwCtx.fillStyle = '#fb923c'; gwCtx.shadowColor = '#fb923c'; gwCtx.shadowBlur = 10; gwCtx.fill(); gwCtx.shadowBlur = 0;
+        gwCtx.lineWidth = 2; gwCtx.strokeStyle = '#fff'; gwCtx.stroke();
+        gwCtx.fillStyle = '#fdba74'; gwCtx.font = 'bold 14px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+        gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'bottom';
+        gwCtx.fillText('d = ' + xIntercept.toFixed(1), X(xIntercept), Y(0) - 10);
+      }
+      // eps working on canvas (lower area, clear of the y-axis labels)
+      const eps = -xIntercept;
+      gwCtx.textAlign = 'left'; gwCtx.textBaseline = 'alphabetic';
+      const bx = px + pw - 340, by = py + ph - 96;
+      gwCtx.font = 'bold 16px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.fillStyle = '#e5e7eb';
+      gwCtx.fillText('x-intercept: 1/\u221aC = 0 at d = \u2212\u03b5', bx, by);
+      gwCtx.font = '15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.fillStyle = '#cbd5e1';
+      gwCtx.fillText('so \u03b5 = \u2212(' + xIntercept.toFixed(1) + ') cm', bx, by + 24);
+      gwCtx.font = 'bold 17px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.fillStyle = '#fbbf24';
+      gwCtx.fillText('\u03b5 = ' + eps.toFixed(1) + ' cm   (true offset 2 cm)', bx, by + 50);
+    }
+
+    // counting-uncertainty error bars (under the crosses)
+    if (showUncert) {
+      for (let i = 0; i < n; i++) {
+        const ex = X(pts[i].d);
+        gwErrorBar(ex, Y(pts[i].y + pts[i].sigmaY), Y(pts[i].y - pts[i].sigmaY), py, py + ph, 'rgba(52,211,153,0.7)');
+      }
+      gwUncertCaption(px, py, pw);
+    }
+
+    // data crosses
+    gwCtx.strokeStyle = '#34d399'; gwCtx.lineWidth = 2.2; const r = 5;
+    for (let i = 0; i < n; i++) {
+      const cx = X(pts[i].d), cy = Y(pts[i].y);
+      gwCtx.beginPath();
+      gwCtx.moveTo(cx - r, cy - r); gwCtx.lineTo(cx + r, cy + r);
+      gwCtx.moveTo(cx + r, cy - r); gwCtx.lineTo(cx - r, cy + r);
+      gwCtx.stroke();
+    }
+  }
+
+  /* ---- Count rate (bars): one bar per single reading (raw, uncorrected count
+     rate), background included as its own bar, repeats kept as separate bars.
+     Repeats of one absorber show the counting scatter; different absorbers show
+     the absorption. Only drawn when the readings share the same source, distance
+     and gate (a fair set); otherwise a message states what is required.
+     Categorical x-axis, so bars (not points/curve). Makes no fit or claim. ---- */
+  function gwDrawAbsorberBars() {
+    const W = graphsCanvas.width, H = graphsCanvas.height;
+    gwCtx.setTransform(1, 0, 0, 1, 0, 0);
+    gwCtx.fillStyle = '#0c1426'; gwCtx.fillRect(0, 0, W, H);
+    const mL = 86, mR = 36, mT = 36, mB = 88;
+    const px = mL, py = mT, pw = W - mL - mR, ph = H - mT - mB;
+
+    const data = absorberBarData();
+    if (!data.ok) {
+      gwCtx.fillStyle = '#9fb4c9'; gwCtx.font = '600 16px -apple-system,sans-serif';
+      gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'middle';
+      let msg = 'Nothing to show yet', sub = '';
+      if (data.reason === 'few') { msg = 'Take at least two readings'; sub = 'Repeat a reading, or change the absorber, keeping source and distance fixed.'; }
+      else if (data.reason === 'varied') { msg = 'Keep source and distance fixed'; sub = 'Absorber and gate may change; bars compare one source at one distance.'; }
+      gwCtx.fillText(msg, W / 2, H / 2 - 12);
+      gwCtx.fillStyle = '#7c8aa3'; gwCtx.font = '14px -apple-system,sans-serif';
+      gwCtx.fillText(sub, W / 2, H / 2 + 12);
+      return;
+    }
+
+    const bars = data.bars;
+    let rMax = 1;
+    for (let i = 0; i < bars.length; i++) {
+      const top = bars[i].rate + (showUncert ? (bars[i].sigma || 0) : 0);
+      if (top > rMax) rMax = top;
+    }
+    const yTop = rMax * (showUncert ? 1.18 : 1.12);   // extra headroom for the % line
+
+    function Y(v) { return py + ph - (v / yTop) * ph; }
+
+    // gridlines + axes
+    gwCtx.strokeStyle = 'rgba(255,255,255,0.06)'; gwCtx.lineWidth = 1;
+    for (let g = 1; g <= 5; g++) { const gy = py + (g / 5) * ph; gwCtx.beginPath(); gwCtx.moveTo(px, gy); gwCtx.lineTo(px + pw, gy); gwCtx.stroke(); }
+    gwCtx.strokeStyle = 'rgba(255,255,255,0.35)'; gwCtx.lineWidth = 2;
+    gwCtx.beginPath(); gwCtx.moveTo(px, py - 6); gwCtx.lineTo(px, py + ph); gwCtx.lineTo(px + pw + 6, py + ph); gwCtx.stroke();
+
+    // y labels + axis title (1 dp when the scale is small, else whole numbers,
+    // so low-rate repeat charts don't show duplicate rounded labels)
+    const yDp = (yTop < 10) ? 1 : 0;
+    gwCtx.font = '15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.fillStyle = '#cbd5e1'; gwCtx.textAlign = 'right'; gwCtx.textBaseline = 'middle';
+    for (let g = 0; g <= 5; g++) { const v = yTop * g / 5; const ty = py + ph - (g / 5) * ph; gwCtx.fillText(v.toFixed(yDp), px - 9, ty); }
+    gwCtx.save(); gwCtx.translate(px - 60, py + ph / 2); gwCtx.rotate(-Math.PI / 2);
+    gwCtx.fillStyle = 'rgba(255,255,255,0.92)'; gwCtx.font = 'italic 16px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'middle'; gwCtx.fillText('count rate / s\u207B\u00B9', 0, 0); gwCtx.restore();
+
+    // background reference line across the plot (the floor). The labelled
+    // background bar already names it, so the line itself needs no text.
+    if (data.bgRate !== null && data.bgRate > 0) {
+      const by = Y(data.bgRate);
+      gwCtx.strokeStyle = 'rgba(251,191,36,0.5)'; gwCtx.lineWidth = 1.5; gwCtx.setLineDash([6, 4]);
+      gwCtx.beginPath(); gwCtx.moveTo(px, by); gwCtx.lineTo(px + pw, by); gwCtx.stroke();
+      gwCtx.setLineDash([]);
+    }
+
+    // bars
+    const n = bars.length;
+    const slot = pw / n;
+    const bw = Math.min(slot * 0.62, 70);
+    for (let i = 0; i < n; i++) {
+      const cx = px + slot * (i + 0.5);
+      const bh = (bars[i].rate / yTop) * ph;
+      const bx = cx - bw / 2, byTop = py + ph - bh;
+      // background bar dimmer/distinct from absorber bars
+      gwCtx.fillStyle = bars[i].isBg ? 'rgba(148,163,184,0.55)' : 'rgba(52,211,153,0.75)';
+      gwCtx.strokeStyle = bars[i].isBg ? 'rgba(148,163,184,0.9)' : '#34d399';
+      gwCtx.lineWidth = 1.5;
+      gwCtx.fillRect(bx, byTop, bw, bh);
+      gwCtx.strokeRect(bx, byTop, bw, bh);
+      // counting-uncertainty whisker (light, so it reads on the filled bar)
+      let labelY = byTop;
+      if (showUncert && bars[i].sigma > 0) {
+        const wTop = Y(bars[i].rate + bars[i].sigma), wBot = Y(Math.max(0, bars[i].rate - bars[i].sigma));
+        gwErrorBar(cx, wTop, wBot, py, py + ph, 'rgba(229,231,235,0.85)');
+        labelY = Math.min(labelY, Math.max(wTop, py));
+      }
+      // value above the bar (above the whisker when uncertainties are shown),
+      // with the percentage uncertainty beneath it: sigma/rate = sqrt(N)/N,
+      // the standard percentage-uncertainty formula for a count of N.
+      gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'bottom';
+      if (showUncert && bars[i].sigma > 0 && bars[i].rate > 0) {
+        const pct = 100 * bars[i].sigma / bars[i].rate;
+        gwCtx.fillStyle = '#e5e7eb'; gwCtx.font = '12px -apple-system,sans-serif';
+        gwCtx.fillText('\u00b1' + (pct < 10 ? pct.toFixed(1) : pct.toFixed(0)) + '%', cx, labelY - 4);
+        gwCtx.font = '600 13px -apple-system,sans-serif';
+        gwCtx.fillText(bars[i].rate < 10 ? bars[i].rate.toFixed(1) : bars[i].rate.toFixed(0), cx, labelY - 19);
+      } else {
+        gwCtx.fillStyle = '#e5e7eb'; gwCtx.font = '600 12px -apple-system,sans-serif';
+        gwCtx.fillText(bars[i].rate < 10 ? bars[i].rate.toFixed(1) : bars[i].rate.toFixed(0), cx, labelY - 4);
+      }
+      // label below the axis (angled if many bars)
+      gwCtx.save();
+      gwCtx.translate(cx, py + ph + 10);
+      gwCtx.fillStyle = bars[i].isBg ? '#9fb4c9' : '#cbd5e1';
+      gwCtx.font = '13px -apple-system,sans-serif';
+      if (n > 5) { gwCtx.rotate(-Math.PI / 6); gwCtx.textAlign = 'right'; gwCtx.textBaseline = 'middle'; gwCtx.fillText(bars[i].label, 0, 0); }
+      else { gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'top'; gwCtx.fillText(bars[i].label, 0, 0); }
+      gwCtx.restore();
+    }
+    if (showUncert) gwUncertCaption(px, py, pw);
+  }
+
+  /* ---- Count distribution: histogram of repeat counts at one fixed setup,
+     with the Poisson prediction drawn as a dashed normal curve of mean N-bar
+     and width sqrt(N-bar), scaled to the number of readings. The on-canvas
+     working compares the observed spread s with the predicted sqrt(mean):
+     "decay is random" made quantitative and checkable. ---- */
+  function gwDrawHist() {
+    const W = graphsCanvas.width, H = graphsCanvas.height;
+    gwCtx.setTransform(1, 0, 0, 1, 0, 0);
+    gwCtx.fillStyle = '#0c1426'; gwCtx.fillRect(0, 0, W, H);
+    const mL = 86, mR = 36, mT = 36, mB = 60;
+    const px = mL, py = mT, pw = W - mL - mR, ph = H - mT - mB;
+
+    const data = histGroupData();
+    if (!data.ok) {
+      gwCtx.fillStyle = '#9fb4c9'; gwCtx.font = '600 16px -apple-system,sans-serif';
+      gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'middle';
+      gwCtx.fillText('Repeat one reading 5 or more times', W / 2, H / 2 - 12);
+      gwCtx.fillStyle = '#7c8aa3'; gwCtx.font = '14px -apple-system,sans-serif';
+      gwCtx.fillText('Keep the source, distance, absorber and gate the same between readings.', W / 2, H / 2 + 12);
+      return;
+    }
+
+    const g = data.group, cs = g.counts, n = cs.length;
+    let sum = 0;
+    for (let i = 0; i < n; i++) sum += cs[i];
+    const mean = sum / n;
+    let ss = 0;
+    for (let i = 0; i < n; i++) ss += (cs[i] - mean) * (cs[i] - mean);
+    const s = Math.sqrt(ss / (n - 1));         // observed sample spread
+    const pred = Math.sqrt(mean);              // Poisson prediction
+
+    // integer-aligned bins, about 10 across the data
+    let cMin = cs[0], cMax = cs[0];
+    for (let i = 1; i < n; i++) { if (cs[i] < cMin) cMin = cs[i]; if (cs[i] > cMax) cMax = cs[i]; }
+    const binW = Math.max(1, niceStepG(Math.max(cMax - cMin, 1), 10));
+    const start = Math.floor(cMin / binW) * binW;
+    const nb = Math.max(1, Math.ceil((cMax + 1 - start) / binW));
+    const freq = [];
+    for (let b = 0; b < nb; b++) freq.push(0);
+    for (let i = 0; i < n; i++) {
+      let b = Math.floor((cs[i] - start) / binW);
+      if (b < 0) b = 0; if (b > nb - 1) b = nb - 1;
+      freq[b]++;
+    }
+    let fMax = 1;
+    for (let b = 0; b < nb; b++) if (freq[b] > fMax) fMax = freq[b];
+    // include the curve peak in the y-scale so it never clips
+    const peak = n * binW / (pred * Math.sqrt(2 * Math.PI));
+    if (peak > fMax) fMax = peak;
+    const yTop = fMax * 1.15;
+    const xLo = start, xHi = start + nb * binW;
+
+    function X(c) { return px + ((c - xLo) / (xHi - xLo)) * pw; }
+    function Y(f) { return py + ph - (f / yTop) * ph; }
+
+    // gridlines + axes
+    gwCtx.strokeStyle = 'rgba(255,255,255,0.06)'; gwCtx.lineWidth = 1;
+    for (let gl = 1; gl <= 5; gl++) { const gy = py + (gl / 5) * ph; gwCtx.beginPath(); gwCtx.moveTo(px, gy); gwCtx.lineTo(px + pw, gy); gwCtx.stroke(); }
+    gwCtx.strokeStyle = 'rgba(255,255,255,0.35)'; gwCtx.lineWidth = 2;
+    gwCtx.beginPath(); gwCtx.moveTo(px, py - 6); gwCtx.lineTo(px, py + ph); gwCtx.lineTo(px + pw + 6, py + ph); gwCtx.stroke();
+
+    // y labels (whole readings) + axis titles
+    gwCtx.font = '15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.fillStyle = '#cbd5e1'; gwCtx.textAlign = 'right'; gwCtx.textBaseline = 'middle';
+    const yStep = Math.max(1, niceStepG(yTop, 5));
+    for (let v = 0; v <= yTop + 1e-9; v += yStep) gwCtx.fillText(v.toFixed(0), px - 9, Y(v));
+    gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'top';
+    const xStep = Math.max(binW, niceStepG(xHi - xLo, 8));
+    for (let xv = xLo; xv <= xHi + 1e-9; xv += xStep) gwCtx.fillText(xv.toFixed(0), X(xv), py + ph + 9);
+    gwCtx.fillStyle = 'rgba(255,255,255,0.92)'; gwCtx.font = 'italic 16px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.fillText('counts in one gate', px + pw / 2, py + ph + 32);
+    gwCtx.save(); gwCtx.translate(px - 60, py + ph / 2); gwCtx.rotate(-Math.PI / 2);
+    gwCtx.textBaseline = 'middle'; gwCtx.fillText('number of readings', 0, 0); gwCtx.restore();
+
+    // histogram bars
+    for (let b = 0; b < nb; b++) {
+      if (!freq[b]) continue;
+      const bx = X(start + b * binW), bx2 = X(start + (b + 1) * binW);
+      const byTop = Y(freq[b]);
+      gwCtx.fillStyle = 'rgba(52,211,153,0.55)';
+      gwCtx.strokeStyle = '#34d399'; gwCtx.lineWidth = 1.5;
+      gwCtx.fillRect(bx + 1, byTop, bx2 - bx - 2, py + ph - byTop);
+      gwCtx.strokeRect(bx + 1, byTop, bx2 - bx - 2, py + ph - byTop);
+    }
+
+    // Poisson prediction: dashed normal, mean N-bar, width sqrt(N-bar),
+    // scaled to n readings x bin width so curve and bars are comparable
+    gwCtx.save();
+    gwCtx.beginPath(); gwCtx.rect(px, py, pw, ph); gwCtx.clip();
+    gwCtx.strokeStyle = '#fbbf24'; gwCtx.lineWidth = 2.2; gwCtx.setLineDash([7, 5]);
+    gwCtx.beginPath();
+    for (let q = 0; q <= 240; q++) {
+      const c = xLo + (xHi - xLo) * q / 240;
+      const f = n * binW * Math.exp(-(c - mean) * (c - mean) / (2 * mean)) / (pred * Math.sqrt(2 * Math.PI));
+      if (q === 0) gwCtx.moveTo(X(c), Y(f)); else gwCtx.lineTo(X(c), Y(f));
+    }
+    gwCtx.stroke();
+    gwCtx.setLineDash([]);
+    gwCtx.restore();
+
+    // setup caption (top-left): what these repeats are
+    let meta = n + ' readings \u00b7 ' + (g.isBackground ? 'background' : g.sourceName) + ' \u00b7 gate ' + g.gate + ' s';
+    if (!g.isBackground) {
+      meta += ' \u00b7 ' + g.distance.toFixed(1) + ' cm';
+      if (g.absorber && g.absorber !== 'none') meta += ' \u00b7 ' + (ABSORBER_LABEL[g.absorber] || g.absorber);
+    }
+    gwCtx.fillStyle = '#9aa7bd'; gwCtx.font = '12px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.textAlign = 'left'; gwCtx.textBaseline = 'bottom';
+    gwCtx.fillText(meta, px, py - 8);
+
+    // the working: observed spread vs Poisson prediction
+    const bx0 = px + pw - 250, by0 = py + 26;
+    gwCtx.textAlign = 'left'; gwCtx.textBaseline = 'alphabetic';
+    gwCtx.font = 'bold 15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.fillStyle = '#e5e7eb';
+    gwCtx.fillText('mean count  N\u0304 = ' + mean.toFixed(1), bx0, by0);
+    gwCtx.font = '15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.fillStyle = '#cbd5e1';
+    gwCtx.fillText('observed spread  s = ' + s.toFixed(1), bx0, by0 + 24);
+    gwCtx.font = 'bold 15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.fillStyle = '#fbbf24';
+    gwCtx.fillText('predicted  \u221aN\u0304 = ' + pred.toFixed(1), bx0, by0 + 48);
+  }
+
+  /* ---- ln(count rate) vs time: straight-line fit with the full lambda and
+     half-life working drawn on the canvas (Dice Decay gwDrawLn style). ---- */
+  function gwDrawLn() {
+    const W = graphsCanvas.width, H = graphsCanvas.height;
+    gwCtx.setTransform(1, 0, 0, 1, 0, 0);
+    gwCtx.fillStyle = '#0c1426'; gwCtx.fillRect(0, 0, W, H);
+    const mL = 86, mR = 36, mT = 30, mB = 60;
+    const px = mL, py = mT, pw = W - mL - mR, ph = H - mT - mB;
+
+    const sp = seriesPoints();
+    const pts = [];
+    for (let i = 0; i < sp.length; i++) pts.push({ x: sp[i].t, y: Math.log(sp[i].rate), sLn: sp[i].sigma / sp[i].rate });
+
+    let tMax = 5, yTop = 1; const yMin = 0;
+    for (let i = 0; i < pts.length; i++) { if (pts[i].x > tMax) tMax = pts[i].x; if (pts[i].y > yTop) yTop = pts[i].y; }
+    tMax = tMax * 1.05; yTop = yTop * 1.08;
+
+    function X(t) { return px + (t / tMax) * pw; }
+    function Y(l) { return py + ph - ((l - yMin) / (yTop - yMin)) * ph; }
+
+    gwCtx.strokeStyle = 'rgba(255,255,255,0.06)'; gwCtx.lineWidth = 1;
+    for (let g = 1; g <= 5; g++) { const gy = py + (g / 5) * ph; gwCtx.beginPath(); gwCtx.moveTo(px, gy); gwCtx.lineTo(px + pw, gy); gwCtx.stroke(); }
+    gwCtx.strokeStyle = 'rgba(255,255,255,0.35)'; gwCtx.lineWidth = 2;
+    gwCtx.beginPath(); gwCtx.moveTo(px, py - 6); gwCtx.lineTo(px, py + ph); gwCtx.lineTo(px + pw + 6, py + ph); gwCtx.stroke();
+
+    gwCtx.font = '15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.fillStyle = '#cbd5e1'; gwCtx.textAlign = 'right'; gwCtx.textBaseline = 'middle';
+    for (let g = 0; g <= 5; g++) { const v = yMin + (yTop - yMin) * g / 5; const ty = py + ph - (g / 5) * ph; gwCtx.fillText(v.toFixed(1), px - 9, ty); }
+    gwCtx.textAlign = 'center'; gwCtx.textBaseline = 'top';
+    const xStep = niceStepG(tMax, 8);
+    for (let tv = 0; tv <= tMax + 1e-9; tv += xStep) { gwCtx.fillText(tv.toFixed(0), X(tv), py + ph + 9); }
+    gwCtx.fillStyle = 'rgba(255,255,255,0.92)'; gwCtx.font = 'italic 16px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+    gwCtx.fillText('time / s', px + pw / 2, py + ph + 32);
+    gwCtx.save(); gwCtx.translate(px - 60, py + ph / 2); gwCtx.rotate(-Math.PI / 2);
+    gwCtx.textBaseline = 'middle'; gwCtx.fillText('ln(count rate)', 0, 0); gwCtx.restore();
+
+    const fit = computeSeriesFit();
+    if (fit && pts.length >= 2) {
+      const k = fit.k, lnA = Math.log(fit.A);
+      const x1 = 0, y1 = lnA;
+      const x2 = pts[pts.length - 1].x, y2 = lnA - k * x2;
+      gwCtx.strokeStyle = '#fbbf24'; gwCtx.lineWidth = 2.6;
+      gwCtx.beginPath(); gwCtx.moveTo(X(x1), Y(y1)); gwCtx.lineTo(X(x2), Y(y2)); gwCtx.stroke();
+      const ex = [{ x: x1, y: y1 }, { x: x2, y: y2 }];
+      for (let e = 0; e < 2; e++) {
+        gwCtx.beginPath(); gwCtx.arc(X(ex[e].x), Y(ex[e].y), 7, 0, Math.PI * 2);
+        gwCtx.fillStyle = '#fb923c'; gwCtx.shadowColor = '#fb923c'; gwCtx.shadowBlur = 10; gwCtx.fill(); gwCtx.shadowBlur = 0;
+        gwCtx.lineWidth = 2; gwCtx.strokeStyle = '#fff'; gwCtx.stroke();
+      }
+      gwCtx.font = 'bold 14px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.fillStyle = '#fdba74'; gwCtx.textAlign = 'left'; gwCtx.textBaseline = 'bottom';
+      gwCtx.fillText('(' + x1.toFixed(0) + ', ' + y1.toFixed(2) + ')', X(x1) + 12, Y(y1) - 6);
+      const c2 = '(' + x2.toFixed(0) + ', ' + y2.toFixed(2) + ')';
+      let c2x = X(x2) + 10; const c2w = gwCtx.measureText(c2).width;
+      if (c2x + c2w > px + pw) c2x = px + pw - c2w;
+      gwCtx.fillText(c2, c2x, Y(y2) + 22);
+
+      gwCtx.textAlign = 'left'; gwCtx.textBaseline = 'alphabetic';
+      const bx = px + 16, by = py + ph - 168;
+      gwCtx.font = 'bold 16px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.fillStyle = '#e5e7eb';
+      gwCtx.fillText('gradient = \u2212\u03bb = (y\u2082 \u2212 y\u2081) / (x\u2082 \u2212 x\u2081)', bx, by);
+      gwCtx.font = '15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.fillStyle = '#cbd5e1';
+      gwCtx.fillText('= (' + y2.toFixed(2) + ' \u2212 ' + y1.toFixed(2) + ') / (' + x2.toFixed(0) + ' \u2212 ' + x1.toFixed(0) + ')', bx, by + 24);
+      gwCtx.fillText('= \u2212' + k.toFixed(4) + ' s\u207B\u00B9', bx, by + 46);
+      gwCtx.font = 'bold 17px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.fillStyle = '#fbbf24';
+      gwCtx.fillText('\u03bb = ' + k.toFixed(4) + ' s\u207B\u00B9', bx, by + 74);
+      const thalf = Math.LN2 / k;
+      gwCtx.font = '15px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.fillStyle = '#cbd5e1';
+      gwCtx.fillText('half-life  t\u00bd = ln2 / \u03bb', bx, by + 100);
+      gwCtx.fillText('= 0.693 / ' + k.toFixed(4), bx, by + 122);
+      gwCtx.font = 'bold 17px -apple-system,BlinkMacSystemFont,"Segoe UI"';
+      gwCtx.fillStyle = '#fbbf24';
+      // measured value, with the accepted half-life of the source in brackets
+      let measuredLine = '= ' + thalf.toFixed(1) + ' s';
+      const decSrc = currentSource();
+      if (decSrc && decSrc.decaying && decSrc.halfLife_s) {
+        measuredLine += '   (accepted ' + decSrc.halfLife_s + ' s)';
+      }
+      gwCtx.fillText(measuredLine, bx, by + 146);
+    }
+    if (showUncert && pts.length) {
+      for (let i = 0; i < pts.length; i++) {
+        const ex = X(pts[i].x);
+        gwErrorBar(ex, Y(pts[i].y + pts[i].sLn), Y(pts[i].y - pts[i].sLn), py, py + ph, 'rgba(52,211,153,0.7)');
+      }
+      gwUncertCaption(px, py, pw);
+    }
+    gwCtx.strokeStyle = '#34d399'; gwCtx.lineWidth = 2.2; const r = 5;
+    for (let i = 0; i < pts.length; i++) {
+      const cx = X(pts[i].x), cy = Y(pts[i].y);
+      if (cy < py - 2 || cy > py + ph + 2) continue;
+      gwCtx.beginPath();
+      gwCtx.moveTo(cx - r, cy - r); gwCtx.lineTo(cx + r, cy + r);
+      gwCtx.moveTo(cx + r, cy - r); gwCtx.lineTo(cx - r, cy + r);
+      gwCtx.stroke();
+    }
+    if (pts.length < 2) {
+      gwCtx.fillStyle = '#7c8aa3'; gwCtx.font = '15px -apple-system,sans-serif'; gwCtx.textAlign = 'center';
+      gwCtx.fillText('Run a timed decay series to see the graph.', px + pw / 2, py + ph / 2);
+    }
+  }
+
+  /* ---- popout drag + resize (Dice Decay pattern, mouse + touch) ---- */
+  function attachPopupDragResize(win, header, grip, onResize) {
+    const st = { drag: false, rz: false, sx: 0, sy: 0, wl: 0, wt: 0, rw: 0, rh: 0 };
+    function startDrag(cx, cy) { const r = win.getBoundingClientRect(); st.drag = true; st.sx = cx; st.sy = cy; st.wl = r.left; st.wt = r.top; }
+    function moveDrag(cx, cy) {
+      if (!st.drag) return; let nl = st.wl + (cx - st.sx), nt = st.wt + (cy - st.sy);
+      const minL = -(win.offsetWidth - 80), maxL = window.innerWidth - 80; if (nl < minL) nl = minL; if (nl > maxL) nl = maxL;
+      if (nt < 0) nt = 0; if (nt > window.innerHeight - 36) nt = window.innerHeight - 36; win.style.left = nl + 'px'; win.style.top = nt + 'px';
+    }
+    function startResize(cx, cy) { const r = win.getBoundingClientRect(); st.rz = true; st.sx = cx; st.sy = cy; st.rw = r.width; st.rh = r.height; }
+    function moveResize(cx, cy) {
+      if (!st.rz) return; let nw = st.rw + (cx - st.sx), nh = st.rh + (cy - st.sy);
+      if (nw < 380) nw = 380; if (nw > window.innerWidth - 20) nw = window.innerWidth - 20; if (nh < 300) nh = 300; if (nh > window.innerHeight - 20) nh = window.innerHeight - 20;
+      win.style.width = nw + 'px'; win.style.height = nh + 'px'; if (onResize) onResize();
+    }
+    function endAll() { st.drag = false; st.rz = false; }
+    header.addEventListener('mousedown', function (e) { if (e.target.tagName === 'BUTTON') return; startDrag(e.clientX, e.clientY); e.preventDefault(); });
+    grip.addEventListener('mousedown', function (e) { startResize(e.clientX, e.clientY); e.preventDefault(); });
+    document.addEventListener('mousemove', function (e) { if (st.drag) moveDrag(e.clientX, e.clientY); else if (st.rz) moveResize(e.clientX, e.clientY); });
+    document.addEventListener('mouseup', endAll);
+    header.addEventListener('touchstart', function (e) { if (e.target.tagName === 'BUTTON') return; const t = e.touches[0]; startDrag(t.clientX, t.clientY); e.preventDefault(); }, { passive: false });
+    grip.addEventListener('touchstart', function (e) { const t = e.touches[0]; startResize(t.clientX, t.clientY); e.preventDefault(); }, { passive: false });
+    document.addEventListener('touchmove', function (e) { if (st.drag) { const t = e.touches[0]; moveDrag(t.clientX, t.clientY); e.preventDefault(); } else if (st.rz) { const t2 = e.touches[0]; moveResize(t2.clientX, t2.clientY); e.preventDefault(); } }, { passive: false });
+    document.addEventListener('touchend', endAll);
+    document.addEventListener('touchcancel', endAll);
+  }
+  attachPopupDragResize(graphsWindow, graphsHeader, graphsGrip, drawGraphsWindow);
+
+  graphsBtn.addEventListener('click', () => {
+    populateGraphPresets();   // ensure presets match the current mode
+    graphsWindow.classList.add('open');
+    drawGraphsWindow();
+  });
+  graphsClose.addEventListener('click', () => { graphsWindow.classList.remove('open'); });
+  graphsTypeSel.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn || btn.disabled) return;     // ignore unavailable presets
+    const btns = graphsTypeSel.querySelectorAll('button');
+    for (let i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+    btn.classList.add('active');
+    graphPreset = btn.getAttribute('data-gtype');
+    drawGraphsWindow();
+  });
+  populateGraphPresets();
+
+  function init() {
+    gateSel.value = String(state.gate);
+    if (readingsInput) readingsInput.value = String(state.readings);
+    renderReveal();
+    renderTable();
+    setCounter(0, 0, state.gate, false);
+    drawBench();
+    updateGraphsAvailability();
+    requestAnimationFrame(idleLoop);
+  }
+  init();
+
+})();
+</script>
+
+</body>
+</html>
