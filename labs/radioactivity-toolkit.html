@@ -359,6 +359,13 @@ tbody td.abs-col { font-weight:600; }
         <label class="grp-label">Sound</label>
         <button class="ghost-btn" id="absSoundBtn" aria-pressed="true">&#128266; On</button>
       </div>
+      <div class="control-group" title="How far the source's active layer and the tube's detection point sit behind their windows. 2.0 cm matches real school apparatus; 0 is idealised kit with both at the window faces. Locked while readings exist - press Clear to change it.">
+        <label class="grp-label">Apparatus offset &epsilon;</label>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="range" id="absEpsSlider" min="0" max="2" step="0.1" value="2">
+          <span class="slider-val" id="absEpsVal">2.0 cm</span>
+        </div>
+      </div>
     </div>
 
     <div class="hint">Drag the source, absorber or detector to position them. See <span style="color:var(--accent);cursor:pointer;font-style:normal;" onclick="showHelpModal('absorption')">help</span> for the method.</div>
@@ -456,6 +463,7 @@ function showHelpModal(topic) {
     '<p><span class="key">Distance</span> &mdash; the source&ndash;tube separation. Keep it the same between readings for a fair test.</p>' +
     '<p><span class="key">Gate time</span> &mdash; how long the counter counts for. Counting for longer gives a steadier reading.</p>' +
     '<p><span class="key">Speed</span> &mdash; how fast the gate plays out on screen. The physics is unchanged; only the waiting is sped up.</p>' +
+    '<p><span class="key">Apparatus offset &epsilon;</span> &mdash; how far the source&rsquo;s active layer and the tube&rsquo;s detection point sit recessed behind their windows. The measured distance d runs window to window, so the true source-to-detection separation is d + &epsilon;. At <span class="key">2.0 cm</span> the bench behaves like real school apparatus: the inverse-square graphs bend at small distances and the 1/&radic;(count rate) line points back to the hidden offset. Slide it to <span class="key">0</span> for idealised kit with everything at the window faces, and the offset&rsquo;s signature vanishes from the graphs &mdash; turning the systematic error on and off is the quickest way to show a class what it does to data. With less recess the alpha also reaches slightly further, as it should. The slider is <span class="key">locked while readings exist</span> (so one dataset never mixes two geometries) and unlocks when you press Clear. Even at 0 the fitted line may miss the origin by a millimetre or two: the detector window has real size, so very close in the counts fall slightly below a perfect inverse square.</p>' +
     '<h3>Live monitor mode (have a play first)</h3>' +
     '<p>Tap the round <span class="key">power switch</span> on the counter to switch it into <span class="key">live monitor</span> mode. The counter then runs continuously, like a switched-on Geiger counter: the total climbs and you hear a steady crackle. Move the tube, source or absorber and the counter speeds up or slows down, and the crackle changes &mdash; great for getting a feel for the apparatus before taking proper readings.</p>' +
     '<p>While monitoring, the panel shows <span class="key">LIVE &mdash; monitor &mdash; not recorded</span> and the <span class="key">Run</span> button is switched off. Nothing here is logged. Tap the power switch again to turn monitor mode off; then use <span class="key">Run</span> to take real, recorded measurements.</p>' +
@@ -557,19 +565,22 @@ window.closeHelpModal = closeHelpModal;
      thickness exponential (mu_m = 17*Emax^-1.43), gamma by NIST coefficients. */
 
   const BACKGROUND = 0.5;            // counts/s, always present
-  const EPS_M = 0.020;               // apparatus offset, metres (2 cm, measured)
-  // The 2 cm geometric offset splits physically into ~1 cm of air in front of
-  // the source window (which the alpha must cross) and ~1 cm of detection depth
+  const EPS_DEFAULT_CM = 2.0;        // apparatus offset, cm (default; the slider
+                                     // varies state.epsCm from 0 to this value)
+  // The geometric offset epsilon splits physically into air in front of the
+  // source's active layer (which the alpha must cross) and detection depth
   // recessed inside the GM tube (behind the window - the alpha is caught at the
   // window, so this part is NOT air the alpha travels). The alpha's air path is
   // therefore (source-side air + the measured gap to whatever intercepts it),
   // NOT the full geometric separation. This does not affect the inverse-square
   // geometry (which uses the full combined offset) or the 1/sqrt(C) vs d offset
-  // recovery (a combined value), only how far the alpha reaches.
+  // recovery (a combined value), only how far the alpha reaches. The slider
+  // scales BOTH parts together: at epsilon = 0 the active layer sits at the
+  // source window and detection happens at the tube window (idealised kit).
   const SRC_AIR_CM = 1.5;            // cm of air from the source's active layer
-                                     // out to its window. Distance d is measured
-                                     // from the WINDOW, so the alpha's total air
-                                     // path is this source-internal air + d.
+                                     // out to its window AT THE DEFAULT offset.
+                                     // Scaled by (epsCm / EPS_DEFAULT_CM) so the
+                                     // source-side recess follows the slider.
   const WINDOW_RADIUS_M = 0.0175;    // GM end-window radius (35 mm dia), assumed typical
 
   // Intrinsic detection efficiency of the GM tube per radiation kind.
@@ -698,11 +709,11 @@ window.closeHelpModal = closeHelpModal;
 
   function airFactor(comp, x_cm, distance_cm) {
     if (comp.type === 'alpha') {
-      // The alpha crosses the source-side air (SRC_AIR_CM) plus the measured
-      // gap to the detector - the tube-side recess is behind the window and
-      // is not air the alpha travels through. So its air path is shorter than
-      // the full geometric separation, letting it reach a bit further.
-      const airPath = SRC_AIR_CM + distance_cm;
+      // The alpha crosses the source-side air plus the measured gap to the
+      // detector - the tube-side recess is behind the window and is not air
+      // the alpha travels through. The source-side air scales with the
+      // offset slider: at epsilon = 0 the active layer sits at the window.
+      const airPath = SRC_AIR_CM * (state.epsCm / EPS_DEFAULT_CM) + distance_cm;
       const R = alphaAirRange_cm(comp.Ealpha);
       const straggle = 0.5;                 // cm, half-width of the fall-off
       if (airPath <= R - straggle) return 1;
@@ -798,7 +809,7 @@ window.closeHelpModal = closeHelpModal;
   function meanRate(source, absorberKey, distance_cm) {
     let r = BACKGROUND;
     if (!source.components.length) return r;
-    const x_cm = distance_cm + EPS_M * 100;          // true separation, cm
+    const x_cm = distance_cm + state.epsCm;           // true separation, cm
     const x_m  = x_cm / 100;                          // true separation, m
     const geom = solidAngleFraction(x_m);             // fraction of 4pi at the window
     const A = effectiveActivity(source);              // decay-adjusted activity
@@ -855,6 +866,7 @@ window.closeHelpModal = closeHelpModal;
     detCm: 18,         // detector position (cm from datum); distance = detCm - srcCm
     absCm: 12,         // absorber position (cm from datum); free between src & det
     gate: 100,         // s
+    epsCm: EPS_DEFAULT_CM, // apparatus offset (cm); slider-set, locked while readings exist
     speed: 1,          // playback multiplier; 0 = instant
     mode: 'single',    // 'single' | 'time' (measurement mode)
     readings: 12,      // number of readings in a time-series run
@@ -887,6 +899,22 @@ window.closeHelpModal = closeHelpModal;
   const clearBtn   = document.getElementById('absClearBtn');
   const revealBtn  = document.getElementById('absRevealBtn');
   const soundBtn   = document.getElementById('absSoundBtn');
+  const epsSlider  = document.getElementById('absEpsSlider');
+  const epsVal     = document.getElementById('absEpsVal');
+
+  /* Apparatus offset slider. Locked while any readings exist so a dataset
+     can never mix two different geometries; Clear unlocks it. */
+  epsSlider.addEventListener('input', () => {
+    state.epsCm = parseFloat(epsSlider.value);
+    epsVal.textContent = state.epsCm.toFixed(1) + ' cm';
+  });
+
+  function updateEpsEnabled() {
+    const locked = state.rows.length > 0;
+    epsSlider.disabled = locked;
+    epsSlider.style.opacity = locked ? 0.4 : 1;
+    epsVal.style.opacity = locked ? 0.55 : 1;
+  }
   const revealCont = document.getElementById('absRevealContent');
   const tableBody  = document.getElementById('absTableBody');
   const rateHeader = document.getElementById('absRateHeader');
@@ -1064,6 +1092,7 @@ window.closeHelpModal = closeHelpModal;
       tMid: (typeof tMid === 'number') ? tMid : null   // time stamp (s) for series rows
     });
     renderTable();
+    updateEpsEnabled();                       // lock the offset slider while data exists
     // Update graph availability and live-refresh an open graphs window.
     if (typeof updateGraphsAvailability === 'function') updateGraphsAvailability();
     if (graphsWindow && graphsWindow.classList.contains('open')) { populateGraphPresets(); drawGraphsWindow(); }
@@ -2016,6 +2045,7 @@ window.closeHelpModal = closeHelpModal;
     rowCounter = 0;
     renderTable();
     setCounter(0, 0, state.gate, false);
+    updateEpsEnabled();                       // offset slider unlocks once the table is empty
     updateGraphsAvailability();
     if (graphsWindow.classList.contains('open')) drawGraphsWindow();
   });
@@ -2913,7 +2943,7 @@ window.closeHelpModal = closeHelpModal;
       gwCtx.fillText('so \u03b5 = \u2212(' + xIntercept.toFixed(1) + ') cm', bx, by + 24);
       gwCtx.font = 'bold 17px -apple-system,BlinkMacSystemFont,"Segoe UI"';
       gwCtx.fillStyle = '#fbbf24';
-      gwCtx.fillText('\u03b5 = ' + eps.toFixed(1) + ' cm   (true offset 2 cm)', bx, by + 50);
+      gwCtx.fillText('\u03b5 = ' + eps.toFixed(1) + ' cm   (true offset ' + state.epsCm.toFixed(1) + ' cm)', bx, by + 50);
     }
 
     // counting-uncertainty error bars (under the crosses)
@@ -3325,11 +3355,62 @@ window.closeHelpModal = closeHelpModal;
     renderReveal();
     renderTable();
     setCounter(0, 0, state.gate, false);
+    updateEpsEnabled();
     drawBench();
     updateGraphsAvailability();
     requestAnimationFrame(idleLoop);
   }
   init();
+
+  // ---- iPad Safari range-slider touchend fix (from DC Construction Kit) ----
+  // On iPad Safari, lifting a finger or Apple Pencil from a range input
+  // sometimes gets interpreted as the track origin. The community fix is
+  // to recompute the slider value ourselves from the actual touch
+  // position and dispatch corrected input/change events.
+  //
+  // Delegated at document level so it covers any current or future range
+  // input - no per-element rebinding needed.
+  function _ipadSliderTouchEnd(e) {
+    var el = e.target;
+    if (!el || el.tagName !== 'INPUT' || el.type !== 'range') return;
+    if (el.disabled) return;
+    if (!e.changedTouches || e.changedTouches.length === 0) return;
+    var t = e.changedTouches[0];
+    var rect = el.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    var min = parseFloat(el.min);
+    var max = parseFloat(el.max);
+    if (isNaN(min)) min = 0;
+    if (isNaN(max)) max = 100;
+    var step = parseFloat(el.step);
+    if (isNaN(step) || step <= 0) step = 1;
+    // Fraction along the track (0 = left, 1 = right). Clamp so a touch
+    // that ends just outside the slider bounds still produces an
+    // in-range value rather than snapping wildly.
+    var frac = (t.clientX - rect.left) / rect.width;
+    if (frac < 0) frac = 0;
+    if (frac > 1) frac = 1;
+    var raw = min + frac * (max - min);
+    // Snap to nearest step from min.
+    var stepped = min + Math.round((raw - min) / step) * step;
+    if (stepped < min) stepped = min;
+    if (stepped > max) stepped = max;
+    // Avoid floating-point noise like 0.30000000000000004 for step="0.1".
+    // toFixed picks decimal places from step's exponent.
+    var stepStr = String(step);
+    var dotIdx = stepStr.indexOf('.');
+    var decimals = (dotIdx >= 0) ? (stepStr.length - dotIdx - 1) : 0;
+    var newVal = decimals > 0 ? parseFloat(stepped.toFixed(decimals)) : stepped;
+    var current = parseFloat(el.value);
+    if (newVal === current) return;  // Browser got it right; don't double-fire.
+    el.value = String(newVal);
+    // Fire input first (live-update handler) then change (commit handler),
+    // mirroring the order a real interaction would produce.
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  document.addEventListener('touchend', _ipadSliderTouchEnd, { passive: true });
+  document.addEventListener('touchcancel', _ipadSliderTouchEnd, { passive: true });
 
 })();
 </script>
