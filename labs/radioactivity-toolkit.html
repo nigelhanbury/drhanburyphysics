@@ -324,10 +324,10 @@ tbody td.abs-col { font-weight:600; }
         <label class="grp-label">Absorber</label>
         <select id="absAbsorberSel">
           <option value="none">None</option>
-          <option value="idpaper">Paper (idealised)</option>
-          <option value="paper">Paper (real)</option>
+          <option value="paper">Paper</option>
           <option value="al">Aluminium (3 mm)</option>
-          <option value="al5">Aluminium (5 cm)</option>
+          <option value="al7">Aluminium (7 mm)</option>
+          <option value="al13">Aluminium (13 mm)</option>
           <option value="pb">Lead (5 cm)</option>
         </select>
       </div>
@@ -459,7 +459,7 @@ function showHelpModal(topic) {
     '<h3>The controls</h3>' +
     '<p><span class="key">Moving things</span> &mdash; you can drag all three items along the bench: the <span class="key">source</span>, the <span class="key">detector</span>, and the <span class="key">absorber</span> (drag it by the round handle below it). They behave as solid objects and gently snap to each centimetre, and the distance reads to 0.1&nbsp;cm so you can position them precisely.</p>' +
     '<p><span class="key">Source</span> &mdash; pick an unknown source. What it emits is hidden until you press <span class="key">Reveal</span>.</p>' +
-    '<p><span class="key">Absorber</span> &mdash; place nothing, paper, aluminium or lead between the source and the tube. <span class="key">Paper (idealised)</span> is the textbook model: it stops alpha completely and lets all beta and gamma through. <span class="key">Paper (real)</span> behaves as real paper does &mdash; it stops alpha, but also absorbs some of a low-energy (soft) beta, so the count can drop a little more than the simple rule suggests. Switch between the two to see the difference.</p>' +
+    '<p><span class="key">Absorber</span> &mdash; place nothing, paper, aluminium or lead between the source and the tube. <span class="key">Paper</span> stops alpha, but also absorbs some of a low-energy (soft) beta, so the count can drop a little more than the simple &ldquo;paper stops only alpha&rdquo; rule suggests. <span class="key">Aluminium</span> comes in three thicknesses (3, 7 and 13 mm) so you can build up an absorption series: a soft or medium beta is stopped by the thinnest, but an energetic beta (such as the yttrium-90 in a strontium source) leaks through 3 mm and is only fully stopped near 13 mm. Stepping through the thicknesses shows whether a surviving count keeps falling (beta still being absorbed) or holds steady (gamma, which passes through aluminium almost untouched) &mdash; the proper way to tell an energetic beta from gamma rather than trusting a single thickness. <span class="key">Lead</span> is needed to attenuate gamma.</p>' +
     '<p><span class="key">Distance</span> &mdash; the source&ndash;tube separation. Keep it the same between readings for a fair test.</p>' +
     '<p><span class="key">Gate time</span> &mdash; how long the counter counts for. Counting for longer gives a steadier reading.</p>' +
     '<p><span class="key">Speed</span> &mdash; how fast the gate plays out on screen. The physics is unchanged; only the waiting is sped up.</p>' +
@@ -597,10 +597,10 @@ window.closeHelpModal = closeHelpModal;
   // Absorber physical properties.
   const ABSORBERS = {
     none:   { label: 'None',      tag: 'none',  rho: 0,     t_cm: 0     },
-    idpaper:{ label: 'Paper',     tag: 'paper', rho: 0.90,  t_cm: 0.012 }, // idealised (alpha-only)
-    paper:  { label: 'Paper',     tag: 'paper', rho: 0.90,  t_cm: 0.012 }, // ~0.12 mm, real
+    paper:  { label: 'Paper',     tag: 'paper', rho: 0.90,  t_cm: 0.012 }, // ~0.12 mm
     al:     { label: 'Aluminium', tag: 'al',    rho: 2.70,  t_cm: 0.30  }, // 3 mm
-    al5:    { label: 'Aluminium', tag: 'al',    rho: 2.70,  t_cm: 5.0   }, // 5 cm (thick)
+    al7:    { label: 'Aluminium', tag: 'al',    rho: 2.70,  t_cm: 0.70  }, // 7 mm
+    al13:   { label: 'Aluminium', tag: 'al',    rho: 2.70,  t_cm: 1.30  }, // 13 mm
     pb:     { label: 'Lead',      tag: 'pb',    rho: 11.35, t_cm: 5.0   }  // 5 cm
   };
   function massThickness(absKey) {
@@ -608,8 +608,8 @@ window.closeHelpModal = closeHelpModal;
     return a.rho * a.t_cm;        // g/cm^2
   }
 
-  const ABSORBER_LABEL = { none: 'None', idpaper: 'Paper (idealised)', paper: 'Paper (real)', al: 'Aluminium 3 mm', al5: 'Aluminium 5 cm', pb: 'Lead' };
-  const ABSORBER_TAG   = { none: 'none', idpaper: 'paper', paper: 'paper', al: 'al', al5: 'al', pb: 'pb' };
+  const ABSORBER_LABEL = { none: 'None', paper: 'Paper', al: 'Aluminium 3 mm', al7: 'Aluminium 7 mm', al13: 'Aluminium 13 mm', pb: 'Lead' };
+  const ABSORBER_TAG   = { none: 'none', paper: 'paper', al: 'al', al7: 'al', al13: 'al', pb: 'pb' };
 
   // Alpha range in g/cm^2 (~5 MeV alpha in unit-density material ~0.004).
   const ALPHA_RANGE = 0.004;
@@ -645,12 +645,6 @@ window.closeHelpModal = closeHelpModal;
   // Transmission of one component through an absorber, from real physics.
   function transmission(comp, absKey) {
     if (absKey === 'none') return 1;
-    // Idealised paper: the textbook model - stops alpha completely, passes ALL
-    // beta and gamma untouched (no soft-beta absorption). A deliberate teaching
-    // idealisation; switch to real Paper to see the true partial beta absorption.
-    if (absKey === 'idpaper') {
-      return (comp.type === 'alpha') ? 0 : 1;
-    }
     const xm = massThickness(absKey);
     if (comp.type === 'alpha') {
       return (xm > ALPHA_RANGE) ? 0 : 1;
@@ -1552,10 +1546,10 @@ window.closeHelpModal = closeHelpModal;
       return;
     }
     let w, col, edge, label;
-    if (state.absorber === 'idpaper') { w = 6; col = '#eef0e6'; edge = '#9fb8a0'; label = 'Paper (ideal)'; }
-    else if (state.absorber === 'paper') { w = 6;  col = '#e8e3d4'; edge = '#bcb49a'; label = 'Paper'; }
+    if (state.absorber === 'paper') { w = 6;  col = '#e8e3d4'; edge = '#bcb49a'; label = 'Paper'; }
     else if (state.absorber === 'al') { w = 14; col = '#aab4c2'; edge = '#7c8a9c'; label = 'Aluminium 3 mm'; }
-    else if (state.absorber === 'al5') { w = 30; col = '#aab4c2'; edge = '#7c8a9c'; label = 'Aluminium 5 cm'; }
+    else if (state.absorber === 'al7') { w = 20; col = '#aab4c2'; edge = '#7c8a9c'; label = 'Aluminium 7 mm'; }
+    else if (state.absorber === 'al13') { w = 28; col = '#aab4c2'; edge = '#7c8a9c'; label = 'Aluminium 13 mm'; }
     else { w = 30; col = '#5c6675'; edge = '#3b424e'; label = 'Lead 5 cm'; }
 
     const grabbed = (_dragging === 'abs');
@@ -1900,9 +1894,11 @@ window.closeHelpModal = closeHelpModal;
   /* Half-width of the current absorber slab, in cm (for solid-object clamps). */
   function absHalfCm() {
     const a = state.absorber;
-    const halfPx = (a === 'paper' || a === 'idpaper') ? 3
+    const halfPx = (a === 'paper') ? 3
                  : (a === 'al')    ? 7
-                 : 15;                                    // al5 / pb (30px wide)
+                 : (a === 'al7')   ? 10
+                 : (a === 'al13')  ? 14
+                 : 15;                                    // pb (30px wide)
     return halfPx / PX_PER_CM;
   }
 
