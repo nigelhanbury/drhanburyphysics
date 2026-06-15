@@ -1,0 +1,2306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Binding Energy, Fission &amp; Fusion</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+/* Apple Pencil: route Pencil/finger as pointer on controls, kill 300ms delay. */
+input, button, label, select,
+.main-tab, .tab-help-btn {
+    touch-action: manipulation;
+}
+input[type="range"] { touch-action: none; }
+
+body {
+    font-family:'Segoe UI', Arial, sans-serif;
+    background:linear-gradient(135deg,#0f1b2d 0%,#13294b 50%,#0c1c33 100%);
+    min-height:100vh; padding:14px; display:flex; justify-content:center;
+    color:#e8eef6;
+}
+.container {
+    background:rgba(0,0,0,0.34); border-radius:18px; padding:18px;
+    max-width:1340px; width:100%;
+    border:1px solid rgba(255,255,255,0.13);
+    box-shadow:0 0 50px rgba(60,130,220,0.13);
+}
+h1 {
+    text-align:center; color:#fff; font-size:1.7em; margin-bottom:3px;
+    letter-spacing:1px; text-shadow:0 0 24px rgba(90,170,255,0.6);
+}
+.subtitle { text-align:center; color:#9fb4cc; margin-bottom:14px; font-size:0.9em; }
+
+/* ---- Tab bar (suite-standard router UI) ---- */
+.tab-bar { display:flex; align-items:center; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+.main-tab {
+    background:rgba(255,255,255,0.06); color:#cfe0f2;
+    border:1px solid rgba(255,255,255,0.16); border-radius:10px;
+    padding:9px 18px; font-size:0.98em; font-weight:600; cursor:pointer;
+    transition:background 0.15s, border-color 0.15s;
+}
+.main-tab:hover { background:rgba(255,255,255,0.12); }
+.main-tab.active {
+    background:linear-gradient(135deg,#2a6cc9,#1d4e96);
+    border-color:#5aa0ff; color:#fff;
+}
+.tab-help-btn {
+    width:26px; height:26px; border-radius:50%;
+    background:rgba(255,255,255,0.08); color:#cfe0f2;
+    border:1px solid rgba(255,255,255,0.18); cursor:pointer;
+    font-size:0.85em; font-weight:700; line-height:1;
+}
+.tab-help-btn:hover { background:rgba(255,255,255,0.16); }
+
+.tab-content { display:none; }
+.tab-content.active { display:block; }
+
+/* ---- Curve tab layout ---- */
+.curve-main { display:flex; gap:18px; flex-wrap:wrap; }
+.canvas-column { flex:1; min-width:640px; display:flex; flex-direction:column; gap:10px; }
+.canvas-wrap { position:relative; }
+.zc-zoom-btn {
+    position:absolute; top:12px; right:12px;
+    background:rgba(90,160,255,0.18); color:#bcd9ff;
+    border:1px solid rgba(90,160,255,0.5); border-radius:8px;
+    padding:6px 14px; font-size:0.85em; font-weight:600; cursor:pointer;
+    touch-action:manipulation;
+}
+.zc-zoom-btn:hover { background:rgba(90,160,255,0.3); color:#fff; }
+.zc-zoom-btn.active {
+    background:linear-gradient(135deg,#2a6cc9,#1d4e96); color:#fff;
+    border-color:#7fb4ff; box-shadow:0 0 14px rgba(90,160,255,0.5);
+}
+.zc-zoom-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.82); z-index:1002;
+    display:flex; align-items:center; justify-content:center; backdrop-filter:blur(6px);
+}
+.zc-zoom-inner {
+    position:relative; border-radius:16px; overflow:hidden;
+    border:1px solid rgba(90,160,255,0.35);
+    box-shadow:0 0 80px rgba(90,160,255,0.12), 0 20px 60px rgba(0,0,0,0.5);
+    background:linear-gradient(135deg,#0a1526,#0e1d33);
+}
+.zc-zoom-close {
+    position:absolute; top:10px; right:14px; z-index:10;
+    background:rgba(90,160,255,0.2); border:1px solid rgba(90,160,255,0.45);
+    color:#bcd9ff; border-radius:8px; padding:6px 16px;
+    font-size:14px; cursor:pointer; font-family:inherit; touch-action:manipulation;
+}
+.zc-zoom-close:hover { background:rgba(90,160,255,0.35); color:#fff; }
+.zc-zoom-title {
+    position:absolute; top:12px; left:16px; z-index:10;
+    color:rgba(180,210,240,0.7); font-size:13px;
+}
+#zcZoomCanvas { display:block; max-width:92vw; max-height:82vh; }
+#curveCanvas {
+    background:linear-gradient(180deg,#0a1526 0%,#0e1d33 100%);
+    border-radius:12px; display:block; width:100%; height:auto;
+    border:2px solid rgba(90,160,255,0.35);
+    box-shadow:inset 0 0 40px rgba(0,0,0,0.45);
+    -webkit-user-select:none; user-select:none;
+}
+.curve-side { width:300px; display:flex; flex-direction:column; gap:12px; }
+.panel {
+    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12);
+    border-radius:12px; padding:14px;
+}
+.panel h3 { font-size:0.95em; color:#bcd3ee; margin-bottom:8px; font-weight:700; }
+.readout-empty { color:#7e94ad; font-size:0.88em; line-height:1.5; }
+.ro-title { font-size:1.15em; font-weight:700; color:#ffd24a; margin-bottom:8px; }
+.ro-fullname { font-size:0.78em; font-weight:600; color:#bcd3ee; }
+.ro-table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+.ro-table td { padding:4px 0; font-size:0.9em; border-bottom:1px solid rgba(255,255,255,0.07); }
+.ro-k { color:#9fb4cc; }
+.ro-v { color:#eef4fb; font-weight:600; }
+.ro-v-cell { text-align:left; }
+.ro-mask {
+    cursor:pointer;
+    display:inline-block; color:#7e94ad; font-style:italic; font-weight:500;
+    padding:1px 9px; border:1px dashed rgba(255,255,255,0.22); border-radius:6px;
+    font-size:0.85em;
+}
+.ro-mask:hover { color:#cfe0f2; border-color:rgba(255,255,255,0.4); }
+.ro-work {
+    cursor:pointer; margin-left:10px; vertical-align:middle;
+    display:inline-block; color:#cfe6ff; font-size:0.95em; font-weight:700;
+    background:rgba(90,160,255,0.22); border:1px solid rgba(90,160,255,0.6);
+    border-radius:7px; padding:2px 9px;
+}
+.ro-work:hover { color:#fff; background:rgba(90,160,255,0.4); }
+
+/* Reveal / working buttons */
+.be-btn {
+    display:block; width:100%; margin-top:8px; padding:9px 12px;
+    background:linear-gradient(135deg,#2a6cc9,#1d4e96); color:#fff;
+    border:1px solid #5aa0ff; border-radius:9px;
+    font-size:0.92em; font-weight:600; cursor:pointer;
+    transition:filter 0.15s;
+}
+.be-btn:hover { filter:brightness(1.12); }
+.be-btn-ghost {
+    background:rgba(255,255,255,0.06); color:#cfe0f2;
+    border:1px solid rgba(255,255,255,0.22);
+}
+
+/* Working pop-out: backdrop disables everything behind; window is
+   draggable + resizable; inner content auto-scales to fill the window. */
+.work-backdrop {
+    display:none; position:fixed; inset:0; background:transparent;
+    z-index:900; pointer-events:none;
+}
+.work-backdrop.open { display:block; }
+.work-window {
+    position:fixed; top:90px; left:calc(50% - 320px);
+    width:640px; height:560px;
+    min-width:340px; min-height:240px;
+    max-width:calc(100vw - 20px); max-height:calc(100vh - 20px);
+    background:linear-gradient(145deg,#15284a,#0c1426);
+    border:1px solid rgba(90,160,255,0.5); border-radius:14px;
+    display:none; flex-direction:column;
+    box-shadow:0 24px 70px rgba(0,0,0,0.65); z-index:951;
+    -webkit-user-select:none; user-select:none;
+}
+.work-window.open { display:flex; }
+.work-header {
+    display:flex; justify-content:space-between; align-items:center;
+    gap:10px; padding:9px 14px; cursor:move;
+    border-bottom:1px solid rgba(255,255,255,0.1);
+}
+.work-header-right { display:flex; align-items:center; gap:12px; }
+.work-method-btn {
+    background:rgba(90,160,255,0.16); color:#bcd9ff;
+    border:1px solid rgba(90,160,255,0.5); border-radius:8px;
+    padding:5px 12px; font-size:0.78em; font-weight:600; cursor:pointer;
+    touch-action:manipulation;
+}
+.work-method-btn:hover { background:rgba(90,160,255,0.28); color:#fff; }
+.work-title {
+    font-size:0.72em; text-transform:uppercase; letter-spacing:1px;
+    color:#5aa0ff; font-weight:700;
+}
+.work-close {
+    background:none; border:none; color:#ff8080; font-size:22px;
+    cursor:pointer; padding:0 5px; line-height:1;
+}
+.work-close:hover { color:#ffacac; }
+.work-body { flex:1; min-height:0; position:relative; overflow:hidden; }
+/* work-scale is the measured/transformed layer; transform-origin top-left so
+   scaling fills from the corner. work-inner holds the natural-size content. */
+.work-scale { position:absolute; top:14px; left:18px; transform-origin:top left; }
+.work-inner { width:620px; }   /* natural layout width; scaled by JS */
+.work-resize-grip {
+    position:absolute; right:0; bottom:0; width:22px; height:22px;
+    cursor:nwse-resize; touch-action:none;
+    background:linear-gradient(135deg, transparent 0 6px, rgba(90,160,255,0.55) 6px 7.5px, transparent 7.5px 11px, rgba(90,160,255,0.55) 11px 12.5px, transparent 12.5px 16px, rgba(90,160,255,0.55) 16px 17.5px, transparent 17.5px);
+    border-bottom-right-radius:14px; opacity:0.75; transition:opacity 0.15s;
+}
+.work-resize-grip:hover { opacity:1; }
+
+/* Working content styling (natural size; scaled as a whole) */
+.wk-title { font-size:22px; font-weight:700; color:#ffd24a; margin-bottom:14px; }
+.wk-title .rx-nuc { color:#ffd24a; display:inline-block; position:relative; margin-right:2px; }
+.wk-title .rx-pre { display:inline-block; width:0.78em; position:relative; height:1em; vertical-align:middle; }
+.wk-title .rx-a { position:absolute; right:0; top:-0.45em; font-size:0.46em; font-weight:700; }
+.wk-title .rx-z { position:absolute; right:0; bottom:-0.45em; font-size:0.46em; font-weight:700; }
+.wk-title .rx-coeff { margin-right:-0.3em; position:relative; z-index:1; }
+.wk-step { margin:0 0 14px 0; }
+.wk-label { font-size:15px; color:#9cc4f5; margin-bottom:3px; }
+.wk-math { font-size:18px; color:#eef4fb; line-height:1.5; font-variant-numeric:tabular-nums; }
+.wk-sub { color:#9fb4cc; font-size:0.82em; }
+.wk-answer {
+    margin-top:6px; padding:10px 14px; border-radius:9px;
+    background:rgba(255,210,74,0.12); border:1px solid rgba(255,210,74,0.4);
+    font-size:20px; font-weight:700; color:#ffe08a;
+}
+.wk-note {
+    margin-top:14px; font-size:13px; line-height:1.5; color:#9fb4cc; font-style:italic;
+}
+.const-sep td { border-top:1px solid rgba(255,255,255,0.18); padding-top:9px; }
+.const-note { margin-top:12px; font-size:0.8em; line-height:1.5; color:#8aa0ba; font-style:italic; }
+.const-head { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
+.qstyle-panel { border:1px solid rgba(90,160,255,0.3); }
+.qstyle-head { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+.qstyle-head h3 { margin:0; }
+.qstyle-prompt { margin:0; color:#eef4fb; font-size:0.98em; font-weight:600; line-height:1.45; }
+.answer-panel { border:1px solid rgba(90,160,255,0.3); }
+.answer-empty { color:#8aa0ba; font-size:0.9em; font-style:italic; }
+.answer-filled { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.answer-value { color:#ffe08a; font-weight:700; font-size:1.3em; }
+.answer-reveal-btn {
+    background:rgba(255,255,255,0.06); color:#cfe0f2; font-family:inherit;
+    border:1px dashed rgba(255,255,255,0.3); border-radius:8px;
+    padding:8px 18px; font-size:0.95em; font-style:italic; cursor:pointer; touch-action:manipulation;
+}
+.answer-reveal-btn:hover { color:#fff; border-color:rgba(255,255,255,0.5); }
+.answer-work-btn {
+    background:rgba(90,160,255,0.22); color:#cfe6ff; font-family:inherit;
+    border:1px solid rgba(90,160,255,0.6); border-radius:8px;
+    padding:7px 14px; font-size:0.92em; font-weight:600; cursor:pointer; touch-action:manipulation;
+}
+.answer-work-btn:hover { color:#fff; background:rgba(90,160,255,0.4); }
+.wk-config { color:#9cc4f5; font-size:0.85em; font-weight:600; margin:-2px 0 10px 0; }
+.config-toggle { display:inline-flex; border:1px solid rgba(90,160,255,0.35); border-radius:8px; overflow:hidden; }
+.config-btn {
+    background:transparent; color:#9cc4f5; border:none; cursor:pointer;
+    padding:4px 9px; font-size:0.75em; font-family:inherit; touch-action:manipulation;
+    border-right:1px solid rgba(90,160,255,0.25);
+}
+.config-btn:last-child { border-right:none; }
+.config-btn:hover { background:rgba(90,160,255,0.15); }
+.config-btn.active { background:rgba(90,160,255,0.4); color:#fff; font-weight:600; }
+.config-btn.disabled, .config-btn:disabled { opacity:0.4; cursor:not-allowed; color:#6b7d92; }
+.config-btn.disabled:hover, .config-btn:disabled:hover { background:transparent; }
+.qstyle-disabled-note { margin:8px 0 0 0; color:#ffb892; font-size:0.85em; line-height:1.45; }
+
+/* ---- Reactions tab ---- */
+.react-top { display:flex; align-items:center; gap:24px; margin-bottom:4px; flex-wrap:nowrap; }
+.react-top .rx-dropdown { flex:0 0 auto; }
+/* Custom reaction dropdown (renders stacked isotope notation in the menu) */
+.rx-dropdown { position:relative; display:inline-block; }
+.rx-dd-button {
+    display:flex; align-items:center; gap:14px; min-width:300px;
+    padding:9px 14px; font-size:1.05em; font-family:inherit;
+    background:rgba(255,255,255,0.05); color:#eef4fb;
+    border:1px solid rgba(255,255,255,0.18); border-radius:9px;
+    cursor:pointer; text-align:left; touch-action:manipulation;
+}
+.rx-dd-button:hover { border-color:rgba(90,160,255,0.5); }
+.rx-dd-label { flex:1; }
+.rx-dd-label .rx-nuc { color:#ffd24a; display:inline-block; position:relative; margin-right:2px; }
+.rx-dd-label .rx-pre { display:inline-block; width:0.78em; position:relative; height:1em; vertical-align:middle; }
+.rx-dd-label .rx-a { position:absolute; right:0; top:-0.45em; font-size:0.46em; font-weight:700; }
+.rx-dd-label .rx-z { position:absolute; right:0; bottom:-0.45em; font-size:0.46em; font-weight:700; }
+.rx-dd-caret { color:#9cc4f5; font-size:0.8em; }
+.rx-dd-menu {
+    display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:60;
+    background:#13294b; border:1px solid rgba(90,160,255,0.4); border-radius:11px;
+    box-shadow:0 18px 50px rgba(0,0,0,0.6); padding:6px;
+    max-height:60vh; overflow-y:auto; min-width:340px;
+}
+.rx-dd-menu.open { display:block; }
+.rx-dd-group-label {
+    color:#9cc4f5; font-weight:700; font-size:0.8em; text-transform:uppercase;
+    letter-spacing:0.5px; padding:10px 12px 4px;
+}
+.rx-dd-item {
+    padding:9px 14px; border-radius:7px; cursor:pointer; color:#eef4fb;
+    font-size:1.15em; white-space:nowrap; touch-action:manipulation;
+}
+.rx-dd-item:hover { background:rgba(90,160,255,0.18); }
+.rx-dd-item .rx-nuc { color:#ffd24a; display:inline-block; position:relative; margin-right:2px; }
+.rx-dd-item .rx-pre { display:inline-block; width:0.78em; position:relative; height:1em; vertical-align:middle; }
+.rx-dd-item .rx-a { position:absolute; right:0; top:-0.45em; font-size:0.46em; font-weight:700; }
+.rx-dd-item .rx-z { position:absolute; right:0; bottom:-0.45em; font-size:0.46em; font-weight:700; }
+.react-balance { font-size:0.82em; color:#7fcf9f; }
+.react-equation-line {
+    flex:1; min-width:0;
+    font-size:1.9em; font-weight:600; color:#eef4fb; line-height:1.5;
+    font-variant-numeric:tabular-nums; padding:2px 6px;
+    text-align:center; white-space:nowrap; overflow-x:auto; overflow-y:hidden;
+}
+.react-equation-line::-webkit-scrollbar { height:8px; }
+.react-equation-line::-webkit-scrollbar-thumb { background:rgba(90,160,255,0.4); border-radius:4px; }
+.react-equation-line .rx-nuc { color:#ffd24a; white-space:nowrap; display:inline-block; position:relative; margin-right:2px; }
+.rx-overline { border-top:0.09em solid currentColor; display:inline-block; line-height:1; padding-top:0.04em; }
+.react-equation-line .rx-pre { display:inline-block; width:0.78em; position:relative; height:1em; vertical-align:middle; }
+.react-equation-line .rx-a { position:absolute; right:0; top:-0.45em; font-size:0.46em; font-weight:700; }
+.react-equation-line .rx-z { position:absolute; right:0; bottom:-0.45em; font-size:0.46em; font-weight:700; }
+.react-equation-line .rx-coeff { margin-right:-0.3em; position:relative; z-index:1; }
+.rx-dd-item .rx-coeff, .rx-dd-label .rx-coeff { margin-right:-0.3em; position:relative; z-index:1; }
+.react-eqn-hint { font-size:0.5em; font-weight:400; color:#8aa0ba; font-style:italic; }
+.react-beta-note { margin:2px 0 10px 0; color:#9cc4f5; font-size:0.95em; font-style:italic; padding:0 6px; }
+.react-energy-term {
+    cursor:pointer; display:inline-block; color:#9fb4cc; font-style:italic;
+    font-size:0.92em; font-weight:600; padding:4px 18px;
+    border:2px dashed rgba(120,180,255,0.5); border-radius:10px; vertical-align:middle;
+}
+.react-energy-term:hover { color:#cfe0f2; border-color:rgba(255,255,255,0.45); }
+.react-energy-val { color:#ffe08a; font-weight:700; }
+.rx-work {
+    cursor:pointer; margin-left:14px; color:#5aa0ff; font-size:0.6em;
+    font-weight:700; vertical-align:middle;
+}
+.rx-work:hover { color:#8cc0ff; }
+.react-canvas-column { display:flex; justify-content:center; }
+.react-work-row { display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap; }
+.react-work-row .react-canvas-column { flex:1; min-width:520px; }
+.react-side { width:340px; }
+.rx-tbl-group { margin-bottom:14px; }
+.rx-tbl-group-label {
+    font-size:0.78em; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;
+    margin-bottom:6px;
+}
+.rx-tbl-group-label.reactant { color:#ff8c5a; }
+.rx-tbl-group-label.product { color:#5ad6a0; }
+.rx-tbl { width:100%; border-collapse:collapse; }
+.rx-tbl th {
+    text-align:right; font-size:0.68em; color:#8aa0ba; font-weight:600;
+    padding:2px 5px; border-bottom:1px solid rgba(255,255,255,0.12); white-space:nowrap;
+}
+.rx-tbl th:first-child { text-align:left; }
+.rx-tbl td { padding:5px 5px; font-size:0.82em; text-align:right; white-space:nowrap; }
+.rx-tbl td:first-child { text-align:left; font-weight:600; }
+.rx-tbl td.rx-tbl-name-reactant { color:#ffb892; }.rx-tbl td.rx-tbl-name-product { color:#9fe6c6; }
+.rx-tbl .rx-tbl-bea { color:#eef4fb; font-weight:600; }
+.react-canvas-wrap { position:relative; width:100%; max-width:1000px; }
+#reactCanvas { width:100%; display:block; }
+
+/* Placeholder for unbuilt tabs */
+.placeholder { color:#8aa0ba; font-size:0.95em; padding:40px; text-align:center;
+    border:1px dashed rgba(255,255,255,0.16); border-radius:12px; }
+
+/* ---- Help modal (suite-standard pattern, blue palette) ---- */
+.help-modal-overlay {
+    display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+    background:rgba(0,0,0,0.7); z-index:2000;
+    justify-content:center; align-items:center; backdrop-filter:blur(3px);
+}
+.help-modal {
+    background:linear-gradient(135deg,#16284a 0%,#0d1729 100%);
+    border:1px solid rgba(90,160,255,0.3); border-radius:12px;
+    max-width:580px; max-height:82vh; overflow-y:auto;
+    padding:20px 26px; box-shadow:0 10px 40px rgba(0,0,0,0.5);
+}
+.help-modal h2 {
+    color:#5aa0ff; margin:0 0 14px 0; font-size:1.3em;
+    border-bottom:1px solid rgba(90,160,255,0.22); padding-bottom:10px;
+}
+.help-modal h3 { color:#9cc4f5; margin:15px 0 8px 0; font-size:1em; }
+.help-modal p { color:#b8c8db; margin:6px 0; font-size:0.9em; line-height:1.55; }
+.help-modal .key { color:#ffd24a; font-weight:600; }
+.help-modal .close-btn {
+    float:right; background:none; border:none; color:#ff8080;
+    font-size:22px; cursor:pointer; padding:0 5px; line-height:1;
+}
+.help-modal .close-btn:hover { color:#ffacac; }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>Binding Energy, Fission &amp; Fusion</h1>
+    <p class="subtitle">The binding-energy-per-nucleon curve, and the energy released when nuclei split or join</p>
+
+    <div class="tab-bar">
+        <button class="main-tab active" id="tabBtn-curve" onclick="switchTab('curve')">Binding Energy Curve</button>
+        <button class="tab-help-btn" onclick="showHelpModal('curve')" title="Help">?</button>
+        <button class="main-tab" id="tabBtn-react" onclick="switchTab('react')">Reactions</button>
+        <button class="tab-help-btn" onclick="showHelpModal('react')" title="Help">?</button>
+    </div>
+
+    <!-- ============ CURVE TAB ============ -->
+    <div id="curveTab" class="tab-content active">
+        <div class="curve-main">
+            <div class="canvas-column">
+                <div class="canvas-wrap">
+                    <canvas id="curveCanvas" width="1000" height="620"></canvas>
+                    <button id="zcZoomBtn" class="zc-zoom-btn" title="Zoom into a region of the curve" onclick="zcToggle()">&#128269; Zoom</button>
+                </div>
+            </div>
+            <div class="curve-side">
+                <div class="panel qstyle-panel">
+                    <div class="qstyle-head">
+                        <h3>Question style</h3>
+                        <div class="config-toggle" id="configToggle">
+                            <button class="config-btn" data-cfg="1" onclick="setConfig(1)">Style 1</button>
+                            <button class="config-btn" data-cfg="2" onclick="setConfig(2)">Style 2</button>
+                            <button class="config-btn" data-cfg="3" onclick="setConfig(3)">Style 3</button>
+                        </div>
+                    </div>
+                    <p class="qstyle-prompt">Using the information below, determine the binding energy per nucleon.</p>
+                </div>
+                <div class="panel">
+                    <h3>Nuclide readout</h3>
+                    <div class="readout-empty" id="readoutBody">
+                        Tap any point on the curve to see its details and work out its binding energy per nucleon.
+                    </div>
+                </div>
+                <div class="panel">
+                    <h3>Constants</h3>
+                    <table class="ro-table const-table" id="constTable"></table>
+                    <p class="const-note" id="constNote"></p>
+                </div>
+                <div class="panel answer-panel">
+                    <h3>Binding energy per nucleon</h3>
+                    <div id="answerBody" class="answer-empty">Select a nuclide on the curve, then reveal the answer.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ REACTIONS TAB ============ -->
+    <div id="reactTab" class="tab-content">
+        <div class="react-top">
+            <div class="rx-dropdown" id="rxDropdown">
+                <button class="rx-dd-button" id="rxDdButton" onclick="event.stopPropagation(); rxDdToggle()">
+                    <span id="rxDdLabel" class="rx-dd-label">Choose a reaction&hellip;</span>
+                    <span class="rx-dd-caret">&#9662;</span>
+                </button>
+                <div class="rx-dd-menu" id="rxDdMenu"></div>
+            </div>
+            <div id="reactEquation" class="react-equation-line">
+                <span class="react-eqn-hint">Choose a reaction to begin.</span>
+            </div>
+        </div>
+        <p class="react-beta-note" id="reactBetaNote" style="display:none;"></p>
+        <div class="react-work-row">
+            <div class="react-canvas-column">
+                <div class="react-canvas-wrap">
+                    <canvas id="reactCanvas" width="1000" height="620"></canvas>
+                </div>
+            </div>
+            <div class="react-side">
+                <div class="panel qstyle-panel">
+                    <div class="qstyle-head">
+                        <h3>Question style</h3>
+                        <div class="config-toggle" id="rxConfigToggle">
+                            <button class="config-btn" data-cfg="1" onclick="setRxConfig(1)">Style 1</button>
+                            <button class="config-btn" data-cfg="2" onclick="setRxConfig(2)">Style 2</button>
+                            <button class="config-btn" data-cfg="3" onclick="setRxConfig(3)">Style 3</button>
+                            <button class="config-btn" data-cfg="4" onclick="setRxConfig(4)">Style 4</button>
+                        </div>
+                    </div>
+                    <p class="qstyle-prompt">Using the information below, determine the energy released. Click <b>Energy</b> above to reveal the answer.</p>
+                    <p class="qstyle-disabled-note" id="rxStyleNote" style="display:none;"></p>
+                </div>
+                <div class="panel" id="reactTablePanel">
+                    <h3>Binding energy per nucleon</h3>
+                    <div id="reactTable" class="readout-empty">Select a reaction to list its isotopes.</div>
+                </div>
+                <div class="panel" id="reactConstPanel" style="display:none;">
+                    <h3>Constants</h3>
+                    <table class="rx-tbl"></table>
+                    <p class="const-note" id="rxConstNote"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Help modal -->
+<div id="helpModalOverlay" class="help-modal-overlay" onclick="if(event.target===this)closeHelpModal()">
+  <div class="help-modal">
+    <button class="close-btn" onclick="closeHelpModal()">&times;</button>
+    <div id="helpModalContent"></div>
+  </div>
+</div>
+
+<!-- Working pop-out (draggable, resizable, auto-scaling text). Modal: a
+     backdrop disables everything behind it until dismissed. -->
+<div id="workBackdrop" class="work-backdrop"></div>
+<div id="workWindow" class="work-window">
+    <div class="work-header" id="workHeader">
+        <span class="work-title">Working</span>
+        <div class="work-header-right">
+            <button class="work-close" id="workClose" title="Close" onclick="closeWorking()">&times;</button>
+        </div>
+    </div>
+    <div class="work-body" id="workBody">
+        <div class="work-scale" id="workScale">
+            <div class="work-inner" id="workInner"></div>
+        </div>
+    </div>
+    <div class="work-resize-grip" id="workResizeGrip" title="Drag to resize"></div>
+</div>
+
+<!-- Reactions working pop-out (duplicated from tab-1 working window, rx namespace) -->
+<div id="rxWorkBackdrop" class="work-backdrop"></div>
+<div id="rxWorkWindow" class="work-window">
+    <div class="work-header" id="rxWorkHeader">
+        <span class="work-title">Working</span>
+        <div class="work-header-right">
+            <button class="work-close" id="rxWorkClose" title="Close" onclick="rxCloseWorking()">&times;</button>
+        </div>
+    </div>
+    <div class="work-body" id="rxWorkBody">
+        <div class="work-scale" id="rxWorkScale">
+            <div class="work-inner" id="rxWorkInner"></div>
+        </div>
+    </div>
+    <div class="work-resize-grip" id="rxWorkResizeGrip" title="Drag to resize"></div>
+</div>
+
+<!-- Curve zoom overlay (wave-motion pattern; namespaced zc*) -->
+<div id="zcZoomOverlay" class="zc-zoom-overlay" style="display:none">
+    <div class="zc-zoom-inner">
+        <span class="zc-zoom-title" id="zcZoomTitle">Zoomed view</span>
+        <button class="zc-zoom-close" id="zcZoomClose" onclick="zcClose()">&#10005; Close</button>
+        <canvas id="zcZoomCanvas" width="1100" height="680"></canvas>
+    </div>
+</div>
+
+<script>
+// ====================== VERIFIED NUCLIDE DATA ======================
+// Atomic masses (u), full precision, AME2020-derived and cross-checked.
+var NUCLIDES = [
+  {name:"H-1", sym:"H", Z:1, A:1, mAtom:1.0078250319, role:"backbone"},
+  {name:"H-2", sym:"H", Z:1, A:2, mAtom:2.01410177785, role:"named"},
+  {name:"H-3", sym:"H", Z:1, A:3, mAtom:3.01604928132, role:"named"},
+  {name:"He-3", sym:"He", Z:2, A:3, mAtom:3.01602932265, role:"named"},
+  {name:"He-4", sym:"He", Z:2, A:4, mAtom:4.00260325413, role:"named"},
+  {name:"Li-6", sym:"Li", Z:3, A:6, mAtom:6.01512288742, role:"backbone"},
+  {name:"Li-7", sym:"Li", Z:3, A:7, mAtom:7.01600343426, role:"backbone"},
+  {name:"Be-9", sym:"Be", Z:4, A:9, mAtom:9.012183065, role:"backbone"},
+  {name:"B-11", sym:"B", Z:5, A:11, mAtom:11.009305355, role:"backbone"},
+  {name:"C-12", sym:"C", Z:6, A:12, mAtom:12.0, role:"named"},
+  {name:"C-13", sym:"C", Z:6, A:13, mAtom:13.00335483534, role:"backbone"},
+  {name:"N-14", sym:"N", Z:7, A:14, mAtom:14.00307400446, role:"backbone"},
+  {name:"O-16", sym:"O", Z:8, A:16, mAtom:15.9949146196, role:"named"},
+  {name:"O-18", sym:"O", Z:8, A:18, mAtom:17.99915961287, role:"backbone"},
+  {name:"F-19", sym:"F", Z:9, A:19, mAtom:18.99840316288, role:"backbone"},
+  {name:"Ne-20", sym:"Ne", Z:10, A:20, mAtom:19.9924401762, role:"backbone"},
+  {name:"Na-23", sym:"Na", Z:11, A:23, mAtom:22.98976928196, role:"backbone"},
+  {name:"Mg-24", sym:"Mg", Z:12, A:24, mAtom:23.9850416962, role:"backbone"},
+  {name:"Al-27", sym:"Al", Z:13, A:27, mAtom:26.98153853, role:"backbone"},
+  {name:"Si-28", sym:"Si", Z:14, A:28, mAtom:27.97692653442, role:"backbone"},
+  {name:"P-31", sym:"P", Z:15, A:31, mAtom:30.97376199768, role:"named"},
+  {name:"S-32", sym:"S", Z:16, A:32, mAtom:31.97207117354, role:"backbone"},
+  {name:"Cl-35", sym:"Cl", Z:17, A:35, mAtom:34.968852682, role:"backbone"},
+  {name:"K-39", sym:"K", Z:19, A:39, mAtom:38.96370648661, role:"backbone"},
+  {name:"Ar-40", sym:"Ar", Z:18, A:40, mAtom:39.96238312204, role:"backbone"},
+  {name:"Ca-40", sym:"Ca", Z:20, A:40, mAtom:39.962590863, role:"backbone"},
+  {name:"Sc-45", sym:"Sc", Z:21, A:45, mAtom:44.95590828, role:"backbone"},
+  {name:"Ti-48", sym:"Ti", Z:22, A:48, mAtom:47.94794198, role:"backbone"},
+  {name:"V-51", sym:"V", Z:23, A:51, mAtom:50.94395704, role:"backbone"},
+  {name:"Cr-52", sym:"Cr", Z:24, A:52, mAtom:51.94050623, role:"backbone"},
+  {name:"Mn-55", sym:"Mn", Z:25, A:55, mAtom:54.93804391, role:"backbone"},
+  {name:"Fe-56", sym:"Fe", Z:26, A:56, mAtom:55.93493633, role:"named"},
+  {name:"Fe-58", sym:"Fe", Z:26, A:58, mAtom:57.93327443, role:"backbone"},
+  {name:"Ni-58", sym:"Ni", Z:28, A:58, mAtom:57.93534165, role:"backbone"},
+  {name:"Ni-62", sym:"Ni", Z:28, A:62, mAtom:61.92834537, role:"named"},
+  {name:"Cu-63", sym:"Cu", Z:29, A:63, mAtom:62.92959772, role:"backbone"},
+  {name:"Zn-64", sym:"Zn", Z:30, A:64, mAtom:63.92914201, role:"backbone"},
+  {name:"Ge-72", sym:"Ge", Z:32, A:72, mAtom:71.922075826, role:"named"},
+  {name:"Ge-74", sym:"Ge", Z:32, A:74, mAtom:73.921177761, role:"backbone"},
+  {name:"Se-80", sym:"Se", Z:34, A:80, mAtom:79.9165218, role:"backbone"},
+  {name:"Kr-84", sym:"Kr", Z:36, A:84, mAtom:83.91149772708, role:"backbone"},
+  {name:"Sr-88", sym:"Sr", Z:38, A:88, mAtom:87.905612256, role:"backbone"},
+  {name:"Rb-90", sym:"Rb", Z:37, A:90, mAtom:89.91480032, role:"named"},
+  {name:"Zr-90", sym:"Zr", Z:40, A:90, mAtom:89.904698767, role:"backbone"},
+  {name:"Kr-92", sym:"Kr", Z:36, A:92, mAtom:91.92617312, role:"named"},
+  {name:"Mo-98", sym:"Mo", Z:42, A:98, mAtom:97.90540482, role:"backbone"},
+  {name:"Ru-102", sym:"Ru", Z:44, A:102, mAtom:101.9043441, role:"backbone"},
+  {name:"Pd-106", sym:"Pd", Z:46, A:106, mAtom:105.9034804, role:"backbone"},
+  {name:"Cd-114", sym:"Cd", Z:48, A:114, mAtom:113.90336509, role:"backbone"},
+  {name:"Sn-120", sym:"Sn", Z:50, A:120, mAtom:119.90220163, role:"backbone"},
+  {name:"Te-130", sym:"Te", Z:52, A:130, mAtom:129.90622275, role:"backbone"},
+  {name:"Xe-132", sym:"Xe", Z:54, A:132, mAtom:131.90415509, role:"backbone"},
+  {name:"Ba-138", sym:"Ba", Z:56, A:138, mAtom:137.905247, role:"backbone"},
+  {name:"Ce-140", sym:"Ce", Z:58, A:140, mAtom:139.90544731, role:"backbone"},
+  {name:"Ba-141", sym:"Ba", Z:56, A:141, mAtom:140.91412549, role:"named"},
+  {name:"Cs-144", sym:"Cs", Z:55, A:144, mAtom:143.93202737, role:"named"},
+  {name:"Nd-144", sym:"Nd", Z:60, A:144, mAtom:143.910093, role:"backbone"},
+  {name:"Sm-152", sym:"Sm", Z:62, A:152, mAtom:151.91973957, role:"backbone"},
+  {name:"Gd-158", sym:"Gd", Z:64, A:158, mAtom:157.92411233, role:"backbone"},
+  {name:"Dy-164", sym:"Dy", Z:66, A:164, mAtom:163.929182, role:"backbone"},
+  {name:"Er-166", sym:"Er", Z:68, A:166, mAtom:165.93029953, role:"backbone"},
+  {name:"Yb-174", sym:"Yb", Z:70, A:174, mAtom:173.93886642, role:"backbone"},
+  {name:"Hf-180", sym:"Hf", Z:72, A:180, mAtom:179.94655792, role:"backbone"},
+  {name:"W-184", sym:"W", Z:74, A:184, mAtom:183.95093092, role:"backbone"},
+  {name:"Os-192", sym:"Os", Z:76, A:192, mAtom:191.961477, role:"backbone"},
+  {name:"Pt-195", sym:"Pt", Z:78, A:195, mAtom:194.9647917, role:"backbone"},
+  {name:"Au-197", sym:"Au", Z:79, A:197, mAtom:196.96656879, role:"backbone"},
+  {name:"Hg-202", sym:"Hg", Z:80, A:202, mAtom:201.9706434, role:"backbone"},
+  {name:"Pb-208", sym:"Pb", Z:82, A:208, mAtom:207.97665214, role:"named"},
+  {name:"Bi-209", sym:"Bi", Z:83, A:209, mAtom:208.9803991, role:"backbone"},
+  {name:"Ra-228", sym:"Ra", Z:88, A:228, mAtom:228.0310707, role:"named"},
+  {name:"Th-232", sym:"Th", Z:90, A:232, mAtom:232.038055768, role:"named"},
+  {name:"U-235", sym:"U", Z:92, A:235, mAtom:235.043928198, role:"named"},
+  {name:"U-238", sym:"U", Z:92, A:238, mAtom:238.050788263, role:"named"},
+  {name:"Pu-239", sym:"Pu", Z:94, A:239, mAtom:239.05216358, role:"backbone"},
+  {name:"Sr-94", sym:"Sr", Z:38, A:94, mAtom:93.91536007, role:"reaction"},
+  {name:"Xe-140", sym:"Xe", Z:54, A:140, mAtom:139.92164642, role:"reaction"},
+  {name:"Pb-206", sym:"Pb", Z:82, A:206, mAtom:205.97444901, role:"reaction"},
+  {name:"Pb-210", sym:"Pb", Z:82, A:210, mAtom:209.98418884, role:"reaction"},
+  {name:"Po-210", sym:"Po", Z:84, A:210, mAtom:209.98287311, role:"reaction"},
+  {name:"Po-214", sym:"Po", Z:84, A:214, mAtom:213.99518591, role:"reaction"},
+  {name:"Rn-222", sym:"Rn", Z:86, A:222, mAtom:222.01757853, role:"reaction"},
+  {name:"Ra-226", sym:"Ra", Z:88, A:226, mAtom:226.02540982, role:"reaction"},
+  {name:"Th-234", sym:"Th", Z:90, A:234, mAtom:234.04359877, role:"reaction"},
+  {name:"U-234", sym:"U", Z:92, A:234, mAtom:234.04094562, role:"reaction"},
+  {name:"Np-237", sym:"Np", Z:93, A:237, mAtom:237.04817304, role:"reaction"},
+  {name:"Pu-238", sym:"Pu", Z:94, A:238, mAtom:238.04955973, role:"reaction"},
+  {name:"Am-241", sym:"Am", Z:95, A:241, mAtom:241.0568287, role:"reaction"},
+  {name:"Pu-240", sym:"Pu", Z:94, A:240, mAtom:240.0538135, role:"reaction"},
+  {name:"Ba-143", sym:"Ba", Z:56, A:143, mAtom:142.9206890, role:"reaction"},
+  {name:"Sr-95", sym:"Sr", Z:38, A:95, mAtom:94.9193580, role:"reaction"},
+  {name:"Zr-104", sym:"Zr", Z:40, A:104, mAtom:103.9231944, role:"reaction"},
+  {name:"Xe-134", sym:"Xe", Z:54, A:134, mAtom:133.9053947, role:"reaction"},
+  {name:"He-3b", sym:"He", Z:2, A:3, mAtom:3.016029322, role:"reaction"},
+  {name:"C-14", sym:"C", Z:6, A:14, mAtom:14.003241989, role:"reaction"},
+  {name:"N-14b", sym:"N", Z:7, A:14, mAtom:14.003074004, role:"reaction"},
+  {name:"P-32", sym:"P", Z:15, A:32, mAtom:31.973907274, role:"reaction"},
+  {name:"S-32", sym:"S", Z:16, A:32, mAtom:31.972071174, role:"reaction"},
+  {name:"Sr-90", sym:"Sr", Z:38, A:90, mAtom:89.907730, role:"reaction"},
+  {name:"Y-90", sym:"Y", Z:39, A:90, mAtom:89.907144, role:"reaction"},
+  {name:"Cs-137", sym:"Cs", Z:55, A:137, mAtom:136.907089, role:"reaction"},
+  {name:"Ba-137", sym:"Ba", Z:56, A:137, mAtom:136.905827, role:"reaction"},
+  {name:"I-131", sym:"I", Z:53, A:131, mAtom:130.906126, role:"reaction"},
+  {name:"Xe-131", sym:"Xe", Z:54, A:131, mAtom:130.905084, role:"reaction"},
+  {name:"Co-60", sym:"Co", Z:27, A:60, mAtom:59.933816, role:"reaction"},
+  {name:"Ni-60", sym:"Ni", Z:28, A:60, mAtom:59.930785, role:"reaction"},
+  {name:"K-40", sym:"K", Z:19, A:40, mAtom:39.963998, role:"reaction"},
+  {name:"Ca-40b", sym:"Ca", Z:20, A:40, mAtom:39.962590863, role:"reaction"},
+  {name:"C-11", sym:"C", Z:6, A:11, mAtom:11.011433, role:"reaction"},
+  {name:"B-11", sym:"B", Z:5, A:11, mAtom:11.009305, role:"reaction"},
+  {name:"N-13", sym:"N", Z:7, A:13, mAtom:13.005739, role:"reaction"},
+  {name:"C-13b", sym:"C", Z:6, A:13, mAtom:13.003354838, role:"reaction"},
+  {name:"O-15", sym:"O", Z:8, A:15, mAtom:15.003066, role:"reaction"},
+  {name:"N-15", sym:"N", Z:7, A:15, mAtom:15.000108898, role:"reaction"},
+  {name:"F-18", sym:"F", Z:9, A:18, mAtom:18.000937, role:"reaction"},
+  {name:"O-18b", sym:"O", Z:8, A:18, mAtom:17.999159613, role:"reaction"},
+  {name:"Na-22", sym:"Na", Z:11, A:22, mAtom:21.994437, role:"reaction"},
+  {name:"Ne-22", sym:"Ne", Z:10, A:22, mAtom:21.991385, role:"reaction"},
+  {name:"Mg-23", sym:"Mg", Z:12, A:23, mAtom:22.994124, role:"reaction"},
+  {name:"Na-23b", sym:"Na", Z:11, A:23, mAtom:22.989769282, role:"reaction"}
+];
+
+// Verified reaction library (balanced; mass-defect and BE-curve routes agree).
+var REACTIONS = [
+  {type:"fission", label:"U-235 fission &rarr; Cs-144 + Rb-90", reactants:["U-235","n"], products:["Cs-144","Rb-90","n","n"]},
+  {type:"fission", label:"U-235 fission &rarr; Ba-141 + Kr-92", reactants:["U-235","n"], products:["Ba-141","Kr-92","n","n","n"]},
+  {type:"fission", label:"U-235 fission &rarr; Xe-140 + Sr-94", reactants:["U-235","n"], products:["Xe-140","Sr-94","n","n"]},
+  {type:"fission", label:"Pu-239 fission &rarr; Ba-143 + Sr-94", reactants:["Pu-239","n"], products:["Ba-143","Sr-94","n","n","n"]},
+  {type:"fission", label:"U-238 spontaneous fission &rarr; Xe-140 + Sr-94", reactants:["U-238"], products:["Xe-140","Sr-94","n","n","n","n"]},
+  {type:"fission", label:"Pu-240 spontaneous fission &rarr; Ba-143 + Sr-95", reactants:["Pu-240"], products:["Ba-143","Sr-95","n","n"]},
+  {type:"fission", label:"Pu-240 spontaneous fission &rarr; Xe-134 + Zr-104", reactants:["Pu-240"], products:["Xe-134","Zr-104","n","n"]},
+  {type:"fusion", label:"D-T fusion", reactants:["H-2","H-3"], products:["He-4","n"]},
+  {type:"fusion", label:"D-D fusion &rarr; He-3 + n", reactants:["H-2","H-2"], products:["He-3","n"]},
+  {type:"fusion", label:"D-D fusion &rarr; T + p", reactants:["H-2","H-2"], products:["H-3","H-1"]},
+  {type:"fusion", label:"D-He-3 fusion", reactants:["H-2","He-3"], products:["He-4","H-1"]},
+  {type:"alpha", label:"Th-232 alpha decay", reactants:["Th-232"], products:["Ra-228","He-4"]},
+  {type:"alpha", label:"U-238 alpha decay", reactants:["U-238"], products:["Th-234","He-4"]},
+  {type:"alpha", label:"Ra-226 alpha decay", reactants:["Ra-226"], products:["Rn-222","He-4"]},
+  {type:"alpha", label:"Po-210 alpha decay", reactants:["Po-210"], products:["Pb-206","He-4"]},
+  {type:"alpha", label:"Po-214 alpha decay", reactants:["Po-214"], products:["Pb-210","He-4"]},
+  {type:"alpha", label:"Pu-238 alpha decay", reactants:["Pu-238"], products:["U-234","He-4"]},
+  {type:"alpha", label:"Pu-239 alpha decay", reactants:["Pu-239"], products:["U-235","He-4"]},
+  {type:"alpha", label:"Am-241 alpha decay", reactants:["Am-241"], products:["Np-237","He-4"]},
+  {type:"beta", bplus:false, label:"H-3 beta-minus decay", reactants:["H-3"], products:["He-3b"]},
+  {type:"beta", bplus:false, label:"C-14 beta-minus decay", reactants:["C-14"], products:["N-14b"]},
+  {type:"beta", bplus:false, label:"P-32 beta-minus decay", reactants:["P-32"], products:["S-32"]},
+  {type:"beta", bplus:false, label:"Sr-90 beta-minus decay", reactants:["Sr-90"], products:["Y-90"]},
+  {type:"beta", bplus:false, label:"Cs-137 beta-minus decay", reactants:["Cs-137"], products:["Ba-137"]},
+  {type:"beta", bplus:false, label:"I-131 beta-minus decay", reactants:["I-131"], products:["Xe-131"]},
+  {type:"beta", bplus:false, label:"Co-60 beta-minus decay", reactants:["Co-60"], products:["Ni-60"]},
+  {type:"beta", bplus:false, label:"K-40 beta-minus decay", reactants:["K-40"], products:["Ca-40b"]},
+  {type:"beta", bplus:true, label:"C-11 beta-plus decay", reactants:["C-11"], products:["B-11"]},
+  {type:"beta", bplus:true, label:"N-13 beta-plus decay", reactants:["N-13"], products:["C-13b"]},
+  {type:"beta", bplus:true, label:"O-15 beta-plus decay", reactants:["O-15"], products:["N-15"]},
+  {type:"beta", bplus:true, label:"F-18 beta-plus decay", reactants:["F-18"], products:["O-18b"]},
+  {type:"beta", bplus:true, label:"Na-22 beta-plus decay", reactants:["Na-22"], products:["Ne-22"]},
+  {type:"beta", bplus:true, label:"Mg-23 beta-plus decay", reactants:["Mg-23"], products:["Na-23b"]}
+];
+
+// ====================== PHYSICS CONSTANTS (WJEC) ======================
+var MP = 1.007276;      // proton mass, u   (WJEC/ebook)
+var MN = 1.008665;      // neutron mass, u
+var ME = 0.000549;      // electron mass, u
+var U_TO_MEV = 931.5;   // WJEC conversion
+
+// Precise SI constants for the E = mc^2 alternative method. Using full
+// precision so both methods agree; in the exam, students use the rounded
+// data-booklet values (which give a slightly different final figure).
+var U_KG = 1.660539e-27;     // 1 u in kg
+var C_SI = 2.997925e8;       // speed of light, m/s
+var EV_J = 1.602177e-19;     // 1 eV in joules (booklet gives this; MeV is derived)
+
+// ---- Data configuration (1, 2 or 3): controls which constants and mass units
+// are shown, forcing a single calculation route. ----
+//   Config 1: masses in u, 1 u = 931.5 MeV  (x931.5 route)
+//   Config 2: masses in u, plus u->kg, c, eV  (E=mc2 route from u)
+//   Config 3: masses in kg, plus c, eV        (E=mc2 route from kg)
+var config = 1;
+// Proton/neutron masses in kg (for Config 3).
+var MP_KG = MP * U_KG, MN_KG = MN * U_KG;
+
+function sci(value, sig) {
+    // format as m.mmm x 10^e using HTML sup
+    if (value === 0) return '0';
+    var exp = Math.floor(Math.log10(Math.abs(value)));
+    var mant = value / Math.pow(10, exp);
+    var mantStr = mant.toFixed(sig - 1);
+    return mantStr + ' &times; 10<sup>' + (exp < 0 ? '&minus;' + Math.abs(exp) : exp) + '</sup>';
+}
+
+function buildConstants() {
+    var t = document.getElementById('constTable');
+    var note = document.getElementById('constNote');
+    if (!t) return;
+    var rows = '';
+    function row(k, v) { return '<tr><td class="ro-k">' + k + '</td><td class="ro-v-cell"><span class="ro-v">' + v + '</span></td></tr>'; }
+    if (config === 1) {
+        rows += row('Proton mass, m<sub>p</sub>', MP.toFixed(6) + ' u');
+        rows += row('Neutron mass, m<sub>n</sub>', MN.toFixed(6) + ' u');
+        rows += row('Electron mass, m<sub>e</sub>', ME.toFixed(6) + ' u');
+        rows += row('1 u', '931.5 MeV');
+    } else if (config === 2) {
+        rows += row('Proton mass, m<sub>p</sub>', MP.toFixed(6) + ' u');
+        rows += row('Neutron mass, m<sub>n</sub>', MN.toFixed(6) + ' u');
+        rows += row('Electron mass, m<sub>e</sub>', ME.toFixed(6) + ' u');
+        rows += row('1 u', sci(U_KG, 7) + ' kg');
+        rows += row('c', sci(C_SI, 7) + ' m s<sup>&minus;1</sup>');
+        rows += row('1 eV', sci(EV_J, 7) + ' J');
+    } else {
+        rows += row('Proton mass, m<sub>p</sub>', sci(MP_KG, 7) + ' kg');
+        rows += row('Neutron mass, m<sub>n</sub>', sci(MN_KG, 7) + ' kg');
+        rows += row('Electron mass, m<sub>e</sub>', sci(ME * U_KG, 7) + ' kg');
+        rows += row('c', sci(C_SI, 7) + ' m s<sup>&minus;1</sup>');
+        rows += row('1 eV', sci(EV_J, 7) + ' J');
+    }
+    t.innerHTML = rows;
+    note.innerHTML = '';
+    // reflect active button on tab 1's toggle only
+    var btns = document.querySelectorAll('#configToggle .config-btn');
+    for (var i = 0; i < btns.length; i++) {
+        btns[i].classList.toggle('active', parseInt(btns[i].getAttribute('data-cfg'), 10) === config);
+    }
+}
+
+function setConfig(n) {
+    config = n;
+    buildConstants();
+    if (selectedNuc) updateReadout(selectedNuc);    // refresh mass-unit display
+    if (workingOpen) document.getElementById('workInner').innerHTML = buildWorkingHTML(selectedNuc);
+}
+window.setConfig = setConfig;
+
+// Tab 2 has its own config (1-4); tab 1 uses `config` (1-3). They are independent.
+var rxConfig = 1;
+function setRxConfig(n) {
+    rxConfig = n;
+    if (typeof rxCurrent !== 'undefined' && rxCurrent) {
+        rxBuildTable();
+        if (typeof rxWorkOpen !== 'undefined' && rxWorkOpen) {
+            document.getElementById('rxWorkInner').innerHTML = rxBuildWorking();
+        }
+    }
+}
+window.setRxConfig = setRxConfig;
+
+// Element names keyed by Z (covers all elements in the nuclide table).
+var ELEMENT_NAME = {
+    1:'Hydrogen', 2:'Helium', 3:'Lithium', 4:'Beryllium', 5:'Boron',
+    6:'Carbon', 7:'Nitrogen', 8:'Oxygen', 9:'Fluorine', 10:'Neon',
+    11:'Sodium', 12:'Magnesium', 13:'Aluminium', 14:'Silicon', 15:'Phosphorus',
+    16:'Sulfur', 17:'Chlorine', 18:'Argon', 19:'Potassium', 20:'Calcium',
+    21:'Scandium', 22:'Titanium', 23:'Vanadium', 24:'Chromium', 25:'Manganese',
+    26:'Iron', 28:'Nickel', 29:'Copper', 30:'Zinc', 32:'Germanium',
+    34:'Selenium', 36:'Krypton', 37:'Rubidium', 38:'Strontium', 40:'Zirconium',
+    42:'Molybdenum', 44:'Ruthenium', 46:'Palladium', 48:'Cadmium', 50:'Tin',
+    52:'Tellurium', 54:'Xenon', 55:'Caesium', 56:'Barium', 58:'Cerium',
+    60:'Neodymium', 62:'Samarium', 64:'Gadolinium', 66:'Dysprosium', 68:'Erbium',
+    70:'Ytterbium', 72:'Hafnium', 74:'Tungsten', 76:'Osmium', 78:'Platinum',
+    79:'Gold', 80:'Mercury', 82:'Lead', 83:'Bismuth', 88:'Radium',
+    90:'Thorium', 92:'Uranium', 94:'Plutonium'
+};
+// Full descriptive name, e.g. "Cr-52" -> "Chromium-52".
+function fullName(nuc) {
+    var nm = ELEMENT_NAME[nuc.Z];
+    return nm ? (nm + '-' + nuc.A) : nuc.name;
+}
+
+function nuclearMass(nuc) { return nuc.mAtom - nuc.Z * ME; }
+function totalBE(nuc) {    // MeV
+    var N = nuc.A - nuc.Z;
+    var dm = nuc.Z * MP + N * MN - nuclearMass(nuc);
+    return dm * U_TO_MEV;
+}
+function bePerA(nuc) { return totalBE(nuc) / nuc.A; }
+
+// Precompute BE/A for plotting and hit-testing.
+for (var i = 0; i < NUCLIDES.length; i++) {
+    NUCLIDES[i].bea = bePerA(NUCLIDES[i]);
+    NUCLIDES[i].be = totalBE(NUCLIDES[i]);
+}
+
+// Backbone subset, in A order, for drawing the connected curve line.
+var BACKBONE = NUCLIDES.filter(function(n){ return n.A > 1 && n.role !== 'reaction'; })
+                       .slice()
+                       .sort(function(a,b){ return a.A - b.A; });
+
+// ====================== CANVAS / PLOT ======================
+var canvas = document.getElementById('curveCanvas');
+var ctx = canvas.getContext('2d');
+
+// Plot area within the 1000x620 canvas.
+var PLOT = { left:70, right:962, top:34, bottom:560 };
+var AX = { aMin:0, aMax:240, yMin:0, yMax:9 };
+
+function aToX(A) {
+    return PLOT.left + (A - AX.aMin) / (AX.aMax - AX.aMin) * (PLOT.right - PLOT.left);
+}
+function yToY(v) {
+    return PLOT.bottom - (v - AX.yMin) / (AX.yMax - AX.yMin) * (PLOT.bottom - PLOT.top);
+}
+
+function drawAxes() {
+    ctx.save();
+    // gridlines
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    ctx.fillStyle = '#8aa0ba';
+    ctx.font = '12px Segoe UI, Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    var a;
+    for (a = 0; a <= 240; a += 20) {
+        var gx = aToX(a);
+        ctx.beginPath(); ctx.moveTo(gx, PLOT.top); ctx.lineTo(gx, PLOT.bottom); ctx.stroke();
+        ctx.fillText(String(a), gx, PLOT.bottom + 8);
+    }
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    var v;
+    for (v = 0; v <= 9; v += 1) {
+        var gy = yToY(v);
+        ctx.beginPath(); ctx.moveTo(PLOT.left, gy); ctx.lineTo(PLOT.right, gy); ctx.stroke();
+        ctx.fillText(String(v), PLOT.left - 8, gy);
+    }
+    // axis frame
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(PLOT.left, PLOT.top, PLOT.right - PLOT.left, PLOT.bottom - PLOT.top);
+    // axis titles
+    ctx.fillStyle = '#cfe0f2';
+    ctx.font = '13px Segoe UI, Arial';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('Nucleon number,  A', (PLOT.left + PLOT.right) / 2, PLOT.bottom + 28);
+    ctx.save();
+    ctx.translate(18, (PLOT.top + PLOT.bottom) / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Binding energy per nucleon  /  MeV', 0, 0);
+    ctx.restore();
+    ctx.restore();
+}
+
+function drawCurveLine() {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(120,180,255,0.55)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (var i = 0; i < BACKBONE.length; i++) {
+        var px = aToX(BACKBONE[i].A);
+        var py = yToY(BACKBONE[i].bea);
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.restore();
+}
+
+function drawMarkers() {
+    ctx.save();
+    for (var i = 0; i < NUCLIDES.length; i++) {
+        var n = NUCLIDES[i];
+        if (n.A === 1) continue;            // free nucleons (BE/A = 0) not plotted
+        if (n.role === 'reaction') continue; // reaction-only species: not on tab-1 curve
+        var px = aToX(n.A), py = yToY(n.bea);
+        if (n.role === 'named') {
+            // filled diamond
+            ctx.fillStyle = '#ffd24a';
+            ctx.strokeStyle = '#1a2436';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(px, py - 5); ctx.lineTo(px + 5, py);
+            ctx.lineTo(px, py + 5); ctx.lineTo(px - 5, py);
+            ctx.closePath(); ctx.fill(); ctx.stroke();
+        } else {
+            // small circle
+            ctx.fillStyle = 'rgba(150,200,255,0.85)';
+            ctx.beginPath(); ctx.arc(px, py, 2.6, 0, Math.PI * 2); ctx.fill();
+        }
+    }
+    ctx.restore();
+}
+
+// Labels for the named anchors (calm default: only these are labelled).
+// Offsets are the label-anchor position relative to the data point; a thin
+// leader line is drawn from the point to the label so clustered anchors near
+// the peak stay unambiguous on a projector.
+var LABELLED = {
+    'H-2':  {dx:-4,  dy:34,  align:'center'},
+    'He-4': {dx:-30, dy:-22, align:'right'},
+    'C-12': {dx:-30, dy:-6,  align:'right'},
+    'O-16': {dx:-6,  dy:-30, align:'center'},
+    'P-31': {dx:6,   dy:34,  align:'left'},
+    'Fe-56':{dx:-34, dy:-30, align:'right'},
+    'Ni-62':{dx:18,  dy:-34, align:'left'},
+    'Ge-72':{dx:40,  dy:-20, align:'left'},
+    'Pb-208':{dx:0,  dy:-30, align:'center'},
+    'U-235':{dx:-32, dy:20,  align:'right'},
+    'U-238':{dx:-30, dy:-14, align:'right'}
+};
+function drawLabels() {
+    ctx.save();
+    ctx.font = '14px Segoe UI, Arial';
+    for (var i = 0; i < NUCLIDES.length; i++) {
+        var n = NUCLIDES[i];
+        var L = LABELLED[n.name];
+        if (!L) continue;
+        var px = aToX(n.A), py = yToY(n.bea);
+        var lx = px + L.dx, ly = py + L.dy;
+        // leader line from point to just before the label anchor
+        ctx.strokeStyle = 'rgba(220,232,246,0.45)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(lx, ly); ctx.stroke();
+        // label text
+        ctx.fillStyle = '#eef4fb';
+        ctx.textAlign = L.align; ctx.textBaseline = 'middle';
+        var pad = (L.align === 'right') ? -4 : (L.align === 'left') ? 4 : 0;
+        ctx.fillText(n.name, lx + pad, ly);
+    }
+    ctx.restore();
+}
+
+// Peak tick: minimal always-on marker at the curve maximum (Ni-62).
+function drawPeakTick() {
+    var peak = NUCLIDES[0];
+    for (var i = 1; i < NUCLIDES.length; i++) {
+        if (NUCLIDES[i].A > 1 && NUCLIDES[i].bea > peak.bea) peak = NUCLIDES[i];
+    }
+    var px = aToX(peak.A), py = yToY(peak.bea);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,210,74,0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(px, PLOT.top); ctx.lineTo(px, py - 8); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+}
+
+// Highlight ring on the picked/hovered nuclide.
+var selectedNuc = null;
+function drawHighlight() {
+    if (!selectedNuc) return;
+    var n = selectedNuc;
+    if (n.A === 1) return;
+    var px = aToX(n.A), py = yToY(n.bea);
+    ctx.save();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(px, py, 9, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,210,74,0.9)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(px, py, 12, 0, Math.PI * 2); ctx.stroke();
+    // A locked selection gets a small filled centre dot so it reads as committed
+    // (versus a transient glide preview, which shows the rings only).
+    if (selectionLocked) {
+        ctx.fillStyle = '#ffd24a';
+        ctx.beginPath(); ctx.arc(px, py, 3.5, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+
+    // Transient name label for the selected point, unless it is already a
+    // permanently-labelled anchor (those keep their fixed labels). Placed above
+    // the point by default, nudged below if too near the top of the plot.
+    if (!LABELLED[n.name]) {
+        var above = (py - 36 > PLOT.top);
+        var ly = above ? py - 30 : py + 30;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(220,232,246,0.55)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, ly + (above ? 8 : -8)); ctx.stroke();
+        ctx.font = '14px Segoe UI, Arial';
+        ctx.fillStyle = '#eef4fb';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(n.name, px, ly);
+        ctx.restore();
+    }
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawAxes();
+    drawPeakTick();
+    drawCurveLine();
+    drawMarkers();
+    drawHighlight();
+    drawLabels();
+}
+
+// ====================== ZOOM (zc namespace; wave-motion pattern) ======================
+// Self-contained region-magnify for the Curve tab only. Reuses the SAME curve
+// rendering by temporarily redirecting `ctx` at the zoom canvas (the wave-motion
+// wpCtx-swap technique), so the magnified view is vector-crisp, not a bitmap.
+var zc = {
+    mode:false,        // armed (rubber-band select active)
+    dragging:false,    // mid rubber-band drag
+    sx:0, sy:0, ex:0, ey:0
+};
+var zcZoomBtn = document.getElementById('zcZoomBtn');
+var zcOverlay = document.getElementById('zcZoomOverlay');
+var zcCanvas = document.getElementById('zcZoomCanvas');
+var zcCtx = zcCanvas.getContext('2d');
+
+// Draw just the scene parts (no full-canvas clear) into the current ctx.
+function zcDrawSceneParts() {
+    drawAxes();
+    drawPeakTick();
+    drawCurveLine();
+    drawMarkers();
+    drawHighlight();
+    drawLabels();
+}
+
+// Render the selected pixel rect (rx,ry,rw,rh on the main canvas) magnified to
+// fill the zoom canvas, by transform + redraw of the same scene.
+function zcRenderZoom(rx, ry, rw, rh) {
+    var zw = zcCanvas.width, zh = zcCanvas.height;
+    var scale = Math.min(zw / rw, zh / rh);
+    var offX = (zw - rw * scale) / 2;
+    var offY = (zh - rh * scale) / 2;
+
+    var mainCtx = ctx;          // save real context
+    ctx = zcCtx;                // primitives now draw into the zoom canvas
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, zw, zh);
+    ctx.fillStyle = '#0a1526';
+    ctx.fillRect(0, 0, zw, zh);
+    ctx.save();
+    ctx.translate(offX, offY);
+    ctx.scale(scale, scale);
+    ctx.translate(-rx, -ry);
+    ctx.beginPath(); ctx.rect(rx, ry, rw, rh); ctx.clip();
+    zcDrawSceneParts();
+    ctx.restore();
+    ctx = mainCtx;              // restore real context
+
+    document.getElementById('zcZoomTitle').textContent =
+        'Zoomed view (' + scale.toFixed(1) + '\u00d7)';
+    zcOverlay.style.display = 'flex';
+}
+
+function zcEnter() {
+    if (workingOpen) return;
+    zc.mode = true;
+    zcZoomBtn.classList.add('active');
+    canvas.style.cursor = 'crosshair';
+    draw(); zcDrawHint();
+}
+function zcExit() {
+    zc.mode = false; zc.dragging = false;
+    zcZoomBtn.classList.remove('active');
+    canvas.style.cursor = 'default';
+    draw();
+}
+function zcToggle() { if (zc.mode) zcExit(); else zcEnter(); }
+function zcClose() { zcOverlay.style.display = 'none'; }
+window.zcToggle = zcToggle;
+window.zcClose = zcClose;
+zcOverlay.addEventListener('click', function(e) { if (e.target === zcOverlay) zcClose(); });
+
+// Rubber-band selection on the main canvas while zoom armed.
+function zcDown(clientX, clientY) {
+    var p = getCanvasPos(clientX, clientY);
+    zc.sx = p.x; zc.sy = p.y; zc.ex = p.x; zc.ey = p.y;
+    zc.dragging = true;
+}
+function zcMove(clientX, clientY) {
+    if (!zc.dragging) return;
+    var p = getCanvasPos(clientX, clientY);
+    zc.ex = p.x; zc.ey = p.y;
+    draw(); zcDrawRect();
+}
+function zcUp() {
+    if (!zc.dragging) return;
+    zc.dragging = false;
+    var x = Math.min(zc.sx, zc.ex), y = Math.min(zc.sy, zc.ey);
+    var w = Math.abs(zc.ex - zc.sx), h = Math.abs(zc.ey - zc.sy);
+    if (w > 12 && h > 12) {
+        zcRenderZoom(x, y, w, h);
+        zcExit();               // one-shot: disarm after a selection
+    } else {
+        draw(); zcDrawHint();   // tiny drag — keep armed, show hint again
+    }
+}
+
+// Dashed rubber-band rectangle while selecting.
+function zcDrawRect() {
+    var x = Math.min(zc.sx, zc.ex), y = Math.min(zc.sy, zc.ey);
+    var w = Math.abs(zc.ex - zc.sx), h = Math.abs(zc.ey - zc.sy);
+    if (w < 2 || h < 2) return;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.30)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(x, y, w, h);
+    // redraw scene only inside the selection so it stays bright
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    zcDrawSceneParts();
+    ctx.restore();
+    ctx.strokeStyle = '#5aa0ff'; ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]); ctx.strokeRect(x, y, w, h); ctx.setLineDash([]);
+    ctx.fillStyle = '#5aa0ff';
+    var cs = 8;
+    ctx.fillRect(x - 2, y - 2, cs, cs);
+    ctx.fillRect(x + w - cs + 2, y - 2, cs, cs);
+    ctx.fillRect(x - 2, y + h - cs + 2, cs, cs);
+    ctx.fillRect(x + w - cs + 2, y + h - cs + 2, cs, cs);
+    ctx.restore();
+}
+
+// Hint shown while zoom is armed and no box drawn yet.
+function zcDrawHint() {
+    var txt = 'Drag a box around the region to magnify';
+    ctx.save();
+    ctx.font = 'bold 16px Segoe UI, Arial';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    var tw = ctx.measureText(txt).width;
+    var cx = canvas.width / 2, cy = 22, pad = 14, bw = tw + pad * 2, bh = 30;
+    ctx.fillStyle = 'rgba(16,40,74,0.92)';
+    ctx.strokeStyle = 'rgba(90,160,255,0.6)';
+    ctx.lineWidth = 1.5;
+    if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(cx - bw/2, cy - bh/2, bw, bh, 8); ctx.fill(); ctx.stroke(); }
+    else { ctx.fillRect(cx - bw/2, cy - bh/2, bw, bh); ctx.strokeRect(cx - bw/2, cy - bh/2, bw, bh); }
+    ctx.fillStyle = '#bcd9ff';
+    ctx.fillText(txt, cx, cy);
+    ctx.restore();
+}
+
+// ====================== INTERACTION ======================
+// Coordinate mapping (canonical DC_Construction_Kit pattern): map client
+// coords to the canvas's internal resolution via getBoundingClientRect scale.
+function getCanvasPos(clientX, clientY) {
+    var rect = canvas.getBoundingClientRect();
+    return {
+        x: (clientX - rect.left) * (canvas.width / rect.width),
+        y: (clientY - rect.top) * (canvas.height / rect.height)
+    };
+}
+
+// Find the nearest plotted nuclide within a pixel radius of (x,y).
+function nuclideAt(x, y) {
+    var best = null, bestD = 16;   // hit radius in canvas px
+    for (var i = 0; i < NUCLIDES.length; i++) {
+        var n = NUCLIDES[i];
+        if (n.A === 1) continue;
+        if (n.role === 'reaction') continue;
+        var d = Math.hypot(x - aToX(n.A), y - yToY(n.bea));
+        if (d < bestD) { bestD = d; best = n; }
+    }
+    return best;
+}
+
+function fmt(v, dp) { return v.toFixed(dp); }
+
+// Which derived rows have been revealed for the current point.
+var revealed = {};   // keys: mNuc, dm, be, bea
+
+function row(label, val) {
+    return '<tr><td class="ro-k">' + label + '</td><td class="ro-v">' + val + '</td></tr>';
+}
+// A derived row: masked tappable chip until revealed; once revealed, shows the
+// value plus a small expand symbol that opens the full working pop-out.
+function revealRow(label, key, val) {
+    var cell;
+    if (revealed[key]) {
+        cell = '<span class="ro-v">' + val + '</span>' +
+               '<span class="ro-work" onclick="openWorking()" title="Show working">&#10530; working</span>';
+    } else {
+        cell = '<span class="ro-mask" onclick="revealValue(\'' + key + '\')">answer</span>';
+    }
+    return '<tr><td class="ro-k">' + label + '</td><td class="ro-v-cell">' + cell + '</td></tr>';
+}
+function revealValue(key) {
+    revealed[key] = true;
+    updateReadout(selectedNuc);
+}
+window.revealValue = revealValue;
+
+// Compute the derived quantities for a nuclide (shared by panel + working).
+function deriveNuclide(n) {
+    var N = n.A - n.Z;
+    var mNuc = n.mAtom - n.Z * ME;
+    var mSep = n.Z * MP + N * MN;           // mass of separated nucleons
+    var dm = mSep - mNuc;                    // mass defect (u)
+    var be = dm * U_TO_MEV;                  // total binding energy (MeV)
+    return { N:N, mNuc:mNuc, mSep:mSep, dm:dm, be:be, bea:be / n.A };
+}
+
+function updateReadout(n) {
+    var el = document.getElementById('readoutBody');
+    if (!n) {
+        el.className = 'readout-empty';
+        el.innerHTML = 'Tap any point on the curve to see its details and work out its binding energy per nucleon.';
+        updateAnswer(null);
+        return;
+    }
+    var d = deriveNuclide(n);
+    el.className = 'readout-filled';
+    el.innerHTML =
+        '<div class="ro-title">' + n.name + ' <span class="ro-fullname">(' + fullName(n) + ')</span></div>' +
+        '<table class="ro-table">' +
+        row('Protons, Z', n.Z) +
+        row('Neutrons, N', d.N) +
+        row('Nucleons, A', n.A) +
+        row('Atomic mass', (config === 3 ? sci(n.mAtom * U_KG, 7) + ' kg' : fmt(n.mAtom, 6) + ' u')) +
+        '</table>';
+    updateAnswer(n, d);
+}
+
+// The answer panel under the constants: masked button until revealed, then the
+// value plus a button to open the full working.
+function updateAnswer(n, d) {
+    var el = document.getElementById('answerBody');
+    if (!el) return;
+    if (!n) {
+        el.className = 'answer-empty';
+        el.innerHTML = 'Select a nuclide on the curve, then reveal the answer.';
+        return;
+    }
+    if (!d) d = deriveNuclide(n);
+    el.className = 'answer-filled';
+    if (revealed.bea) {
+        el.innerHTML =
+            '<div class="answer-value">' + fmt(d.bea, 4) + ' MeV</div>' +
+            '<button class="answer-work-btn" onclick="openWorking()">&#10530; Show working</button>';
+    } else {
+        el.innerHTML =
+            '<button class="answer-reveal-btn" onclick="revealValue(\'bea\')">Reveal answer</button>';
+    }
+}
+
+var selectionLocked = false;   // true once a point is clicked; glide won't override
+
+function setSelection(n) {
+    if (n !== selectedNuc) {
+        selectedNuc = n;
+        revealed = {};                     // new point = fresh question, all masked
+        updateReadout(n);
+        draw();
+    }
+}
+
+// Hover preview: updates the selection as the cursor glides, but only while
+// unlocked. Once a point is clicked (locked), gliding does nothing.
+function previewAt(clientX, clientY) {
+    if (workingOpen || selectionLocked) return null;
+    var p = getCanvasPos(clientX, clientY);
+    var n = nuclideAt(p.x, p.y);
+    if (n) setSelection(n);
+    return n;
+}
+
+// Click commit: a point locks the selection; empty space unlocks and resumes
+// gliding; a different point moves the lock.
+function commitAt(clientX, clientY) {
+    if (workingOpen) return;
+    var p = getCanvasPos(clientX, clientY);
+    var n = nuclideAt(p.x, p.y);
+    if (n) {
+        setSelection(n);
+        selectionLocked = true;
+    } else {
+        selectionLocked = false;           // clicked empty space -> resume gliding
+    }
+}
+
+// Mouse: glide previews (unlocked), click locks.
+canvas.addEventListener('mousemove', function(e) {
+    if (zc.mode) { if (zc.dragging) zcMove(e.clientX, e.clientY); return; }
+    if (workingOpen) return;
+    var p = getCanvasPos(e.clientX, e.clientY);
+    var n = nuclideAt(p.x, p.y);
+    canvas.style.cursor = n ? 'pointer' : 'default';
+    previewAt(e.clientX, e.clientY);
+});
+canvas.addEventListener('mousedown', function(e) {
+    if (e.button === 2) return;
+    if (zc.mode) { zcDown(e.clientX, e.clientY); e.preventDefault(); return; }
+    commitAt(e.clientX, e.clientY);
+});
+
+// Touch: a tap commits (locks) directly, since there is no hover on touch.
+canvas.addEventListener('touchstart', function(e) {
+    if (e.touches.length !== 1) return;
+    e.preventDefault();
+    var t = e.touches[0];
+    if (zc.mode) { zcDown(t.clientX, t.clientY); return; }
+    commitAt(t.clientX, t.clientY);
+}, { passive: false });
+canvas.addEventListener('touchmove', function(e) {
+    if (e.touches.length !== 1) return;
+    e.preventDefault();
+    var t = e.touches[0];
+    if (zc.mode) { if (zc.dragging) zcMove(t.clientX, t.clientY); return; }
+    previewAt(t.clientX, t.clientY);
+}, { passive: false });
+canvas.addEventListener('touchcancel', function() {
+    // leave the last pick in place; nothing to clean up
+}, { passive: true });
+// Zoom rubber-band release (mouse + touch handled at document level so a drag
+// that ends outside the canvas still completes).
+document.addEventListener('mouseup', function() { if (zc.mode && zc.dragging) zcUp(); });
+document.addEventListener('touchend', function() { if (zc.mode && zc.dragging) zcUp(); });
+
+// ====================== WORKING POP-OUT ======================
+var workingOpen = false;
+var workWindow = document.getElementById('workWindow');
+var workBackdrop = document.getElementById('workBackdrop');
+
+// (Working route is driven by the global `config`; see buildWorkingHTML.)
+
+function wkStep(label, math, sub) {
+    return '<div class="wk-step"><div class="wk-label">' + label + '</div>' +
+           '<div class="wk-math">' + math +
+           (sub ? ' <span class="wk-sub">' + sub + '</span>' : '') + '</div></div>';
+}
+
+function buildWorkingHTML(n) {
+    var d = deriveNuclide(n);
+    var head = '<div class="wk-title">' + n.name + ' &nbsp;(Z = ' + n.Z + ', A = ' + n.A + ')</div>' +
+               '<div class="wk-config">Question Style ' + config + ' &mdash; using only the constants on the panel</div>';
+    if (config === 1) return head + buildStdWorking(n, d);
+    if (config === 2) return head + buildMc2Working(n, d);
+    return head + buildKgWorking(n, d);
+}
+
+// Config 3: masses in kg, E = mc^2 throughout (no u anywhere).
+function buildKgWorking(n, d) {
+    var mAtom_kg = n.mAtom * U_KG;
+    var mNuc_kg = mAtom_kg - n.Z * (ME * U_KG);
+    var mSep_kg = n.Z * MP_KG + d.N * MN_KG;
+    var dm_kg = mSep_kg - mNuc_kg;
+    var be_J = dm_kg * C_SI * C_SI;
+    var bea_J = be_J / n.A;
+    var bea_MeV = bea_J / EV_J / 1e6;
+    var h = '';
+    h += wkStep('Mass of nucleus  =  atomic mass &minus; (Z &times; electron mass)',
+        sci(mAtom_kg, 7) + ' &minus; (' + n.Z + ' &times; ' + sci(ME * U_KG, 7) + ')  =  <b>' + sci(mNuc_kg, 6) + ' kg</b>');
+    h += wkStep('Mass of separated nucleons  =  (Z &times; m<sub>p</sub>) + (N &times; m<sub>n</sub>)',
+        '(' + n.Z + ' &times; ' + sci(MP_KG, 7) + ') + (' + d.N + ' &times; ' + sci(MN_KG, 7) + ')  =  <b>' + sci(mSep_kg, 6) + ' kg</b>');
+    h += wkStep('Mass defect  &Delta;m  =  (separated nucleons) &minus; (nucleus)',
+        sci(mSep_kg, 6) + ' &minus; ' + sci(mNuc_kg, 6) + '  =  <b>' + sci(dm_kg, 4) + ' kg</b>');
+    h += wkStep('Binding energy  =  &Delta;m c&sup2;  =  &Delta;m &times; (2.997925 &times; 10<sup>8</sup>)&sup2;',
+        sci(dm_kg, 4) + ' &times; (2.997925 &times; 10<sup>8</sup>)&sup2;  =  <b>' + sci(be_J, 4) + ' J</b>');
+    h += wkStep('Binding energy per nucleon  =  BE &divide; A',
+        sci(be_J, 4) + ' &divide; ' + n.A + '  =  <b>' + sci(bea_J, 4) + ' J</b>');
+    h += wkStep('Convert to MeV  (&divide; 1.602177 &times; 10<sup>&minus;19</sup>, then &divide; 10<sup>6</sup>)',
+        sci(bea_J, 4) + ' &divide; 1.602177 &times; 10<sup>&minus;19</sup> &divide; 10<sup>6</sup>  =  <b>' + fmt(bea_MeV, 4) + ' MeV</b>');
+    h += '<div class="wk-answer">Binding energy per nucleon  =  ' + sci(bea_J, 4) + ' J  =  ' + fmt(bea_MeV, 4) + ' MeV</div>';
+    return h;
+}
+
+// Method 1: mass defect in u, x 931.5
+function buildStdWorking(n, d) {
+    var h = '';
+    h += wkStep('Mass of nucleus  =  atomic mass &minus; (Z &times; electron mass)',
+        fmt(n.mAtom, 6) + ' &minus; (' + n.Z + ' &times; ' + fmt(ME, 6) + ')  =  <b>' + fmt(d.mNuc, 6) + ' u</b>');
+    h += wkStep('Mass of separated nucleons  =  (Z &times; m<sub>p</sub>) + (N &times; m<sub>n</sub>)',
+        '(' + n.Z + ' &times; ' + fmt(MP, 6) + ') + (' + d.N + ' &times; ' + fmt(MN, 6) + ')  =  <b>' + fmt(d.mSep, 6) + ' u</b>');
+    h += wkStep('Mass defect  &Delta;m  =  (separated nucleons) &minus; (nucleus)',
+        fmt(d.mSep, 6) + ' &minus; ' + fmt(d.mNuc, 6) + '  =  <b>' + fmt(d.dm, 6) + ' u</b>');
+    h += wkStep('Binding energy  =  &Delta;m &times; 931.5',
+        fmt(d.dm, 6) + ' &times; 931.5  =  <b>' + fmt(d.be, 3) + ' MeV</b>');
+    h += wkStep('Binding energy per nucleon  =  BE &divide; A',
+        fmt(d.be, 3) + ' &divide; ' + n.A + '  =  <b>' + fmt(d.bea, 4) + ' MeV</b>');
+    h += '<div class="wk-answer">Binding energy per nucleon  =  ' + fmt(d.bea, 4) + ' MeV</div>';
+    return h;
+}
+
+// Method 2: E = mc^2 in SI units
+function buildMc2Working(n, d) {
+    var dm_kg = d.dm * U_KG;
+    var be_J = dm_kg * C_SI * C_SI;
+    var bea_J = be_J / n.A;
+    function sci(x, dp) {
+        var e = Math.floor(Math.log10(Math.abs(x)));
+        var m = x / Math.pow(10, e);
+        return m.toFixed(dp) + ' &times; 10<sup>' + e + '</sup>';
+    }
+    var h = '';
+    h += wkStep('Mass of nucleus  =  atomic mass &minus; (Z &times; electron mass)',
+        fmt(n.mAtom, 6) + ' &minus; (' + n.Z + ' &times; ' + fmt(ME, 6) + ')  =  <b>' + fmt(d.mNuc, 6) + ' u</b>');
+    h += wkStep('Mass defect  &Delta;m  =  (Z &times; m<sub>p</sub> + N &times; m<sub>n</sub>) &minus; nucleus',
+        '(' + n.Z + ' &times; ' + fmt(MP, 6) + ' + ' + d.N + ' &times; ' + fmt(MN, 6) + ') &minus; ' + fmt(d.mNuc, 6) +
+        '  =  <b>' + fmt(d.dm, 6) + ' u</b>');
+    h += wkStep('Convert &Delta;m to kilograms  (&times; 1.660539 &times; 10<sup>&minus;27</sup>)',
+        fmt(d.dm, 6) + ' &times; 1.660539 &times; 10<sup>&minus;27</sup>  =  <b>' + sci(dm_kg, 4) + ' kg</b>');
+    h += wkStep('Binding energy  =  &Delta;m c&sup2;  =  &Delta;m &times; (2.997925 &times; 10<sup>8</sup>)&sup2;',
+        sci(dm_kg, 4) + ' &times; (2.997925 &times; 10<sup>8</sup>)&sup2;  =  <b>' + sci(be_J, 4) + ' J</b>');
+    h += wkStep('Binding energy per nucleon  =  BE &divide; A',
+        sci(be_J, 4) + ' &divide; ' + n.A + '  =  <b>' + sci(bea_J, 4) + ' J</b>');
+    var bea_eV = bea_J / 1.602177e-19;
+    var bea_MeV = bea_eV / 1e6;
+    h += wkStep('Convert to eV  (&divide; 1.602177 &times; 10<sup>&minus;19</sup>)',
+        sci(bea_J, 4) + ' &divide; 1.602177 &times; 10<sup>&minus;19</sup>  =  <b>' + sci(bea_eV, 4) + ' eV</b>');
+    h += wkStep('Convert to MeV  (&divide; 10<sup>6</sup>)',
+        sci(bea_eV, 4) + ' &divide; 10<sup>6</sup>  =  <b>' + fmt(bea_MeV, 4) + ' MeV</b>');
+    h += '<div class="wk-answer">Binding energy per nucleon  =  ' + sci(bea_J, 4) + ' J  =  ' + fmt(bea_MeV, 4) + ' MeV</div>';
+    return h;
+}
+
+// (Calculation route is driven by the global config; no separate method toggle.)
+
+// Auto-scale the working content so it fills the window (text grows on resize).
+function scaleWorking() {
+    var body = document.getElementById('workBody');
+    var scale = document.getElementById('workScale');
+    var inner = document.getElementById('workInner');
+    // reset to natural size to measure
+    scale.style.transform = 'scale(1)';
+    // body has padding (14 top/bottom, 18 left/right via CSS); clientWidth/Height
+    // already exclude scrollbar; subtract the padding we set so content fits inside.
+    var padX = 36, padY = 28;
+    var availW = body.clientWidth - padX;
+    var availH = body.clientHeight - padY;
+    var natW = inner.offsetWidth;
+    var natH = inner.offsetHeight;
+    if (natW <= 0 || natH <= 0 || availW <= 0 || availH <= 0) return;
+    var k = Math.min(availW / natW, availH / natH);
+    if (k < 0.2) k = 0.2;
+    if (k > 3) k = 3;
+    scale.style.transform = 'scale(' + k + ')';
+}
+
+function openWorking() {
+    if (!selectedNuc) return;
+    document.getElementById('workInner').innerHTML = buildWorkingHTML(selectedNuc);
+    workingOpen = true;
+    workBackdrop.classList.add('open');
+    workWindow.classList.add('open');
+    requestAnimationFrame(scaleWorking);
+}
+function closeWorking() {
+    workingOpen = false;
+    workWindow.classList.remove('open');
+    workBackdrop.classList.remove('open');
+}
+window.openWorking = openWorking;
+window.closeWorking = closeWorking;
+
+// Drag + resize (wave-motion pattern; resize re-scales the text).
+(function () {
+    var header = document.getElementById('workHeader');
+    var grip = document.getElementById('workResizeGrip');
+    var st = { drag:false, rz:false, sx:0, sy:0, wl:0, wt:0, rw:0, rh:0 };
+    function startDrag(cx, cy) {
+        var r = workWindow.getBoundingClientRect();
+        st.drag = true; st.sx = cx; st.sy = cy; st.wl = r.left; st.wt = r.top;
+    }
+    function moveDrag(cx, cy) {
+        if (!st.drag) return;
+        var nl = st.wl + (cx - st.sx), nt = st.wt + (cy - st.sy);
+        var minL = -(workWindow.offsetWidth - 80), maxL = window.innerWidth - 80;
+        if (nl < minL) nl = minL; if (nl > maxL) nl = maxL;
+        if (nt < 0) nt = 0; if (nt > window.innerHeight - 36) nt = window.innerHeight - 36;
+        workWindow.style.left = nl + 'px'; workWindow.style.top = nt + 'px';
+    }
+    function startResize(cx, cy) {
+        var r = workWindow.getBoundingClientRect();
+        st.rz = true; st.sx = cx; st.sy = cy; st.rw = r.width; st.rh = r.height;
+    }
+    function moveResize(cx, cy) {
+        if (!st.rz) return;
+        var nw = st.rw + (cx - st.sx), nh = st.rh + (cy - st.sy);
+        if (nw < 340) nw = 340; if (nw > window.innerWidth - 20) nw = window.innerWidth - 20;
+        if (nh < 240) nh = 240; if (nh > window.innerHeight - 20) nh = window.innerHeight - 20;
+        workWindow.style.width = nw + 'px'; workWindow.style.height = nh + 'px';
+        scaleWorking();
+    }
+    function endAll() { st.drag = false; st.rz = false; }
+    header.addEventListener('mousedown', function (e) {
+        if (e.target.tagName === 'BUTTON') return;
+        startDrag(e.clientX, e.clientY); e.preventDefault();
+    });
+    grip.addEventListener('mousedown', function (e) { startResize(e.clientX, e.clientY); e.preventDefault(); });
+    document.addEventListener('mousemove', function (e) {
+        if (st.drag) moveDrag(e.clientX, e.clientY);
+        else if (st.rz) moveResize(e.clientX, e.clientY);
+    });
+    document.addEventListener('mouseup', endAll);
+    header.addEventListener('touchstart', function (e) {
+        if (e.target.tagName === 'BUTTON') return;
+        var t = e.touches[0]; startDrag(t.clientX, t.clientY); e.preventDefault();
+    }, { passive:false });
+    grip.addEventListener('touchstart', function (e) {
+        var t = e.touches[0]; startResize(t.clientX, t.clientY); e.preventDefault();
+    }, { passive:false });
+    document.addEventListener('touchmove', function (e) {
+        if (st.drag) { var t = e.touches[0]; moveDrag(t.clientX, t.clientY); e.preventDefault(); }
+        else if (st.rz) { var t2 = e.touches[0]; moveResize(t2.clientX, t2.clientY); e.preventDefault(); }
+    }, { passive:false });
+    document.addEventListener('touchend', endAll);
+    document.addEventListener('touchcancel', endAll);
+})();
+window.addEventListener('resize', function () { if (workingOpen) scaleWorking(); });
+
+// ====================== HELP MODAL ======================
+function showHelpModal(topic) {
+    var c = document.getElementById('helpModalContent');
+    if (!c) return;
+    if (topic === 'curve') {
+        c.innerHTML =
+            '<h2>Binding Energy Curve \u2014 Help</h2>' +
+            '<h3>What this tool is for</h3>' +
+            '<p>The aim is to work out the <span class="key">binding energy per nucleon</span> of a nucleus \u2014 the average energy holding each nucleon in place. Pick a nuclide, then calculate its value yourself before checking against the answer.</p>' +
+            '<h3>Picking a nuclide</h3>' +
+            '<p><span class="key">Glide</span> across the curve to preview points; their details appear on the right as you go. <span class="key">Click or tap</span> a point to lock onto it (a small dot marks the locked point). Click empty space to release and glide again.</p>' +
+            '<h3>Reading the panel and finding the answer</h3>' +
+            '<p>The right-hand panel gives you everything you need: the proton number, neutron number, nucleon number, and the atomic mass. Use these with the constants below to work out the binding energy per nucleon.</p>' +
+            '<p>When you are ready, click the <span class="key">answer</span> chip in the panel to reveal the binding energy per nucleon. Then click <span class="key">working</span> to open a full step-by-step solution, with a toggle between the two standard methods (using 1\u00a0u\u00a0=\u00a0931.5\u00a0MeV, or E\u00a0=\u00a0mc\u00b2).</p>' +
+            '<h3>The shape of the curve</h3>' +
+            '<p>It rises steeply through the light nuclei, reaches a broad maximum around <span class="key">iron and nickel</span> (the upright tick marks the very top, at nickel\u201162), then falls away slowly. Nuclei at the top are the most tightly bound, so energy is released by moving <span class="key">towards</span> the peak \u2014 light nuclei by joining (fusion), heavy nuclei by splitting (fission). The Reactions tab shows this for real reactions.</p>' +
+            '<h3>Zoom</h3>' +
+            '<p>Use the <span class="key">Zoom</span> button to drag a box around any region and magnify it \u2014 useful for showing detail near the peak from the back of the room.</p>' +
+            '<h3>Touch</h3>' +
+            '<p>Everything works with a finger or Apple Pencil exactly as with a mouse.</p>';
+    } else {
+        c.innerHTML =
+            '<h2>Reactions \u2014 Help</h2>' +
+            '<h3>What this tool is for</h3>' +
+            '<p>The aim is to work out the <span class="key">energy released</span> by a nuclear reaction \u2014 fission, fusion, or alpha decay \u2014 using the binding energy curve. Choose a reaction, calculate the energy yourself, then check against the answer.</p>' +
+            '<h3>Choosing a reaction</h3>' +
+            '<p>Use the drop-down at the top to pick from the verified reactions, grouped into <span class="key">Fission</span>, <span class="key">Fusion</span>, and <span class="key">Alpha decay</span>. The full equation appears across the top, ending in <span class="key">+ Energy</span> \u2014 the quantity you are solving for.</p>' +
+            '<h3>Reading the curve and the table</h3>' +
+            '<p>The reacting nuclei are marked on the curve: <span class="key">reactants in orange</span>, <span class="key">products in green</span>, each labelled with its binding energy per nucleon. The same values, with the nucleon number and atomic mass, are listed in the panel on the right. Free neutrons sit at zero on the curve, so they are not marked; their mass is given in the Constants box for when you need it.</p>' +
+            '<h3>Finding the energy</h3>' +
+            '<p>Work out the energy released, then click the <span class="key">Energy</span> box to reveal it. Click the <span class="key">working</span> button beside it for a full solution, with a toggle between two methods:</p>' +
+            '<p>\u2022 the <span class="key">binding-energy method</span>: total binding energy of the products minus the reactants, using the curve values (energy is released because the products are more tightly bound);<br>' +
+            '\u2022 the <span class="key">mass-defect method</span>: the change in mass \u00d7 931.5\u00a0MeV, using the atomic masses.</p>' +
+            '<p>The two agree, because the energy released equals the increase in total binding energy.</p>' +
+            '<h3>The arrows</h3>' +
+            '<p>For fission and fusion, a blue arrow shows the direction of travel <span class="key">up towards the peak</span> of the curve \u2014 the visual reason energy is released. Alpha decay moves only a little along the curve, so it is shown without an arrow.</p>';
+    }
+    document.getElementById('helpModalOverlay').style.display = 'flex';
+}
+function closeHelpModal() {
+    var ov = document.getElementById('helpModalOverlay');
+    if (ov) ov.style.display = 'none';
+}
+window.showHelpModal = showHelpModal;
+window.closeHelpModal = closeHelpModal;
+
+// ====================== REACTIONS TAB (rx namespace) ======================
+// Look up a nuclide record by name (includes reaction-only species).
+var NUC_BY_NAME = {};
+for (var qi = 0; qi < NUCLIDES.length; qi++) NUC_BY_NAME[NUCLIDES[qi].name] = NUCLIDES[qi];
+
+var RX_NEUTRON = { name:'n', sym:'n', Z:0, A:1, mAtom:1.00866491590 };
+function rxSpecies(s) { return s === 'n' ? RX_NEUTRON : NUC_BY_NAME[s]; }
+// Display name: strip the internal "b" suffix used to duplicate curve species
+// for beta-decay reactions (e.g. "O-18b" -> "O-18").
+function rxDisp(sp) { return sp.name.replace(/b$/, ''); }
+
+// Unicode super/subscript digits for plain-text labels (dropdown options).
+var SUP = {'0':'\u2070','1':'\u00b9','2':'\u00b2','3':'\u00b3','4':'\u2074','5':'\u2075','6':'\u2076','7':'\u2077','8':'\u2078','9':'\u2079'};
+var SUB = {'0':'\u2080','1':'\u2081','2':'\u2082','3':'\u2083','4':'\u2084','5':'\u2085','6':'\u2086','7':'\u2087','8':'\u2088','9':'\u2089'};
+function toScript(num, map) {
+    var s = String(num), out = '';
+    for (var i = 0; i < s.length; i++) out += map[s[i]];
+    return out;
+}
+function rxNotationText(s) {
+    var sp = rxSpecies(s);
+    var sym = (s === 'n') ? 'n' : sp.sym;
+    return toScript(sp.A, SUP) + toScript(sp.Z, SUB) + sym;
+}
+function rxSideText(list) {
+    var order = [], count = {};
+    for (var i = 0; i < list.length; i++) {
+        if (count[list[i]] === undefined) { count[list[i]] = 0; order.push(list[i]); }
+        count[list[i]]++;
+    }
+    var parts = [];
+    for (var j = 0; j < order.length; j++) {
+        var s = order[j], c = count[s];
+        parts.push((c > 1 ? c + ' ' : '') + rxNotationText(s));
+    }
+    return parts.join(' + ');
+}
+function rxLabelText(rx) {
+    return rxSideText(rx.reactants) + ' \u2192 ' + rxSideText(rx.products);
+}
+
+// Isotope notation with A stacked over Z immediately before the symbol
+// (the standard nuclear-equation form).
+function rxNotation(s) {
+    var sp = rxSpecies(s);
+    var sym = (s === 'n') ? 'n' : sp.sym;
+    return '<span class="rx-nuc">' +
+             '<span class="rx-pre">' +
+               '<span class="rx-a">' + sp.A + '</span>' +
+               '<span class="rx-z">' + sp.Z + '</span>' +
+             '</span>' +
+             '<span class="rx-sym">' + sym + '</span>' +
+           '</span>';
+}
+
+// Collapse repeated species into "2 n" style coefficients, preserving order.
+function rxSide(list) {
+    var order = [], count = {};
+    for (var i = 0; i < list.length; i++) {
+        if (count[list[i]] === undefined) { count[list[i]] = 0; order.push(list[i]); }
+        count[list[i]]++;
+    }
+    var parts = [];
+    for (var j = 0; j < order.length; j++) {
+        var s = order[j], c = count[s];
+        parts.push((c > 1 ? '<span class="rx-coeff">' + c + '</span>' : '') + rxNotation(s));
+    }
+    return parts.join(' + ');
+}
+
+// Build the custom dropdown menu, grouped, using stacked isotope notation.
+function rxPopulateSelect() {
+    var menu = document.getElementById('rxDdMenu');
+    var groups = [
+        { type:'fission', label:'Fission' },
+        { type:'fusion',  label:'Fusion' },
+        { type:'alpha',   label:'Alpha decay' },
+        { type:'beta',    label:'Beta decay' }
+    ];
+    var html = '';
+    for (var g = 0; g < groups.length; g++) {
+        html += '<div class="rx-dd-group-label">' + groups[g].label + '</div>';
+        for (var i = 0; i < REACTIONS.length; i++) {
+            if (REACTIONS[i].type !== groups[g].type) continue;
+            html += '<div class="rx-dd-item" onclick="rxPick(' + i + ')">' +
+                    rxFullEqn(REACTIONS[i]) +
+                    '</div>';
+        }
+    }
+    menu.innerHTML = html;
+}
+
+// Full equation string (RHS includes the beta particle and neutrino for beta decay).
+function rxFullEqn(rx) {
+    var rhs = rxSide(rx.products);
+    if (rx.type === 'beta') rhs += ' + ' + rxBetaParticle(rx);
+    return rxSide(rx.reactants) + ' &rarr; ' + rhs;
+}
+
+var rxDdOpen = false;
+function rxDdToggle() {
+    rxDdOpen = !rxDdOpen;
+    document.getElementById('rxDdMenu').classList.toggle('open', rxDdOpen);
+}
+function rxDdClose() {
+    rxDdOpen = false;
+    document.getElementById('rxDdMenu').classList.remove('open');
+}
+function rxPick(i) {
+    rxDdClose();
+    document.getElementById('rxDdLabel').innerHTML = rxFullEqn(REACTIONS[i]);
+    rxSelect(String(i));
+}
+window.rxDdToggle = rxDdToggle;
+window.rxPick = rxPick;
+// Close the menu when clicking outside it.
+document.addEventListener('click', function(e) {
+    var dd = document.getElementById('rxDropdown');
+    if (rxDdOpen && dd && !dd.contains(e.target)) rxDdClose();
+});
+
+var rxCurrent = null;
+var rxEnergyShown = false;
+
+function rxSelect(idx) {
+    if (idx === '') {
+        rxCurrent = null; rxEnergyShown = false;
+        document.getElementById('reactEquation').innerHTML =
+            '<span class="react-eqn-hint">Choose a reaction above to begin.</span>';
+        rxDrawCurve();
+        return;
+    }
+    rxCurrent = REACTIONS[parseInt(idx, 10)];
+    rxEnergyShown = false;
+    rxUpdateStyleAvailability();
+    rxRenderEquation();
+    rxBuildTable();
+    rxDrawCurve();
+}
+
+// Beta decay has no binding-energy (curve) method: A does not change, so there is
+// no movement along the curve. Disable Style 1 and force a mass-defect style.
+function rxUpdateStyleAvailability() {
+    var isBeta = rxCurrent && rxCurrent.type === 'beta';
+    var btn1 = document.querySelector('#rxConfigToggle .config-btn[data-cfg="1"]');
+    var noteEl = document.getElementById('rxStyleNote');
+    if (btn1) {
+        btn1.disabled = isBeta;
+        btn1.classList.toggle('disabled', isBeta);
+    }
+    if (isBeta && rxConfig === 1) rxConfig = 2;   // move off the unavailable style
+    if (noteEl) {
+        if (isBeta) {
+            noteEl.style.display = 'block';
+            noteEl.innerHTML = 'Style 1 (binding-energy method) is not available for beta decay: the nucleon number A does not change, so there is no movement along the curve. Use a mass-defect style.';
+        } else {
+            noteEl.style.display = 'none';
+        }
+    }
+}
+
+// Side-panel table: each multi-nucleon isotope with its A and BE/A (4 dp),
+// split into reactants and products. Free nucleons are not listed.
+function rxBuildTable() {
+    var el = document.getElementById('reactTable');
+    if (!rxCurrent) {
+        el.className = 'readout-empty';
+        el.innerHTML = 'Select a reaction to list its isotopes.';
+        document.getElementById('reactConstPanel').style.display = 'none';
+        return;
+    }
+    el.className = '';
+    el.innerHTML =
+        rxTableGroup('Reactants', 'reactant', rxCurrent.reactants) +
+        rxTableGroup('Products', 'product', rxCurrent.products);
+    rxBuildConstants();
+}
+
+// Constants panel: config-driven. Shows the free-nucleon masses that appear in
+// the reaction (off the curve, so not in the BE/A table) plus the route constants
+// for the active config. Includes the Config 1/2/3 toggle.
+function rxBuildConstants() {
+    var panel = document.getElementById('reactConstPanel');
+    var note = document.getElementById('rxConstNote');
+    // reflect active button on tab 2's style toggle (in the question-style card)
+    var qbtns = document.querySelectorAll('#rxConfigToggle .config-btn');
+    for (var q = 0; q < qbtns.length; q++) {
+        qbtns[q].classList.toggle('active', parseInt(qbtns[q].getAttribute('data-cfg'), 10) === rxConfig);
+    }
+    // Style 1 is the binding-energy (curve) method: uses only BE/A, no constants.
+    if (rxConfig === 1) {
+        panel.style.display = 'none';
+        return;
+    }
+    panel.style.display = 'block';
+    var all = rxCurrent.reactants.concat(rxCurrent.products);
+    var hasN = false, hasP = false;
+    for (var i = 0; i < all.length; i++) {
+        if (all[i] === 'n') hasN = true;
+        if (all[i] === 'H-1') hasP = true;
+    }
+    function mu(massU) { return rxConfig === 4 ? sci(massU * U_KG, 7) + ' kg' : massU.toFixed(6) + ' u'; }
+    var rows = '';
+    if (hasN) rows += '<tr><td>Neutron mass</td><td class="rx-tbl-bea">' + mu(MN) + '</td></tr>';
+    if (hasP) rows += '<tr><td>Proton (&#185;&#8321;H) mass</td><td class="rx-tbl-bea">' + mu(1.0078250319) + '</td></tr>';
+    if (rxCurrent.type === 'beta' && rxCurrent.bplus) {
+        rows += '<tr><td>Electron mass, m<sub>e</sub></td><td class="rx-tbl-bea">' + mu(ME) + '</td></tr>';
+    }
+    if (rxConfig === 2) {
+        rows += '<tr><td>1 u</td><td class="rx-tbl-bea">931.5 MeV</td></tr>';
+    } else if (rxConfig === 3) {
+        rows += '<tr><td>1 u</td><td class="rx-tbl-bea">' + sci(U_KG, 7) + ' kg</td></tr>';
+        rows += '<tr><td>c</td><td class="rx-tbl-bea">' + sci(C_SI, 7) + ' m s<sup>&minus;1</sup></td></tr>';
+        rows += '<tr><td>1 eV</td><td class="rx-tbl-bea">' + sci(EV_J, 7) + ' J</td></tr>';
+    } else {
+        rows += '<tr><td>c</td><td class="rx-tbl-bea">' + sci(C_SI, 7) + ' m s<sup>&minus;1</sup></td></tr>';
+        rows += '<tr><td>1 eV</td><td class="rx-tbl-bea">' + sci(EV_J, 7) + ' J</td></tr>';
+    }
+    if (note) note.innerHTML = '';
+    panel.querySelector('table').innerHTML = rows;
+}
+function rxTableGroup(title, kind, list) {
+    var seen = {}, rows = '';
+    var showMass = (rxConfig !== 1);   // mass-defect configs need atomic mass
+    var showBea = (rxConfig === 1);    // binding-energy rxConfig needs BE/A
+    for (var i = 0; i < list.length; i++) {
+        var s = list[i];
+        if (seen[s]) continue; seen[s] = true;
+        var sp = rxSpecies(s);
+        if (sp.A === 1) continue;
+        rows += '<tr>' +
+            '<td class="rx-tbl-name-' + kind + '">' + rxDisp(sp) + '</td>' +
+            '<td>' + sp.A + '</td>' +
+            (showMass ? '<td>' + (rxConfig === 4 ? sci(sp.mAtom * U_KG, 7) + ' kg' : fmt(sp.mAtom, 6) + ' u') + '</td>' : '') +
+            (showBea ? '<td class="rx-tbl-bea">' + fmt(sp.bea, 4) + ' MeV</td>' : '') +
+            '</tr>';
+    }
+    return '<div class="rx-tbl-group">' +
+        '<div class="rx-tbl-group-label ' + kind + '">' + title + '</div>' +
+        '<table class="rx-tbl">' +
+        '<tr><th>Isotope</th><th>A</th>' + (showMass ? '<th>Atomic mass</th>' : '') + (showBea ? '<th>BE/A</th>' : '') + '</tr>' +
+        rows +
+        '</table></div>';
+}
+
+// The reaction as one flowing line: LHS -> RHS + energy (energy masked until solved).
+function rxRenderEquation() {
+    var rx = rxCurrent;
+    var energy;
+    if (rxEnergyShown) {
+        energy = '<span class="react-energy-val">' + fmt(rxQ(rx), 2) + ' MeV</span>' +
+                 '<span class="rx-work" onclick="rxOpenWorking()" title="Show working">&#10530;</span>';
+    } else {
+        energy = '<span class="react-energy-term" onclick="rxRevealEnergy()">Energy</span>';
+    }
+    var rhs = rxSide(rx.products);
+    if (rx.type === 'beta') rhs += ' &nbsp;+&nbsp; ' + rxBetaParticle(rx);
+    document.getElementById('reactEquation').innerHTML =
+        rxSide(rx.reactants) + ' &nbsp;&rarr;&nbsp; ' + rhs + ' &nbsp;+&nbsp; ' + energy;
+    // For beta decay, state the neutrino-mass assumption up front, as part of the question.
+    var noteEl = document.getElementById('reactBetaNote');
+    if (noteEl) {
+        if (rx.type === 'beta') {
+            var nu = rx.bplus ? 'neutrino' : 'antineutrino';
+            noteEl.style.display = 'block';
+            noteEl.innerHTML = 'Assume the ' + nu + ' has negligible rest mass (of the order of 1 eV), ' +
+                'so it is taken as zero in the calculation.';
+        } else {
+            noteEl.style.display = 'none';
+        }
+    }
+}
+
+// Beta particle + (anti)neutrino as stacked notation for the equation RHS.
+function rxBetaParticle(rx) {
+    if (rx.bplus) {
+        // positron (0,+1)e and electron neutrino (nu)
+        return rxStacked('0', '+1', 'e') + ' &nbsp;+&nbsp; ' + rxStacked('0', '0', '&nu;');
+    }
+    // electron (0,-1)e and electron antineutrino (nu with overline)
+    return rxStacked('0', '&minus;1', 'e') + ' &nbsp;+&nbsp; ' + rxStacked('0', '0', '<span class="rx-overline">&nu;</span>');
+}
+
+// Build stacked A-over-Z notation for an arbitrary symbol (used for beta particle).
+function rxStacked(a, z, sym) {
+    return '<span class="rx-nuc"><span class="rx-pre">' +
+           '<span class="rx-a">' + a + '</span><span class="rx-z">' + z + '</span>' +
+           '</span><span class="rx-sym">' + sym + '</span></span>';
+}
+
+// Energy released (MeV). For beta-plus, two electron masses are subtracted because
+// a positron is created and the daughter atom has one fewer electron.
+function rxQ(rx) {
+    var mr = 0, mp = 0, i;
+    for (i = 0; i < rx.reactants.length; i++) mr += rxSpecies(rx.reactants[i]).mAtom;
+    for (i = 0; i < rx.products.length; i++) mp += rxSpecies(rx.products[i]).mAtom;
+    var dm = mr - mp;
+    if (rx.type === 'beta' && rx.bplus) dm -= 2 * ME;   // subtract 2 m_e for beta-plus
+    return dm * U_TO_MEV;
+}
+
+function rxRevealEnergy() {
+    rxEnergyShown = true;
+    rxRenderEquation();
+}
+window.rxRevealEnergy = rxRevealEnergy;
+
+// ---- Reactions working pop-out (duplicated from tab-1 pattern, rx namespace) ----
+var rxWorkOpen = false;
+// (Working route is driven by the global `config`: Config 1 = binding-energy method,
+//  Configs 2 and 3 = mass-defect method in u or kg.)
+var rxWorkWindow = document.getElementById('rxWorkWindow');
+var rxWorkBackdrop = document.getElementById('rxWorkBackdrop');
+
+function rxWkStep(label, math) {
+    return '<div class="wk-step"><div class="wk-label">' + label + '</div>' +
+           '<div class="wk-math">' + math + '</div></div>';
+}
+
+// Total binding energy of a nucleus (MeV) = A * (BE/A). Free nucleons contribute 0.
+function rxTotalBE(s) {
+    var sp = rxSpecies(s);
+    if (sp.A === 1) return 0;
+    return sp.A * sp.bea;
+}
+
+function rxBuildWorking() {
+    var rx = rxCurrent;
+    var head = '<div class="wk-title">' + rxFullEqn(rx) + '</div>' +
+               '<div class="wk-config">Question Style ' + rxConfig + ' &mdash; using only the data on the panel</div>';
+    if (rx.type === 'beta') return head + rxBuildBetaWorking(rx);
+    return head + (rxConfig === 1 ? rxBuildCurveWorking(rx) : rxBuildMassWorking(rx));
+}
+
+// Beta decay working (Styles 2-4). beta-minus: Q = [M(parent) - M(daughter)] route.
+// beta-plus: Q = [M(parent) - M(daughter) - 2 m_e] route. Neutrino is taken massless.
+function rxBuildBetaWorking(rx) {
+    var par = rxSpecies(rx.reactants[0]);
+    var dau = rxSpecies(rx.products[0]);
+    var bplus = !!rx.bplus;
+    var h = '';
+    var dm_u;
+    h += rxWkStep('Mass of parent', rxDisp(par) + '  =  <b>' + fmt(par.mAtom, 6) + ' u</b>');
+    h += rxWkStep('Mass of daughter', rxDisp(dau) + '  =  <b>' + fmt(dau.mAtom, 6) + ' u</b>');
+    if (bplus) {
+        dm_u = par.mAtom - dau.mAtom - 2 * ME;
+        h += rxWkStep('Mass difference  &Delta;m  =  M(parent) &minus; M(daughter) &minus; 2m<sub>e</sub>',
+            fmt(par.mAtom, 6) + ' &minus; ' + fmt(dau.mAtom, 6) + ' &minus; (2 &times; ' + fmt(ME, 6) + ')  =  <b>' + fmt(dm_u, 6) + ' u</b>');
+    } else {
+        dm_u = par.mAtom - dau.mAtom;
+        h += rxWkStep('Mass difference  &Delta;m  =  M(parent) &minus; M(daughter)',
+            fmt(par.mAtom, 6) + ' &minus; ' + fmt(dau.mAtom, 6) + '  =  <b>' + fmt(dm_u, 6) + ' u</b>');
+    }
+    // energy conversion follows the active style (2 = x931.5, 3/4 = E=mc^2)
+    if (rxConfig === 2) {
+        h += rxWkStep('Energy released  =  &Delta;m &times; 931.5',
+            fmt(dm_u, 6) + ' &times; 931.5  =  <b>' + fmt(dm_u * 931.5, 3) + ' MeV</b>');
+        h += '<div class="wk-answer">Energy released  =  ' + fmt(dm_u * 931.5, 3) + ' MeV</div>';
+    } else {
+        var dm_kg = dm_u * U_KG, E_J = dm_kg * C_SI * C_SI, E_MeV = E_J / EV_J / 1e6;
+        h += rxWkStep('Convert &Delta;m to kilograms  (&times; 1.660539 &times; 10<sup>&minus;27</sup>)',
+            fmt(dm_u, 6) + ' &times; 1.660539 &times; 10<sup>&minus;27</sup>  =  <b>' + sci(dm_kg, 4) + ' kg</b>');
+        h += rxWkStep('Energy released  =  &Delta;m c&sup2;',
+            sci(dm_kg, 4) + ' &times; (2.997925 &times; 10<sup>8</sup>)&sup2;  =  <b>' + sci(E_J, 4) + ' J</b>');
+        h += rxWkStep('Convert to MeV  (&divide; 1.602177 &times; 10<sup>&minus;19</sup>, then &divide; 10<sup>6</sup>)',
+            sci(E_J, 4) + ' &divide; 1.602177 &times; 10<sup>&minus;19</sup> &divide; 10<sup>6</sup>  =  <b>' + fmt(E_MeV, 3) + ' MeV</b>');
+        h += '<div class="wk-answer">Energy released  =  ' + sci(E_J, 4) + ' J  =  ' + fmt(E_MeV, 3) + ' MeV</div>';
+    }
+    // electron-bookkeeping note
+    if (bplus) {
+        h += '<div class="wk-note">In &beta;<sup>+</sup> decay a positron is created and the daughter atom has one fewer electron. ' +
+             'The positron has the same rest mass as the electron, so using atomic masses we subtract <b>2m<sub>e</sub></b> ' +
+             '(one for the created positron, one for the lost atomic electron).</div>';
+    } else {
+        h += '<div class="wk-note">In &beta;<sup>&minus;</sup> decay, using atomic masses, the emitted electron is already ' +
+             'included because the daughter atom has one more electron than the parent. No extra electron term is needed.</div>';
+    }
+    // neutrino note
+    h += '<div class="wk-note">The energy released is shared as kinetic energy between the daughter nucleus, the beta ' +
+         'particle and the ' + (bplus ? 'neutrino' : 'antineutrino') + '. The daughter is far heavier, so its recoil takes ' +
+         'only a tiny share; most of the energy goes to the beta particle and the ' + (bplus ? 'neutrino' : 'antineutrino') + '. ' +
+         'Because that split varies, the beta particle emerges with a range of energies up to a maximum of this value.</div>';
+    return h;
+}
+
+// Plain-text label for the working title (no stacked HTML).
+function rxPlainLabel(rx) {
+    return rxSideText(rx.reactants) + '  \u2192  ' + rxSideText(rx.products);
+}
+
+// Method 1: BE-curve route. Energy = total BE(products) - total BE(reactants).
+function rxBuildCurveWorking(rx) {
+    var h = '', i, terms, sp;
+    // products total
+    terms = []; var pTot = 0;
+    for (i = 0; i < rx.products.length; i++) {
+        sp = rxSpecies(rx.products[i]);
+        if (sp.A === 1) continue;
+        terms.push('(' + sp.A + ' &times; ' + fmt(sp.bea, 4) + ')');
+        pTot += sp.A * sp.bea;
+    }
+    h += rxWkStep('Total BE of products  =  &Sigma; (A &times; BE/A)',
+        terms.join(' + ') + '  =  <b>' + fmt(pTot, 2) + ' MeV</b>');
+    // reactants total
+    terms = []; var rTot = 0;
+    for (i = 0; i < rx.reactants.length; i++) {
+        sp = rxSpecies(rx.reactants[i]);
+        if (sp.A === 1) continue;
+        terms.push('(' + sp.A + ' &times; ' + fmt(sp.bea, 4) + ')');
+        rTot += sp.A * sp.bea;
+    }
+    h += rxWkStep('Total BE of reactants  =  &Sigma; (A &times; BE/A)',
+        terms.join(' + ') + '  =  <b>' + fmt(rTot, 2) + ' MeV</b>');
+    h += rxWkStep('Energy released  =  BE(products) &minus; BE(reactants)',
+        fmt(pTot, 2) + ' &minus; ' + fmt(rTot, 2) + '  =  <b>' + fmt(pTot - rTot, 2) + ' MeV</b>');
+    h += '<div class="wk-answer">Energy released  =  ' + fmt(pTot - rTot, 2) + ' MeV</div>';
+    h += '<div class="wk-note">The products are more tightly bound (higher up the curve), ' +
+         'so binding energy increases and that energy is released.</div>';
+    return h;
+}
+
+// Mass-defect route (Configs 2, 3, 4; Config 1 is the binding-energy method).
+//   Config 2: masses in u, Delta m x 931.5 -> MeV
+//   Config 3: masses in u, convert Delta m to kg, E = Delta m c^2 -> J -> MeV
+//   Config 4: masses in kg, E = Delta m c^2 -> J -> MeV
+function rxBuildMassWorking(rx) {
+    var i, sp, mr = 0, mp = 0, rt = [], pt = [];
+    var kg = (rxConfig === 4);
+    for (i = 0; i < rx.reactants.length; i++) { sp = rxSpecies(rx.reactants[i]); mr += sp.mAtom; rt.push(kg ? sci(sp.mAtom * U_KG, 7) : fmt(sp.mAtom, 6)); }
+    for (i = 0; i < rx.products.length; i++) { sp = rxSpecies(rx.products[i]); mp += sp.mAtom; pt.push(kg ? sci(sp.mAtom * U_KG, 7) : fmt(sp.mAtom, 6)); }
+    var dm_u = mr - mp;
+    var note = '<div class="wk-note">Atomic masses are used directly. We do not need to work out ' +
+         'nuclear masses because the proton number is the same on both sides, so the electron ' +
+         'masses cancel out. This agrees with the binding-energy method, since the energy released ' +
+         'equals the increase in total binding energy.</div>';
+    var h = '';
+    if (rxConfig === 4) {
+        var mr_kg = mr * U_KG, mp_kg = mp * U_KG, dm_kg4 = mr_kg - mp_kg;
+        var E_J4 = dm_kg4 * C_SI * C_SI, E_MeV4 = E_J4 / EV_J / 1e6;
+        h += rxWkStep('Total mass of reactants', rt.join(' + ') + '  =  <b>' + sci(mr_kg, 6) + ' kg</b>');
+        h += rxWkStep('Total mass of products', pt.join(' + ') + '  =  <b>' + sci(mp_kg, 6) + ' kg</b>');
+        h += rxWkStep('Mass difference  &Delta;m  =  reactants &minus; products',
+            sci(mr_kg, 6) + ' &minus; ' + sci(mp_kg, 6) + '  =  <b>' + sci(dm_kg4, 4) + ' kg</b>');
+        h += rxWkStep('Energy released  =  &Delta;m c&sup2;',
+            sci(dm_kg4, 4) + ' &times; (2.997925 &times; 10<sup>8</sup>)&sup2;  =  <b>' + sci(E_J4, 4) + ' J</b>');
+        h += rxWkStep('Convert to MeV  (&divide; 1.602177 &times; 10<sup>&minus;19</sup>, then &divide; 10<sup>6</sup>)',
+            sci(E_J4, 4) + ' &divide; 1.602177 &times; 10<sup>&minus;19</sup> &divide; 10<sup>6</sup>  =  <b>' + fmt(E_MeV4, 2) + ' MeV</b>');
+        h += '<div class="wk-answer">Energy released  =  ' + sci(E_J4, 4) + ' J  =  ' + fmt(E_MeV4, 2) + ' MeV</div>';
+        return h + note;
+    }
+    h += rxWkStep('Total mass of reactants', rt.join(' + ') + '  =  <b>' + fmt(mr, 6) + ' u</b>');
+    h += rxWkStep('Total mass of products', pt.join(' + ') + '  =  <b>' + fmt(mp, 6) + ' u</b>');
+    h += rxWkStep('Mass difference  &Delta;m  =  reactants &minus; products',
+        fmt(mr, 6) + ' &minus; ' + fmt(mp, 6) + '  =  <b>' + fmt(dm_u, 6) + ' u</b>');
+    if (rxConfig === 2) {
+        h += rxWkStep('Energy released  =  &Delta;m &times; 931.5',
+            fmt(dm_u, 6) + ' &times; 931.5  =  <b>' + fmt(dm_u * 931.5, 2) + ' MeV</b>');
+        h += '<div class="wk-answer">Energy released  =  ' + fmt(dm_u * 931.5, 2) + ' MeV</div>';
+    } else {
+        var dm_kg = dm_u * U_KG, E_J = dm_kg * C_SI * C_SI, E_MeV = E_J / EV_J / 1e6;
+        h += rxWkStep('Convert &Delta;m to kilograms  (&times; 1.660539 &times; 10<sup>&minus;27</sup>)',
+            fmt(dm_u, 6) + ' &times; 1.660539 &times; 10<sup>&minus;27</sup>  =  <b>' + sci(dm_kg, 4) + ' kg</b>');
+        h += rxWkStep('Energy released  =  &Delta;m c&sup2;',
+            sci(dm_kg, 4) + ' &times; (2.997925 &times; 10<sup>8</sup>)&sup2;  =  <b>' + sci(E_J, 4) + ' J</b>');
+        h += rxWkStep('Convert to MeV  (&divide; 1.602177 &times; 10<sup>&minus;19</sup>, then &divide; 10<sup>6</sup>)',
+            sci(E_J, 4) + ' &divide; 1.602177 &times; 10<sup>&minus;19</sup> &divide; 10<sup>6</sup>  =  <b>' + fmt(E_MeV, 2) + ' MeV</b>');
+        h += '<div class="wk-answer">Energy released  =  ' + sci(E_J, 4) + ' J  =  ' + fmt(E_MeV, 2) + ' MeV</div>';
+    }
+    return h + note;
+}
+
+function rxScaleWorking() {
+    var body = document.getElementById('rxWorkBody');
+    var scale = document.getElementById('rxWorkScale');
+    var inner = document.getElementById('rxWorkInner');
+    scale.style.transform = 'scale(1)';
+    var availW = body.clientWidth - 36, availH = body.clientHeight - 28;
+    var natW = inner.offsetWidth, natH = inner.offsetHeight;
+    if (natW <= 0 || natH <= 0 || availW <= 0 || availH <= 0) return;
+    var k = Math.min(availW / natW, availH / natH);
+    if (k < 0.2) k = 0.2; if (k > 3) k = 3;
+    scale.style.transform = 'scale(' + k + ')';
+}
+function rxOpenWorking() {
+    if (!rxCurrent) return;
+    document.getElementById('rxWorkInner').innerHTML = rxBuildWorking();
+    rxWorkOpen = true;
+    rxWorkBackdrop.classList.add('open');
+    rxWorkWindow.classList.add('open');
+    requestAnimationFrame(rxScaleWorking);
+}
+function rxCloseWorking() {
+    rxWorkOpen = false;
+    rxWorkWindow.classList.remove('open');
+    rxWorkBackdrop.classList.remove('open');
+}
+window.rxOpenWorking = rxOpenWorking;
+window.rxCloseWorking = rxCloseWorking;
+
+// Drag + resize for the rx working window (same pattern as tab 1).
+(function () {
+    var header = document.getElementById('rxWorkHeader');
+    var grip = document.getElementById('rxWorkResizeGrip');
+    var st = { drag:false, rz:false, sx:0, sy:0, wl:0, wt:0, rw:0, rh:0 };
+    function sd(cx, cy) { var r = rxWorkWindow.getBoundingClientRect(); st.drag = true; st.sx = cx; st.sy = cy; st.wl = r.left; st.wt = r.top; }
+    function md(cx, cy) {
+        if (!st.drag) return;
+        var nl = st.wl + (cx - st.sx), nt = st.wt + (cy - st.sy);
+        var minL = -(rxWorkWindow.offsetWidth - 80), maxL = window.innerWidth - 80;
+        if (nl < minL) nl = minL; if (nl > maxL) nl = maxL;
+        if (nt < 0) nt = 0; if (nt > window.innerHeight - 36) nt = window.innerHeight - 36;
+        rxWorkWindow.style.left = nl + 'px'; rxWorkWindow.style.top = nt + 'px';
+    }
+    function sr(cx, cy) { var r = rxWorkWindow.getBoundingClientRect(); st.rz = true; st.sx = cx; st.sy = cy; st.rw = r.width; st.rh = r.height; }
+    function mr(cx, cy) {
+        if (!st.rz) return;
+        var nw = st.rw + (cx - st.sx), nh = st.rh + (cy - st.sy);
+        if (nw < 340) nw = 340; if (nw > window.innerWidth - 20) nw = window.innerWidth - 20;
+        if (nh < 240) nh = 240; if (nh > window.innerHeight - 20) nh = window.innerHeight - 20;
+        rxWorkWindow.style.width = nw + 'px'; rxWorkWindow.style.height = nh + 'px';
+        rxScaleWorking();
+    }
+    function end() { st.drag = false; st.rz = false; }
+    header.addEventListener('mousedown', function (e) { if (e.target.tagName === 'BUTTON') return; sd(e.clientX, e.clientY); e.preventDefault(); });
+    grip.addEventListener('mousedown', function (e) { sr(e.clientX, e.clientY); e.preventDefault(); });
+    document.addEventListener('mousemove', function (e) { if (st.drag) md(e.clientX, e.clientY); else if (st.rz) mr(e.clientX, e.clientY); });
+    document.addEventListener('mouseup', end);
+    header.addEventListener('touchstart', function (e) { if (e.target.tagName === 'BUTTON') return; var t = e.touches[0]; sd(t.clientX, t.clientY); e.preventDefault(); }, { passive:false });
+    grip.addEventListener('touchstart', function (e) { var t = e.touches[0]; sr(t.clientX, t.clientY); e.preventDefault(); }, { passive:false });
+    document.addEventListener('touchmove', function (e) {
+        if (st.drag) { var t = e.touches[0]; md(t.clientX, t.clientY); e.preventDefault(); }
+        else if (st.rz) { var t2 = e.touches[0]; mr(t2.clientX, t2.clientY); e.preventDefault(); }
+    }, { passive:false });
+    document.addEventListener('touchend', end);
+    document.addEventListener('touchcancel', end);
+})();
+window.addEventListener('resize', function () { if (rxWorkOpen) rxScaleWorking(); });
+window.rxSelect = rxSelect;
+
+// ---- Reactions curve (duplicated into rx namespace; main curve untouched) ----
+var rxCanvas = document.getElementById('reactCanvas');
+var rxCtx = rxCanvas.getContext('2d');
+var RX_PLOT = { left:64, right:968, top:34, bottom:556 };
+var RX_AX = { aMin:0, aMax:240, yMin:0, yMax:9 };
+function rxAToX(A) { return RX_PLOT.left + (A - RX_AX.aMin) / (RX_AX.aMax - RX_AX.aMin) * (RX_PLOT.right - RX_PLOT.left); }
+function rxYToY(v) { return RX_PLOT.bottom - (v - RX_AX.yMin) / (RX_AX.yMax - RX_AX.yMin) * (RX_PLOT.bottom - RX_PLOT.top); }
+
+function rxDrawCurve() {
+    var c = rxCtx;
+    c.clearRect(0, 0, rxCanvas.width, rxCanvas.height);
+    c.save();
+    c.strokeStyle = 'rgba(255,255,255,0.08)'; c.lineWidth = 1;
+    c.fillStyle = '#8aa0ba'; c.font = '12px Segoe UI, Arial';
+    c.textAlign = 'center'; c.textBaseline = 'top';
+    for (var a = 0; a <= 240; a += 20) {
+        var gx = rxAToX(a);
+        c.beginPath(); c.moveTo(gx, RX_PLOT.top); c.lineTo(gx, RX_PLOT.bottom); c.stroke();
+        c.fillText(String(a), gx, RX_PLOT.bottom + 8);
+    }
+    c.textAlign = 'right'; c.textBaseline = 'middle';
+    for (var v = 0; v <= 9; v += 1) {
+        var gy = rxYToY(v);
+        c.beginPath(); c.moveTo(RX_PLOT.left, gy); c.lineTo(RX_PLOT.right, gy); c.stroke();
+        c.fillText(String(v), RX_PLOT.left - 8, gy);
+    }
+    c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 1.5;
+    c.strokeRect(RX_PLOT.left, RX_PLOT.top, RX_PLOT.right - RX_PLOT.left, RX_PLOT.bottom - RX_PLOT.top);
+    c.fillStyle = '#cfe0f2'; c.font = '13px Segoe UI, Arial';
+    c.textAlign = 'center'; c.textBaseline = 'top';
+    c.fillText('Nucleon number,  A', (RX_PLOT.left + RX_PLOT.right) / 2, RX_PLOT.bottom + 26);
+    c.save(); c.translate(16, (RX_PLOT.top + RX_PLOT.bottom) / 2); c.rotate(-Math.PI / 2);
+    c.textBaseline = 'middle'; c.fillText('Binding energy per nucleon  /  MeV', 0, 0); c.restore();
+    c.restore();
+    c.save();
+    c.strokeStyle = 'rgba(120,180,255,0.5)'; c.lineWidth = 2;
+    c.beginPath();
+    for (var i = 0; i < BACKBONE.length; i++) {
+        var px = rxAToX(BACKBONE[i].A), py = rxYToY(BACKBONE[i].bea);
+        if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
+    }
+    c.stroke();
+    c.restore();
+
+    // Blue backbone dots (structure, like tab 1).
+    c.save();
+    c.fillStyle = 'rgba(120,180,255,0.85)';
+    for (var b = 0; b < BACKBONE.length; b++) {
+        var bx = rxAToX(BACKBONE[b].A), by = rxYToY(BACKBONE[b].bea);
+        c.beginPath(); c.arc(bx, by, 3, 0, Math.PI * 2); c.fill();
+    }
+    c.restore();
+
+    // Mark the selected reaction's species on the curve. Each gets its name and
+    // BE/A value; labels go above by default, but when two markers are close (as
+    // in alpha decay, parent and daughter near the same A and BE/A) one label is
+    // placed above and the other below so they do not overlap.
+    if (rxCurrent && rxCurrent.type !== 'beta') {
+        var pts = [];
+        rxCollect(rxCurrent.reactants, '#ff8c5a', pts);
+        rxCollect(rxCurrent.products, '#5ad6a0', pts);
+        // assign label direction: default up; resolve close pairs to up/down
+        for (var i = 0; i < pts.length; i++) pts[i].dir = -1;   // -1 = above, +1 = below
+        for (i = 0; i < pts.length; i++) {
+            for (var j = i + 1; j < pts.length; j++) {
+                var dx = Math.abs(pts[i].px - pts[j].px);
+                var dy = Math.abs(pts[i].py - pts[j].py);
+                if (dx < 90 && dy < 44 && pts[i].dir === pts[j].dir) {
+                    pts[j].dir = 1;     // push the second one below
+                }
+            }
+        }
+        // Curved arrow showing the move toward the peak (drawn behind markers).
+        if (rxCurrent.type === 'fusion') rxDrawFusionArrow();
+        else if (rxCurrent.type === 'fission') rxDrawFissionArrow();
+        for (i = 0; i < pts.length; i++) rxDrawMarker(pts[i]);
+    }
+}
+
+// A thick blue curved arrow sweeping up the left (rising) side: fusion climbs
+// toward the peak from low A.
+function rxDrawFusionArrow() {
+    var c = rxCtx;
+    var x0 = rxAToX(8),  y0 = rxYToY(2.4);
+    var x1 = rxAToX(20), y1 = rxYToY(6.2);
+    var x2 = rxAToX(46), y2 = rxYToY(8.0);
+    rxArrow(c, x0, y0, x1, y1, x2, y2, 'Fusion', rxAToX(26), rxYToY(4.4));
+}
+
+// A thick blue curved arrow sweeping in from the heavy (right) end toward the
+// peak: fission moves up the curve from high A.
+function rxDrawFissionArrow() {
+    var c = rxCtx;
+    var x0 = rxAToX(210), y0 = rxYToY(7.0);
+    var x1 = rxAToX(150), y1 = rxYToY(8.0);
+    var x2 = rxAToX(108), y2 = rxYToY(8.35);
+    rxArrow(c, x0, y0, x1, y1, x2, y2, 'Fission', rxAToX(178), rxYToY(7.1));
+}
+
+// Draw a thick curved (quadratic) arrow from (x0,y0) through control (x1,y1)
+// to the head (x2,y2), with an italic label.
+function rxArrow(c, x0, y0, x1, y1, x2, y2, label, lx, ly) {
+    c.save();
+    var col = 'rgba(64,176,233,0.92)';
+    // tangent direction at the tip (derivative of quadratic at t=1 is along x2-x1)
+    var ang = Math.atan2(y2 - y1, x2 - x1);
+    var headLen = 26, headHalf = 13;
+    // end the stroked shaft a little before the tip so the head sits cleanly on top
+    var bx = x2 - headLen * 0.85 * Math.cos(ang);
+    var by = y2 - headLen * 0.85 * Math.sin(ang);
+    c.strokeStyle = col;
+    c.lineWidth = 9; c.lineCap = 'butt';
+    c.beginPath();
+    c.moveTo(x0, y0);
+    c.quadraticCurveTo(x1, y1, bx, by);
+    c.stroke();
+    // clean filled triangular head at the tip
+    c.fillStyle = col;
+    c.beginPath();
+    c.moveTo(x2, y2);
+    c.lineTo(x2 - headLen * Math.cos(ang) + headHalf * Math.cos(ang + Math.PI/2),
+             y2 - headLen * Math.sin(ang) + headHalf * Math.sin(ang + Math.PI/2));
+    c.lineTo(x2 - headLen * Math.cos(ang) - headHalf * Math.cos(ang + Math.PI/2),
+             y2 - headLen * Math.sin(ang) - headHalf * Math.sin(ang + Math.PI/2));
+    c.closePath(); c.fill();
+    // italic label
+    c.fillStyle = '#bfe6f7';
+    c.font = 'italic bold 19px Segoe UI, Arial';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(label, lx, ly);
+    c.restore();
+}
+
+function rxCollect(list, colour, out) {
+    var seen = {};
+    for (var i = 0; i < list.length; i++) {
+        var s = list[i];
+        if (seen[s]) continue; seen[s] = true;
+        var sp = rxSpecies(s);
+        if (sp.A === 1) continue;
+        out.push({ sp:sp, colour:colour, px:rxAToX(sp.A), py:rxYToY(sp.bea), dir:-1 });
+    }
+}
+
+function rxDrawMarker(pt) {
+    var c = rxCtx, sp = pt.sp, colour = pt.colour, px = pt.px, py = pt.py;
+    c.save();
+    c.fillStyle = colour;
+    c.strokeStyle = '#0c1426'; c.lineWidth = 2;
+    c.beginPath(); c.arc(px, py, 7, 0, Math.PI * 2); c.fill(); c.stroke();
+    if (pt.dir < 0) {
+        // label above: BE/A on top, name below it, leader down to point
+        var ly = py - 20;
+        c.strokeStyle = colour; c.lineWidth = 1.5;
+        c.beginPath(); c.moveTo(px, py - 8); c.lineTo(px, ly + 2); c.stroke();
+        c.textAlign = 'center'; c.textBaseline = 'bottom';
+        c.font = 'bold 14px Segoe UI, Arial'; c.fillStyle = colour;
+        c.fillText(sp.name, px, ly);
+        c.font = '13px Segoe UI, Arial'; c.fillStyle = '#eef4fb';
+        c.fillText(fmt(sp.bea, 4) + ' MeV', px, ly - 16);
+    } else {
+        // label below: name first, BE/A under it, leader up to point
+        var ly2 = py + 22;
+        c.strokeStyle = colour; c.lineWidth = 1.5;
+        c.beginPath(); c.moveTo(px, py + 8); c.lineTo(px, ly2 - 4); c.stroke();
+        c.textAlign = 'center'; c.textBaseline = 'top';
+        c.font = 'bold 14px Segoe UI, Arial'; c.fillStyle = colour;
+        c.fillText(sp.name, px, ly2);
+        c.font = '13px Segoe UI, Arial'; c.fillStyle = '#eef4fb';
+        c.fillText(fmt(sp.bea, 4) + ' MeV', px, ly2 + 16);
+    }
+    c.restore();
+}
+
+rxPopulateSelect();
+rxDrawCurve();
+
+// ====================== TAB ROUTER ======================
+function switchTab(name) {
+    var tabs = ['curve', 'react'];
+    for (var i = 0; i < tabs.length; i++) {
+        var t = tabs[i];
+        document.getElementById(t + 'Tab').classList.toggle('active', t === name);
+        document.getElementById('tabBtn-' + t).classList.toggle('active', t === name);
+    }
+    if (name === 'curve') draw();
+}
+
+// initial render
+buildConstants();
+draw();
+</script>
+</body>
+</html>
