@@ -1992,15 +1992,34 @@ function rxBuildCurveWorking(rx) {
     return h;
 }
 
+// Group a reaction side into mass terms, collapsing repeated species into a
+// bracketed "(c x mass)" coefficient form. Returns { terms:[...], total:Number }.
+function rxMassTerms(list, kg) {
+    var order = [], count = {}, i, key;
+    for (i = 0; i < list.length; i++) {
+        key = list[i];
+        if (count[key] === undefined) { count[key] = 0; order.push(key); }
+        count[key]++;
+    }
+    var terms = [], total = 0;
+    for (i = 0; i < order.length; i++) {
+        var sp = rxSpecies(order[i]), c = count[order[i]], m = sp.mAtom;
+        total += c * m;
+        var mStr = kg ? sci(m * U_KG, 7) : fmt(m, 6);
+        terms.push(c > 1 ? '(' + c + ' &times; ' + mStr + ')' : mStr);
+    }
+    return { terms: terms, total: total };
+}
+
 // Mass-defect route (Configs 2, 3, 4; Config 1 is the binding-energy method).
 //   Config 2: masses in u, Delta m x 931.5 -> MeV
 //   Config 3: masses in u, convert Delta m to kg, E = Delta m c^2 -> J -> MeV
 //   Config 4: masses in kg, E = Delta m c^2 -> J -> MeV
 function rxBuildMassWorking(rx) {
-    var i, sp, mr = 0, mp = 0, rt = [], pt = [];
     var kg = (rxConfig === 4);
-    for (i = 0; i < rx.reactants.length; i++) { sp = rxSpecies(rx.reactants[i]); mr += sp.mAtom; rt.push(kg ? sci(sp.mAtom * U_KG, 7) : fmt(sp.mAtom, 6)); }
-    for (i = 0; i < rx.products.length; i++) { sp = rxSpecies(rx.products[i]); mp += sp.mAtom; pt.push(kg ? sci(sp.mAtom * U_KG, 7) : fmt(sp.mAtom, 6)); }
+    var rSide = rxMassTerms(rx.reactants, kg), pSide = rxMassTerms(rx.products, kg);
+    var rt = rSide.terms, pt = pSide.terms;
+    var mr = rSide.total, mp = pSide.total;
     var dm_u = mr - mp;
     var note = '<div class="wk-note">Atomic masses are used directly. We do not need to work out ' +
          'nuclear masses because the proton number is the same on both sides, so the electron ' +
