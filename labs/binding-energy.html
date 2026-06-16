@@ -2021,6 +2021,15 @@ function rxBuildMassWorking(rx) {
     var rt = rSide.terms, pt = pSide.terms;
     var mr = rSide.total, mp = pSide.total;
     var dm_u = mr - mp;
+    // Label and value adapt to the number of terms: a single reactant (e.g.
+    // spontaneous fission) reads "Mass of reactant: X u" rather than "Total ... X = X u".
+    function massLabel(terms, side) {
+        return (terms.length > 1 ? 'Total mass of ' + side + 's' : 'Mass of ' + side);
+    }
+    function massValue(terms, totalStr) {
+        return (terms.length > 1 ? terms.join(' + ') + '  =  <b>' + totalStr + '</b>'
+                                 : '<b>' + totalStr + '</b>');
+    }
     var note = '<div class="wk-note">Atomic masses are used directly. We do not need to work out ' +
          'nuclear masses because the proton number is the same on both sides, so the electron ' +
          'masses cancel out. This agrees with the binding-energy method, since the energy released ' +
@@ -2029,10 +2038,10 @@ function rxBuildMassWorking(rx) {
     if (rxConfig === 4) {
         var mr_kg = mr * U_KG, mp_kg = mp * U_KG, dm_kg4 = mr_kg - mp_kg;
         var E_J4 = dm_kg4 * C_SI * C_SI, E_MeV4 = E_J4 / EV_J / 1e6;
-        h += rxWkStep('Total mass of reactants', rt.join(' + ') + '  =  <b>' + sci(mr_kg, 6) + ' kg</b>');
-        h += rxWkStep('Total mass of products', pt.join(' + ') + '  =  <b>' + sci(mp_kg, 6) + ' kg</b>');
+        h += rxWkStep(massLabel(rt, 'reactant'), massValue(rt, sci(mr_kg, 7) + ' kg'));
+        h += rxWkStep(massLabel(pt, 'product'), massValue(pt, sci(mp_kg, 7) + ' kg'));
         h += rxWkStep('Mass difference  &Delta;m  =  reactants &minus; products',
-            sci(mr_kg, 6) + ' &minus; ' + sci(mp_kg, 6) + '  =  <b>' + sci(dm_kg4, 4) + ' kg</b>');
+            sci(mr_kg, 7) + ' &minus; ' + sci(mp_kg, 7) + '  =  <b>' + sci(dm_kg4, 4) + ' kg</b>');
         h += rxWkStep('Energy released  =  &Delta;m c&sup2;',
             sci(dm_kg4, 4) + ' &times; (2.997925 &times; 10<sup>8</sup>)&sup2;  =  <b>' + sci(E_J4, 4) + ' J</b>');
         h += rxWkStep('Convert to MeV  (&divide; 1.602177 &times; 10<sup>&minus;19</sup>, then &divide; 10<sup>6</sup>)',
@@ -2040,8 +2049,8 @@ function rxBuildMassWorking(rx) {
         h += '<div class="wk-answer">Energy released  =  ' + sci(E_J4, 4) + ' J  =  ' + fmt(E_MeV4, 2) + ' MeV</div>';
         return h + note;
     }
-    h += rxWkStep('Total mass of reactants', rt.join(' + ') + '  =  <b>' + fmt(mr, 6) + ' u</b>');
-    h += rxWkStep('Total mass of products', pt.join(' + ') + '  =  <b>' + fmt(mp, 6) + ' u</b>');
+    h += rxWkStep(massLabel(rt, 'reactant'), massValue(rt, fmt(mr, 6) + ' u'));
+    h += rxWkStep(massLabel(pt, 'product'), massValue(pt, fmt(mp, 6) + ' u'));
     h += rxWkStep('Mass difference  &Delta;m  =  reactants &minus; products',
         fmt(mr, 6) + ' &minus; ' + fmt(mp, 6) + '  =  <b>' + fmt(dm_u, 6) + ' u</b>');
     if (rxConfig === 2) {
