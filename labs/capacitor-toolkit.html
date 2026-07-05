@@ -6523,12 +6523,10 @@ function T2settle() {
     // Energy delivered by the cell = EMF x the cell's NET EMITTED CHARGE, tracked
     // persistently. Each event, the charge that flows THROUGH the cell equals the
     // change in charge on the capacitors currently connected to the cell (old
-    // stored charge -> new settled charge). Charge to an empty cap adds; charge
-    // returning (decrease C) subtracts; a cap isolated by an open switch is not
-    // connected so its stranded charge neither adds nor subtracts (it stays
-    // counted from when it was charged); charge-sharing between isolated caps
-    // never touches the cell. This is correct real-circuit behaviour and is
-    // path-independent for the final state.
+    // stored charge -> new settled charge), EXCEPT charge that merely redistributes
+    // through a newly-closed internal short, which never crosses the cell. Charge
+    // to an empty cap adds; charge returning (decrease C) subtracts; a cap isolated
+    // by an open switch keeps its charge counted from when it was charged.
     if (cells.length === 1) {
         var cnodes2 = T2nodesOf(cells[0]);
         var plus = cnodes2[0];
@@ -6536,6 +6534,10 @@ function T2settle() {
         for (var c2 = 0; c2 < caps.length; c2++) {
             var cn2 = T2nodesOf(caps[c2]);
             if (cn2[0] < 0 || cn2[1] < 0) continue;
+            // A cap now shorted (both plates one node) holds no charge; its old
+            // charge drained through the short, NOT through the cell, so it must
+            // not be counted as returning to the cell.
+            if (cn2[0] === cn2[1]) continue;
             // Only caps sitting across the cell's nodes carry current through it.
             var connectedToCell = (cn2[0] === plus || cn2[1] === plus);
             if (!connectedToCell) continue;
@@ -6543,20 +6545,13 @@ function T2settle() {
             var newQplus = (cn2[0] === plus) ? C2 * (pots[cn2[0]] - pots[cn2[1]])
                                              : C2 * (pots[cn2[1]] - pots[cn2[0]]);
             var oldQ = caps[c2].storedQ || 0;
-            // old charge on the plate facing the cell + node (sign matched)
+            // old charge on the plate facing the cell + node (sign matched to the
+            // cap's CURRENT orientation relative to +).
             var oldQplus = (cn2[0] === plus) ? oldQ : -oldQ;
             dQ += (newQplus - oldQplus);
         }
         T2._netEmitted = (T2._netEmitted || 0) + dQ;
         T2._netDelivered = T2._netEmitted * cells[0].value;   // EMF x net emitted charge
-    } else {
-        // No single cell this event: leave the emitted charge as-is (a stranded
-        // network still represents charge the cell previously delivered). Recompute
-        // the displayed energy from the stored emitted charge against no cell -> 0
-        // only if there is genuinely no cell in the circuit at all.
-        var anyCell = false;
-        for (var ci0 = 0; ci0 < T2.items.length; ci0++) if (T2.items[ci0].type === 'cell') { anyCell = true; break; }
-        if (!anyCell) { /* cell deleted: keep stranded charge value as delivered */ }
     }
 
     // Write back each capacitor's new stored charge (endpoint-1 plate).
