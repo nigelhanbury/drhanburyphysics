@@ -5879,6 +5879,31 @@ function T2draw() {
     var hint = document.getElementById('buildHint');
     if (hint) hint.style.display = T2.items.length === 0 ? 'block' : 'none';
 
+    // On-canvas notice when the circuit cannot be solved, so a blank probe /
+    // voltmeter reads as a clear explanation rather than looking broken. Matches
+    // the DC kit's centered on-canvas message style. A dead short across the
+    // ideal cell is the common case (closing a wire-only loop across it).
+    if (T2._shortReason) {
+        var msg = (T2._shortReason === 'shorted')
+            ? 'Cell short-circuited \u2014 no steady state (an ideal cell shorted by a wire draws infinite current)'
+            : (T2._shortReason === 'twocells')
+                ? 'More than one cell \u2014 remove the extra cell to solve the circuit'
+                : 'Circuit cannot be solved';
+        ctx2.save();
+        ctx2.font = 'bold 14px "Segoe UI", Arial, sans-serif';
+        ctx2.textAlign = 'center';
+        ctx2.textBaseline = 'top';
+        var mw = ctx2.measureText(msg).width;
+        var padX = 14, boxH = 30, boxY = 12, boxX = canvas2.width / 2 - mw / 2 - padX;
+        ctx2.fillStyle = 'rgba(60,10,20,0.92)';
+        ctx2.strokeStyle = '#ff5a5a';
+        ctx2.lineWidth = 2;
+        ctx2.beginPath(); ctx2.roundRect(boxX, boxY, mw + padX * 2, boxH, 8); ctx2.fill(); ctx2.stroke();
+        ctx2.fillStyle = '#ff9a9a';
+        ctx2.fillText(msg, canvas2.width / 2, boxY + 8);
+        ctx2.restore();
+    }
+
     // Rebuild the inspector only when the selection changes, so typing in a
     // field isn't interrupted; refresh the live 'settled' figures separately.
     if (T2._inspFor !== T2.selectedId) { T2._inspFor = T2.selectedId; T2updateInspector(); }
@@ -6473,6 +6498,7 @@ function T2solve() {
    cell-EMF change, Reset) - never on ordinary redraws.
    ============================================================ */
 function T2settle() {
+    T2._shortReason = null;   // cleared unless a bail sets it below
     var N = T2.nodes.length;
     if (N === 0) { T2._lastOk = false; T2._lastPots = null; return; }
     var cells = [], caps = [];
@@ -6481,12 +6507,16 @@ function T2settle() {
         if (t === 'cell') cells.push(T2.items[i]);
         else if (t === 'capacitor' || t === 'varCapacitor') caps.push(T2.items[i]);
     }
-    if (cells.length > 1) { T2._lastOk = false; T2._lastPots = null; return; }
+    if (cells.length > 1) { T2._lastOk = false; T2._lastPots = null; T2._shortReason = 'twocells'; return; }
 
     var fixed = {};
     if (cells.length === 1) {
         var cn = T2nodesOf(cells[0]);
-        if (cn[0] < 0 || cn[1] < 0 || cn[0] === cn[1]) { T2._lastOk = false; T2._lastPots = null; return; }
+        // Both terminals collapsed to one node = a dead short across the ideal
+        // cell. An ideal EMF with no internal resistance has no defined steady
+        // state when short-circuited (infinite current), so we cannot solve.
+        if (cn[0] >= 0 && cn[1] >= 0 && cn[0] === cn[1]) { T2._lastOk = false; T2._lastPots = null; T2._shortReason = 'shorted'; return; }
+        if (cn[0] < 0 || cn[1] < 0) { T2._lastOk = false; T2._lastPots = null; return; }
         fixed[cn[1]] = 0; fixed[cn[0]] = cells[0].value;
     }
     var unknown = [];
