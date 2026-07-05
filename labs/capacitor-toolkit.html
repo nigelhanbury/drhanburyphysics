@@ -789,6 +789,12 @@ input[type="range"]:disabled { cursor: not-allowed; }
     box-shadow: 0 4px 20px rgba(46,204,113,0.3);
 }
 .drag-component.energy:hover { box-shadow: 0 6px 30px rgba(46,204,113,0.5); }
+.drag-component.probe {
+    background: linear-gradient(135deg, rgba(255,107,157,0.3), rgba(255,77,136,0.2));
+    border: 2px solid rgba(255,107,157,0.5);
+    box-shadow: 0 4px 20px rgba(255,107,157,0.3);
+}
+.drag-component.probe:hover { box-shadow: 0 6px 30px rgba(255,107,157,0.5); }
 .drag-component.selected { outline: 3px solid #ffd166; outline-offset: 1px; }
 .drag-component.disabled {
     opacity: 0.3 !important;
@@ -1160,6 +1166,13 @@ canvas#canvas2 {
                                 <text x="25" y="20" font-size="13" fill="#2ecc71" text-anchor="middle" font-weight="bold">E</text>
                             </svg>
                             <span class="component-label">Energy</span>
+                        </div>
+                        <div class="drag-component probe" data-btype="probe">
+                            <svg class="component-icon" viewBox="0 0 50 30">
+                                <circle cx="25" cy="15" r="11" fill="none" stroke="#ff6b9d" stroke-width="2.5"/>
+                                <text x="25" y="20" font-size="12" fill="#ff6b9d" text-anchor="middle" font-weight="bold">&#966;</text>
+                            </svg>
+                            <span class="component-label">Potential</span>
                         </div>
                     </div>
                     <p class="palette-note">Drag a tile onto the canvas, or on a touch screen tap the tile then tap the canvas to place it. Drag endpoints to rotate, resize or wire. Drag a label to move it. To delete a component, long-press it on a touch screen or right-click it on a computer &mdash; deleting resets the circuit&rsquo;s charge and delivered energy, since you&rsquo;re reconfiguring.</p>
@@ -4990,7 +5003,8 @@ var T2_DEFS = {
     switch:       { len: 80, color: '#9b59b6', value: 0,    unit: ''   },
     wire:         { len: 90, color: '#5a7fb0', value: 0,    unit: ''   },
     voltmeter:    { len: 70, color: '#ff6b9d', value: 0,    unit: 'V'  },
-    energy:       { len: 70, color: '#2ecc71', value: 0,    unit: 'J'  }
+    energy:       { len: 70, color: '#2ecc71', value: 0,    unit: 'J'  },
+    probe:        { len: 70, color: '#ff6b9d', value: 0,    unit: 'V'  }
 };
 
 var canvas2, ctx2;
@@ -5144,6 +5158,18 @@ function T2addItem(type, x, y) {
             angle1: 0,
             component: null, compLabel: null, energy: NaN
         };
+    } else if (type === 'probe') {
+        // Potential probe: single probe, like the energy meter, but its tip snaps
+        // to any point on a wire/component and reads the ABSOLUTE potential at that
+        // node (one voltmeter probe against the circuit's 0 V reference). Reveals
+        // why a capacitor holds no charge - probe both plates and compare.
+        item = {
+            id: T2._seq++, type: 'probe', kind: 'probe',
+            bodyX: cx, bodyY: cy,
+            x1: cx, y1: cy + 110,
+            angle1: 0,
+            node: null, potential: NaN
+        };
     } else {
         item = {
             id: T2._seq++,
@@ -5180,7 +5206,7 @@ function T2endpoints() {
     var eps = [];
     for (var i = 0; i < T2.items.length; i++) {
         var it = T2.items[i];
-        if (it.type === 'voltmeter' || it.type === 'energy') continue; // instruments are sensors
+        if (T2isInstrument(it.type)) continue; // instruments are sensors
         eps.push({ x: it.x1, y: it.y1, item: it, endNum: 1 });
         eps.push({ x: it.x2, y: it.y2, item: it, endNum: 2 });
     }
@@ -5248,7 +5274,7 @@ function T2hit(x, y) {
     // topmost first
     for (var i = T2.items.length - 1; i >= 0; i--) {
         var it = T2.items[i];
-        if (it.type === 'voltmeter' || it.type === 'energy') {
+        if (T2isInstrument(it.type)) {
             var a1h = (it.angle1 != null) ? it.angle1 : (it.type === 'energy' ? 0 : -0.15);
             // Probe 1: tip (connection) vs handle-top (rotate). Handle runs from the
             // tip up along the angle for handleHeight; the top ~half rotates.
@@ -5264,7 +5290,7 @@ function T2hit(x, y) {
                 if (Math.hypot(x - h2topX, y - h2topY) < 20 || Math.hypot(x - h2midX, y - h2midY) < 18) return { item: it, part: 'rot2' };
             }
             // Body.
-            var bw = it.type === 'energy' ? 56 : 50, bh = it.type === 'energy' ? 64 : 60;
+            var bw = (it.type === 'energy' || it.type === 'probe') ? 56 : 50, bh = (it.type === 'energy' || it.type === 'probe') ? 64 : 60;
             if (x > it.bodyX - bw / 2 - 5 && x < it.bodyX + bw / 2 + 5 &&
                 y > it.bodyY - bh / 2 - 5 && y < it.bodyY + bh / 2 + 10) return { item: it, part: 'body' };
             continue;
@@ -5438,7 +5464,7 @@ function T2move(x, y) {
         return;
     }
     if ((T2._drag.part === 'rot1' || T2._drag.part === 'rot2') &&
-        (it.type === 'voltmeter' || it.type === 'energy')) {
+        (T2isInstrument(it.type))) {
         // Rotate the probe handle around its tip (Hall-probe style). The handle
         // top is tip + (sin a, -cos a)*h, so the angle pointing toward the
         // pointer is atan2(dx, -dy).
@@ -5478,7 +5504,7 @@ function T2move(x, y) {
         T2._drag.ox = x; T2._drag.oy = y;
         return;
     }
-    if (it.type === 'voltmeter' || it.type === 'energy') {
+    if (T2isInstrument(it.type)) {
         // Match tab 1's meterMove: dragging the body moves ONLY the body
         // (bodyX/bodyY); the probes and their node connections stay put, so the
         // cable just stretches. Dragging a probe moves that probe tip.
@@ -5507,7 +5533,7 @@ function T2findSnap(x, y, excludeItem) {
     for (var i = 0; i < T2.items.length; i++) {
         var it = T2.items[i];
         if (it === excludeItem) continue;
-        if (it.type === 'voltmeter' || it.type === 'energy') continue;
+        if (T2isInstrument(it.type)) continue;
         var d1 = Math.hypot(x - it.x1, y - it.y1);
         if (d1 < nd) { nd = d1; nearest = { x: it.x1, y: it.y1 }; }
         var d2 = Math.hypot(x - it.x2, y - it.y2);
@@ -5564,7 +5590,7 @@ function T2up() {
         if (it && T2._drag.part === 'wiper') {
             // wiper drag: nothing to snap
         } else if (it) {
-            if (it.type === 'voltmeter' || it.type === 'energy') {
+            if (T2isInstrument(it.type)) {
                 // Only a probe drag re-snaps to the circuit; a body move leaves
                 // the probes (and their connections) exactly where they are.
                 if (T2._drag.part === 'e1' || T2._drag.part === 'e2') {
@@ -5584,7 +5610,7 @@ function T2up() {
             }
         }
         // A meter-body move OR a probe rotate leaves the circuit unchanged.
-        var skipSettle = it && (it.type === 'voltmeter' || it.type === 'energy') &&
+        var skipSettle = it && (T2isInstrument(it.type)) &&
             (T2._drag.part === 'body' || T2._drag.part === 'rot1' || T2._drag.part === 'rot2');
         T2._drag = null;
         T2computeNodes();
@@ -5597,6 +5623,12 @@ function T2up() {
    adapted to the dynamic circuit). Voltmeter probes snap to the nearest node
    position and record its node id; the energy probe snaps to the nearest
    capacitor body and records that component. */
+/* True for the sensor instruments (voltmeter, energy meter, potential probe).
+   These are drawn on top, never form nodes, and share drag/hit/delete handling. */
+function T2isInstrument(t) {
+    return t === 'voltmeter' || t === 'energy' || t === 'probe';
+}
+
 function T2snapProbe(m, part) {
     var px = part === 'e1' ? m.x1 : m.x2;
     var py = part === 'e1' ? m.y1 : m.y2;
@@ -5625,7 +5657,7 @@ function T2nearestNode(x, y, maxD) {
     var best = null, bd = maxD || 30;
     for (var i = 0; i < T2.items.length; i++) {
         var it = T2.items[i];
-        if (it.type === 'voltmeter' || it.type === 'energy') continue;
+        if (T2isInstrument(it.type)) continue;
         var d1 = Math.hypot(x - it.x1, y - it.y1);
         if (d1 < bd) { bd = d1; best = { x: it.x1, y: it.y1 }; }
         var d2 = Math.hypot(x - it.x2, y - it.y2);
@@ -5659,7 +5691,7 @@ function T2findNodeAtPoint(px, py) {
     }
     for (var k = 0; k < T2.items.length; k++) {
         var it = T2.items[k];
-        if (it.type === 'voltmeter' || it.type === 'energy') continue;
+        if (T2isInstrument(it.type)) continue;
         var d = T2distToSeg(px, py, it.x1, it.y1, it.x2, it.y2);
         if (d < PROBE) {
             if (it.type === 'wire' || (it.type === 'switch' && it.isOn)) {
@@ -5872,7 +5904,7 @@ function T2drawItem(it, selected) {
         T2drawCapacitor(it, midX, midY, angle);
     } else if (it.type === 'switch') {
         T2drawSwitch(it, midX, midY, angle);
-    } else if (it.type === 'voltmeter' || it.type === 'energy') {
+    } else if (T2isInstrument(it.type)) {
         T2drawInstrument(it);
     }
 
@@ -6023,6 +6055,10 @@ function T2updateInspector() {
         var er = (it.energy != null && !isNaN(it.energy)) ? T2fmtEnergy(it.energy) : '--';
         html += '<div class="insp-row"><label>Stored energy</label><span>' + er + '</span></div>';
         html += '<div class="insp-note">Drag probe onto a capacitor.</div>';
+    } else if (it.type === 'probe') {
+        var pr = (it.potential != null && !isNaN(it.potential)) ? it.potential.toFixed(2) + ' V' : '--';
+        html += '<div class="insp-row"><label>Potential</label><span>' + pr + '</span></div>';
+        html += '<div class="insp-note">Drag the probe onto any wire or component to read the potential there (against the 0 V terminal).</div>';
     } else if (it.type === 'wire') {
         html += '<div class="insp-note">A wire (zero resistance).</div>';
     }
@@ -6156,6 +6192,7 @@ function T2drawSwitch(it, midX, midY, angle) {
 /* Instruments drawn exactly like tab 1's meters (duplicated to draw on ctx2). */
 function T2drawInstrument(it) {
     if (it.type === 'energy') T2drawEnergyMeter(it);
+    else if (it.type === 'probe') T2drawPotentialProbe(it);
     else T2drawVoltmeter(it);
 }
 
@@ -6230,6 +6267,41 @@ function T2drawEnergyMeter(m) {
     T2probeHandle(m.x1, m.y1, '#1a8f48', '#3fe07f', a1);
 }
 
+/* Potential probe: pink-faced, single probe (DC-kit probe colour #ff6b9d). Reads
+   the absolute potential at the node its tip touches, against the 0 V reference.
+   Built as a sibling of the energy meter (body + one cable + one handle). */
+function T2drawPotentialProbe(m) {
+    var bodyX = m.bodyX, bodyY = m.bodyY;
+    var bodyWidth = 56, bodyHeight = 64;
+    var connX = bodyX, connY = bodyY + bodyHeight / 2 + 5;
+    var probeHandleHeight = 50, a1 = (m.angle1 != null) ? m.angle1 : 0;
+    var p1TopX = m.x1 + Math.sin(a1) * probeHandleHeight, p1TopY = m.y1 - Math.cos(a1) * probeHandleHeight;
+
+    T2cableLead(p1TopX, p1TopY, connX, connY, '#7a1436', '#c0286a', '#ff6b9d', false);
+
+    ctx2.save();
+    ctx2.fillStyle = '#1a1a1a'; ctx2.strokeStyle = '#000'; ctx2.lineWidth = 2;
+    ctx2.beginPath(); ctx2.roundRect(bodyX - bodyWidth / 2 - 5, bodyY - bodyHeight / 2 - 5, bodyWidth + 10, bodyHeight + 15, 12); ctx2.fill(); ctx2.stroke();
+    var fg = ctx2.createLinearGradient(bodyX, bodyY - bodyHeight / 2, bodyX, bodyY + bodyHeight / 2);
+    fg.addColorStop(0, '#ff8fb6'); fg.addColorStop(0.5, '#ff6b9d'); fg.addColorStop(1, '#e04b80');
+    ctx2.fillStyle = fg;
+    ctx2.beginPath(); ctx2.roundRect(bodyX - bodyWidth / 2, bodyY - bodyHeight / 2, bodyWidth, bodyHeight, 8); ctx2.fill();
+    ctx2.fillStyle = '#3a0c20'; ctx2.font = 'bold 11px Arial'; ctx2.textAlign = 'center'; ctx2.textBaseline = 'middle';
+    ctx2.fillText('Potential', bodyX, bodyY - 20);
+    ctx2.font = 'bold 9px Arial'; ctx2.fillText((m.node != null) ? 'at node' : '--', bodyX, bodyY - 8);
+    ctx2.fillStyle = '#f8f8f8'; ctx2.strokeStyle = '#999'; ctx2.lineWidth = 1;
+    ctx2.beginPath(); ctx2.roundRect(bodyX - 26, bodyY + 2, 52, 20, 3); ctx2.fill(); ctx2.stroke();
+    var v = m.potential;
+    var disp = (isNaN(v) || m.node == null) ? '--' : (v.toFixed(2) + ' V');
+    ctx2.fillStyle = '#111'; ctx2.font = 'bold 12px monospace'; ctx2.fillText(disp, bodyX, bodyY + 12);
+    ctx2.restore();
+
+    ctx2.fillStyle = '#ff6b9d'; ctx2.strokeStyle = '#7a1436'; ctx2.lineWidth = 2;
+    ctx2.beginPath(); ctx2.arc(connX, connY, 6, 0, Math.PI * 2); ctx2.fill(); ctx2.stroke();
+
+    T2probeHandle(m.x1, m.y1, '#a01450', '#ff6b9d', a1);
+}
+
 function T2cableLead(probeX, probeY, meterX, meterY, darkColor, midColor, lightColor, isRed) {
     var dx = meterX - probeX, dy = meterY - probeY;
     var dist = Math.hypot(dx, dy);
@@ -6286,23 +6358,45 @@ function T2fmtC(uF) {
        solved as a small linear system (C in place of conductance).
    Returns { ok, potentials } (potentials indexed by node id).
    ============================================================ */
+/* Gaussian elimination matching the DC Circuit Builder's gaussianElimination
+   exactly: partial pivoting, and on a zero pivot it does NOT fail - it skips the
+   column in forward elimination and assigns 0 to that free variable in back-
+   substitution. This is essential for a general capacitor topology: a node that
+   no capacitor connects to (a dangling switch end, or a node reachable only
+   through open switches) is a floating/disconnected node with an indeterminate
+   potential. The DC kit assigns it 0 (a reference) and solves the rest of the
+   circuit normally. Previously T2solveLinear returned null on such a node, which
+   aborted the whole settle and left every capacitor stuck at its old charge -
+   the intermittent "cap won't charge after a switch sequence" bug. Assigning 0
+   to a floating node cannot affect any real charge, since by definition no
+   capacitor sits across it. */
 function T2solveLinear(A, b) {
     var n = b.length;
+    // augmented matrix
+    var aug = [];
+    for (var i = 0; i < n; i++) { var row = A[i].slice(); row.push(b[i]); aug.push(row); }
+    // forward elimination with partial pivoting
     for (var col = 0; col < n; col++) {
-        var piv = col;
-        for (var r = col + 1; r < n; r++) if (Math.abs(A[r][col]) > Math.abs(A[piv][col])) piv = r;
-        if (Math.abs(A[piv][col]) < 1e-12) return null;
-        var tA = A[col]; A[col] = A[piv]; A[piv] = tA;
-        var tb = b[col]; b[col] = b[piv]; b[piv] = tb;
-        for (var r2 = 0; r2 < n; r2++) {
-            if (r2 === col) continue;
-            var f = A[r2][col] / A[col][col];
-            for (var c = col; c < n; c++) A[r2][c] -= f * A[col][c];
-            b[r2] -= f * b[col];
+        var maxVal = Math.abs(aug[col][col]), maxRow = col;
+        for (var r = col + 1; r < n; r++) {
+            if (Math.abs(aug[r][col]) > maxVal) { maxVal = Math.abs(aug[r][col]); maxRow = r; }
+        }
+        var tmp = aug[col]; aug[col] = aug[maxRow]; aug[maxRow] = tmp;
+        if (Math.abs(aug[col][col]) < 1e-12) continue;   // singular column: skip, don't fail
+        for (var r2 = col + 1; r2 < n; r2++) {
+            var f = aug[r2][col] / aug[col][col];
+            for (var j = col; j <= n; j++) aug[r2][j] -= f * aug[col][j];
         }
     }
+    // back substitution; free/disconnected node -> 0
     var x = [];
-    for (var i = 0; i < n; i++) x[i] = b[i] / A[i][i];
+    for (var k = 0; k < n; k++) x[k] = 0;
+    for (var i2 = n - 1; i2 >= 0; i2--) {
+        if (Math.abs(aug[i2][i2]) < 1e-12) { x[i2] = 0; continue; }
+        var sum = aug[i2][n];
+        for (var j2 = i2 + 1; j2 < n; j2++) sum -= aug[i2][j2] * x[j2];
+        x[i2] = sum / aug[i2][i2];
+    }
     return x;
 }
 
@@ -6853,6 +6947,11 @@ function T2updateMeters() {
                     m.energy = (C > 0) ? (q * q) / (2 * C) : NaN;   // 1/2 Q^2 / C from stored charge
                 } else { m.energy = NaN; }
             } else { m.energy = NaN; }
+        } else if (m.type === 'probe') {
+            // Potential at the probed node, against the circuit's 0 V reference.
+            var pn = T2findNodeAtPoint(m.x1, m.y1);
+            m.node = pn;
+            m.potential = (ok && pn != null && pn < pots.length) ? pots[pn] : NaN;
         }
     }
 
