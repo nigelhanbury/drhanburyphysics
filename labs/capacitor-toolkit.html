@@ -359,7 +359,7 @@ input[type="range"]:disabled { cursor: not-allowed; }
     gap: 8px;
     padding: 4px 0;
 }
-.checkbox-row label { color: #bbb; font-size: 0.85em; cursor: pointer; }
+.checkbox-row label { color: #bbb; font-size: 0.78em; cursor: pointer; white-space: nowrap; }
 .checkbox-row input { cursor: pointer; width: 16px; height: 16px; }
 
 .btn-row { display: flex; gap: 8px; margin-top: 6px; }
@@ -696,7 +696,7 @@ input[type="range"]:disabled { cursor: not-allowed; }
 
 /* ===== Build Your Own (tab 2) - layout & palette match DC Construction Kit ===== */
 .build-area { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
-.build-canvas-wrap { position: relative; flex: 1 1 auto; min-width: 500px; }
+.build-canvas-wrap { position: relative; flex: 1 1 500px; min-width: 500px; }
 .build-controls { width: 300px; flex: 0 0 auto; }
 .components-grid {
     display: grid;
@@ -1073,6 +1073,10 @@ canvas#canvas2 {
                                 <option value="hide">Hide</option>
                             </select>
                         </div>
+                        <div class="checkbox-row" style="justify-content:space-between;">
+                            <label for="dispBuildPolarity" style="color:#ff8fb6">Plate polarity (+ / &minus;)</label>
+                            <input type="checkbox" id="dispBuildPolarity" checked onchange="T2onDisplayModeChange()">
+                        </div>
                     </div>
                     <div class="opt-group">
                         <div class="opt-group-label">Cell labels</div>
@@ -1101,6 +1105,7 @@ canvas#canvas2 {
                     <button class="build-preset-btn" onclick="T2preset3()">Parallel</button>
                     <button class="build-preset-btn" onclick="T2preset4()">Series/Parallel</button>
                     <button class="build-preset-btn" onclick="T2preset5()">Capacitor charging capacitor</button>
+                    <button class="build-preset-btn" onclick="T2preset6()">Capacitor bridge</button>
                     <button class="build-preset-btn clear-btn" onclick="T2clearAll()">Clear all</button>
                 </div>
             </div>
@@ -4965,7 +4970,7 @@ var T2_GRID = 20;
    mirroring tab 1's DISP/dispText. 'c' = capacitance, 'q' = charge. Tapping a
    symbol label on the canvas reveals that item's value (DC kit per-item reveal
    Sets keyed by item id). */
-var T2DISP = { c: 'value', q: 'value', cellq: 'value', emf: 'value' };
+var T2DISP = { c: 'value', q: 'value', cellq: 'value', emf: 'value', polarity: true };
 var T2revealC = {};   // itemId -> true when this cap's capacitance label is revealed
 var T2revealQ = {};   // itemId -> true when this cap's charge label is revealed
 var T2revealCellQ = {}; // cellId -> true when the cell's charge-delivered label is revealed
@@ -4976,10 +4981,12 @@ function T2onDisplayModeChange() {
     var qs = document.getElementById('dispBuildQ');
     var cqs = document.getElementById('dispBuildCellQ');
     var es = document.getElementById('dispBuildEmf');
+    var ps = document.getElementById('dispBuildPolarity');
     if (cs) T2DISP.c = cs.value;
     if (qs) T2DISP.q = qs.value;
     if (cqs) T2DISP.cellq = cqs.value;
     if (es) T2DISP.emf = es.value;
+    if (ps) T2DISP.polarity = ps.checked;
     if (T2DISP.c === 'value') T2revealC = {};   // value mode clears reveals
     if (T2DISP.q === 'value') T2revealQ = {};
     if (T2DISP.cellq === 'value') T2revealCellQ = {};
@@ -5013,6 +5020,11 @@ function T2init() {
     canvas2 = document.getElementById('canvas2');
     if (!canvas2) return;
     ctx2 = canvas2.getContext('2d');
+
+    // Sync the plate-polarity checkbox to its default (Apps Script strips the HTML
+    // 'checked' attribute, so set it from the T2DISP default in JS on load).
+    var polCb = document.getElementById('dispBuildPolarity');
+    if (polCb) polCb.checked = T2DISP.polarity;
 
     // Palette placement. Mouse: drag a tile onto the canvas (draggingFromPalette).
     // Touch (iPad, DC kit method): TAP a tile to arm it (white highlight), then
@@ -6007,11 +6019,14 @@ function T2drawItem(it, selected) {
             // so the label is grabbed where it is seen, not below it.
             it._cLabel = { x: clx, y: cly - cFont * 0.35, bx: clx, by: cly, w: Math.max(cw, 20), h: cIsSymbol ? 24 : 16 };
         }
-        // Charge label above the capacitor: Value 'Q = ...', Symbol 'Q' (large), hidden.
+        // Charge label above the capacitor. Always MAGNITUDE only - a capacitor
+        // cannot hold "negative charge"; a negative solvedQ just means the plate
+        // polarity is opposite to the drawn orientation. The sign is conveyed by
+        // the + / - plate markers (T2DISP.polarity), not by a minus on the number.
         it._qLabel = null;
         if (it._solvedQ != null && !isNaN(it._solvedQ)) {
             var qIsSymbol = (T2DISP.q === 'symbol' && !T2revealQ[it.id]);
-            var qText = T2dispText('q', it.id, 'Q = ' + T2fmtQ(it._solvedQ), 'Q');
+            var qText = T2dispText('q', it.id, 'Q = ' + T2fmtQ(Math.abs(it._solvedQ)), 'Q');
             if (qText) {
                 ctx2.fillStyle = '#ffd166'; ctx2.textAlign = 'center';
                 var qFont = qIsSymbol ? 20 : 11;
@@ -6161,6 +6176,30 @@ function T2drawCapacitor(it, midX, midY, angle) {
     ctx2.lineWidth = 3;
     ctx2.beginPath(); ctx2.moveTo(-plateGap / 2, -18); ctx2.lineTo(-plateGap / 2, 18); ctx2.stroke();
     ctx2.beginPath(); ctx2.moveTo(plateGap / 2, -18); ctx2.lineTo(plateGap / 2, 18); ctx2.stroke();
+
+    // Plate polarity markers: one + on the higher-potential plate, one - on the
+    // lower, matching Tab 1's colours (+ red, - blue). Drawn in the rotated frame
+    // so they orient correctly on diagonal capacitors (e.g. bridge networks).
+    // Shown ONLY when the toggle is on AND the capacitor carries a charge that
+    // rounds to a non-zero magnitude on its Q label (|Q| >= 0.005 uC) - an
+    // uncharged capacitor has no + or - plate, so no marks. Endpoint-1's plate is
+    // on the -plateGap/2 side, endpoint-2's on the +plateGap/2 side; the sign of
+    // _solvedV (= V at endpoint1 - V at endpoint2) picks which is positive.
+    if (T2DISP.polarity && it._solvedQ != null && !isNaN(it._solvedQ) &&
+        Math.abs(it._solvedQ) >= 5e-9 && it._solvedV != null && !isNaN(it._solvedV)) {
+        var e1Positive = (it._solvedV >= 0);   // endpoint-1 plate at higher potential?
+        var posX = e1Positive ? (-plateGap / 2 - 12) : (plateGap / 2 + 12);
+        var negX = e1Positive ? (plateGap / 2 + 12) : (-plateGap / 2 - 12);
+        // Placed near the top of the plates (plates span y = -18..18 in this rotated
+        // frame); the connecting wires run through the middle (y = 0), so centring
+        // the signs there hid them. -12 sits them by the plate tops, clear of wires.
+        var signY = -12;
+        ctx2.font = 'bold 17px Arial';
+        ctx2.textAlign = 'center';
+        ctx2.textBaseline = 'middle';
+        ctx2.fillStyle = '#ff6b6b'; ctx2.fillText('+', posX, signY);
+        ctx2.fillStyle = '#5dade2'; ctx2.fillText('\u2212', negX, signY);
+    }
     ctx2.restore();
     if (it.type === 'varCapacitor') T2drawWiperArrow(it, midX, midY, angle);
 }
@@ -6920,6 +6959,58 @@ function T2preset5() {
 /* Load a preset: replace the circuit with an exact copy of the given item array,
    preserving all geometry and label positions. Charge starts from each
    capacitor's stored/initial charge as given; then the network settles. */
+function T2preset6() {
+    // Capacitor Wheatstone bridge. Two arms from the + rail to each midpoint, two
+    // arms from the midpoints to the - rail, and a bridge capacitor (id 22) linking
+    // the midpoints. With the arm ratios unbalanced (200 uF vs 100 uF), the two
+    // midpoints settle to different potentials, so the bridge capacitor carries the
+    // imbalance charge - the capacitor analogue of an unbalanced Wheatstone bridge.
+    // Probe the two midpoints to see the potential difference across the bridge cap.
+    T2loadPreset([
+        { "id": 1, "type": "cell", "x1": 60, "y1": 420, "x2": 60, "y2": 160,
+          "value": 6, "unit": "V", "color": "#2ecc71", "isOn": true,
+          "labelOffsetX": -28, "labelOffsetY": -20,
+          "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34,
+          "cqLabelOffX": 56, "cqLabelOffY": -148,
+          "initialQ": 0, "storedQ": 0 },
+        { "id": 18, "type": "switch", "x1": 60, "y1": 160, "x2": 380, "y2": 160,
+          "value": 0, "unit": "", "color": "#9b59b6", "isOn": false,
+          "labelOffsetX": 0, "labelOffsetY": 26,
+          "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34,
+          "initialQ": 0, "storedQ": 0 },
+        { "id": 20, "type": "wire", "x1": 380, "y1": 420, "x2": 60, "y2": 420,
+          "value": 0, "unit": "", "color": "#5a7fb0", "isOn": true,
+          "labelOffsetX": 0, "labelOffsetY": 26,
+          "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34,
+          "initialQ": 0, "storedQ": 0 },
+        { "id": 6, "type": "capacitor", "x1": 220, "y1": 280, "x2": 380, "y2": 160,
+          "value": 200, "unit": "\u00B5F", "color": "#4fc3f7", "isOn": true,
+          "labelOffsetX": 0, "labelOffsetY": 26,
+          "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34,
+          "initialQ": 0, "storedQ": 0 },
+        { "id": 13, "type": "capacitor", "x1": 380, "y1": 160, "x2": 520, "y2": 280,
+          "value": 100, "unit": "\u00B5F", "color": "#4fc3f7", "isOn": true,
+          "labelOffsetX": 0, "labelOffsetY": 26,
+          "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34,
+          "initialQ": 0, "storedQ": 0 },
+        { "id": 22, "type": "capacitor", "x1": 220, "y1": 280, "x2": 520, "y2": 280,
+          "value": 100, "unit": "\u00B5F", "color": "#4fc3f7", "isOn": true,
+          "labelOffsetX": 0, "labelOffsetY": 26,
+          "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34,
+          "initialQ": 0, "storedQ": 0 },
+        { "id": 23, "type": "capacitor", "x1": 520, "y1": 280, "x2": 380, "y2": 420,
+          "value": 100, "unit": "\u00B5F", "color": "#4fc3f7", "isOn": true,
+          "labelOffsetX": 0, "labelOffsetY": 26,
+          "cLabelOffX": -2, "cLabelOffY": 36, "qLabelOffX": 0, "qLabelOffY": -34,
+          "initialQ": 0, "storedQ": 0 },
+        { "id": 24, "type": "capacitor", "x1": 380, "y1": 420, "x2": 220, "y2": 280,
+          "value": 100, "unit": "\u00B5F", "color": "#4fc3f7", "isOn": true,
+          "labelOffsetX": 0, "labelOffsetY": 26,
+          "cLabelOffX": 0, "cLabelOffY": 37, "qLabelOffX": 0, "qLabelOffY": -34,
+          "initialQ": 0, "storedQ": 0 }
+    ]);
+}
+
 function T2loadPreset(items) {
     T2.items = [];
     var maxId = 0;
