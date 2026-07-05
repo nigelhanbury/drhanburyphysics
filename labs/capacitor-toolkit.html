@@ -1184,6 +1184,7 @@ canvas#canvas2 {
             <button class="graphs-type-btn"        id="graphTypeBtn_i"  onclick="setGraphType('i')">Current vs time</button>
             <button class="graphs-type-btn"        id="graphTypeBtn_e"  onclick="setGraphType('e')">Energy vs time</button>
             <button class="graphs-type-btn"        id="graphTypeBtn_qv" onclick="setGraphType('qv')">Charge vs voltage</button>
+            <button class="graphs-type-btn"        id="graphTypeBtn_ln" onclick="setGraphType('ln')">ln plot &amp; time constant</button>
         </div>
         <button class="graphs-close" onclick="closeGraphsModal()" title="Close">&#10005;</button>
     </div>
@@ -2748,6 +2749,26 @@ function stepPhysics(dt) {
     const R = Reff();
     const tau = R * T1.C;
     if (tau <= 0) return;
+    // Once settled, the run is frozen at the settle boundary: do not advance t or
+    // q any further. Without this the live loop keeps stepping past SETTLE_TAUS*tau
+    // toward q = 0, so the live end and the scrubber's far-right position (which
+    // maps to exactly SETTLE_TAUS*tau) would show DIFFERENT charges for the same
+    // reported time. Freezing here makes them coincide exactly.
+    if (T1.settled) return;
+
+    const tEnd = SETTLE_TAUS * tau;
+    // If this step would cross the settle boundary, land exactly on it and use the
+    // analytic charge at tEnd (identical to qAtTime(tEnd) used by the scrubber), so
+    // the two paths agree to the last digit.
+    if (T1.t + dt >= tEnd) {
+        T1.t = tEnd;
+        T1.q = qAtTime(tEnd);
+        T1.settled = true;
+        showScrubber(true);
+        refreshSliderLock();   // run finished: parameters editable again
+        return;
+    }
+
     if (T1.mode === 'charge') {
         const Q0 = T1.C * T1.V;
         T1.q = Q0 + (T1.q - Q0) * Math.exp(-dt / tau);
@@ -2755,17 +2776,6 @@ function stepPhysics(dt) {
         T1.q = T1.q * Math.exp(-dt / tau);
     }
     T1.t += dt;
-
-    // Mark the run as settled once it reaches the settle span (SETTLE_TAUS * tau),
-    // which is also the scrubber window, so the live end state and the scrubber's
-    // far-right position coincide exactly.
-    if (T1.mode === 'charge' || T1.mode === 'discharge') {
-        if (!T1.settled && T1.t >= SETTLE_TAUS * tau) {
-            T1.settled = true;
-            showScrubber(true);
-            refreshSliderLock();   // run finished: parameters editable again
-        }
-    }
 }
 
 function presentValues() {
@@ -3700,7 +3710,8 @@ const GRAPH_META = {
     v: { label: 'Capacitor voltage', symbol: 'V_C', units: 'V', color: '#2ecc71' },
     i: { label: 'Current', symbol: 'I', units: 'mA', color: '#e74c3c' },
     e: { label: 'Energy stored', symbol: 'E', units: 'mJ', color: '#f1c40f' },
-    qv: { label: 'Charge', symbol: 'Q', units: '\u00B5C', color: '#9b59b6' }
+    qv: { label: 'Charge', symbol: 'Q', units: '\u00B5C', color: '#9b59b6' },
+    ln: { label: 'ln plot', symbol: 'ln', units: '', color: '#1abc9c' }
 };
 
 function openGraphsModal() {
@@ -3736,7 +3747,7 @@ function closeGraphsModal() {
 
 function setGraphType(type) {
     graphsState.type = type;
-    const types = ['q', 'v', 'i', 'e', 'qv'];
+    const types = ['q', 'v', 'i', 'e', 'qv', 'ln'];
     for (let i = 0; i < types.length; i++) {
         const b = document.getElementById('graphTypeBtn_' + types[i]);
         if (b) b.classList.toggle('active', types[i] === type);
@@ -3831,6 +3842,78 @@ function buildGraphDataset() {
             yLabel: meta.label, yUnits: u.units,
             tau: Infinity, ceiling: null, ceilingLabel: null,
             isQV: true, qScale: u.scale
+        };
+    }
+
+    // ln plot: linearise the exponential to a straight line whose gradient gives
+    // the time constant. DISCHARGE V = V0 e^(-t/RC) so ln V = ln V0 - t/RC, a
+    // straight line of gradient -1/RC. CHARGE V = V0(1 - e^(-t/RC)) is NOT linear
+    // under ln V (V rises, it does not decay); the quantity that decays is the
+    // gap to the final value, (V0 - V) = V0 e^(-t/RC), so we plot ln(V0 - V),
+    // again a straight line of gradient -1/RC. The tool picks the right quantity
+    // from the mode. The line is exact (analytic, noise-free), so reading two
+    // points off it recovers RC exactly - it demonstrates the method rather than
+    // fitting scattered data.
+    if (kind === 'ln') {
+        const tauLn = Reff() * T1.C;
+        const tWinLn = T1.histWindow;
+        if (tauLn <= 0 || tWinLn <= 0) return null;
+        const mode = T1.mode;
+        if (mode !== 'charge' && mode !== 'discharge') {
+            // Isolated: no exponential in progress, nothing to linearise.
+            return {
+                kind, color: meta.color, points: [],
+                xMin: 0, xMax: tWinLn, yMin: 0, yMax: 1,
+                xLabel: 'Time', xUnits: 's',
+                yLabel: 'ln(V)', yUnits: '',
+                tau: Infinity, ceiling: null, ceilingLabel: null,
+                isLn: true, lnMode: 'isolate'
+            };
+        }
+        const V0 = T1.V;
+        // y(t): discharge -> ln(Vc); charge -> ln(V0 - Vc). Guard the log domain.
+        const yOf = function (tt) {
+            const vc = curveValueRC('v', tt, tauLn);
+            const arg = (mode === 'discharge') ? vc : (V0 - vc);
+            if (arg <= 1e-12) return null;   // log undefined / off-scale
+            return Math.log(arg);
+        };
+        const N = 160;
+        const points = [];
+        for (let n = 0; n <= N; n++) {
+            const tt = (n / N) * tWinLn;
+            const yy = yOf(tt);
+            if (yy !== null) points.push({ x: tt, y: yy });
+        }
+        if (points.length < 2) return null;
+        // y-range from the data, with a little headroom top and bottom.
+        let yLo = points[0].y, yHi = points[0].y;
+        for (let n = 0; n < points.length; n++) {
+            if (points[n].y > yHi) yHi = points[n].y;
+            if (points[n].y < yLo) yLo = points[n].y;
+        }
+        const padLn = (yHi - yLo) * 0.08 || 1;
+        const yMinLn = yLo - padLn, yMaxLn = yHi + padLn;
+        // Two endpoints for the gradient working: the extreme ends of the plotted
+        // line - the first and last points actually drawn. This is the honest
+        // "read the two ends off the graph" method and gives the widest, clearest
+        // rise and run.
+        const first = points[0], last = points[points.length - 1];
+        const xA = first.x, xB = last.x;
+        const yA = first.y, yB = last.y;
+        // gradient = -1/RC ; RC = -1/gradient
+        const grad = (yA !== null && yB !== null && xB !== xA) ? (yB - yA) / (xB - xA) : null;
+        const rcFromGrad = (grad !== null && grad !== 0) ? (-1 / grad) : null;
+        const yLabelLn = (mode === 'discharge') ? 'ln(V)' : 'ln(V\u2080 \u2212 V)';
+        return {
+            kind, color: meta.color,
+            points, xMin: 0, xMax: tWinLn, yMin: yMinLn, yMax: yMaxLn,
+            xLabel: 'Time', xUnits: 's',
+            yLabel: yLabelLn, yUnits: '',
+            tau: tauLn, ceiling: null, ceilingLabel: null,
+            isLn: true, lnMode: mode,
+            fitA: { x: xA, y: yA }, fitB: { x: xB, y: yB },
+            grad, rcFromGrad, tauTrue: tauLn
         };
     }
 
@@ -4073,10 +4156,10 @@ function drawPanel(ctx, dataset, geom, opts) {
     ctx.font = 'bold 13px sans-serif';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'top';
-    ctx.fillText(dataset.xLabel + ' / ' + dataset.xUnits, plotXR - 6, xAxisPx.y + 20);
+    ctx.fillText(dataset.xUnits ? (dataset.xLabel + ' / ' + dataset.xUnits) : dataset.xLabel, plotXR - 6, xAxisPx.y + 20);
     ctx.textAlign = 'left';
     ctx.textBaseline = 'bottom';
-    ctx.fillText(dataset.yLabel + ' / ' + dataset.yUnits, plotXL + 6, plotYT - 4);
+    ctx.fillText(dataset.yUnits ? (dataset.yLabel + ' / ' + dataset.yUnits) : dataset.yLabel, plotXL + 6, plotYT - 4);
 
     if (dataset.ceiling !== null && dataset.ceiling !== undefined && dataset.ceiling <= yMax) {
         const cp = toPx(xMin, dataset.ceiling);
@@ -4093,7 +4176,7 @@ function drawPanel(ctx, dataset, geom, opts) {
         ctx.fillText(dataset.ceilingLabel, plotXR - 2, cp.y - 2);
     }
 
-    if (dataset.tau <= xMax && dataset.tau !== Infinity && T1.mode !== 'isolate') {
+    if (dataset.tau <= xMax && dataset.tau !== Infinity && T1.mode !== 'isolate' && !dataset.isLn) {
         const tp = toPx(dataset.tau, yMin);
         ctx.strokeStyle = 'rgba(255,170,68,0.6)';
         ctx.setLineDash([4, 4]);
@@ -4106,6 +4189,88 @@ function drawPanel(ctx, dataset, geom, opts) {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
         ctx.fillText('\u03C4', tp.x, plotYT - 2);
+    }
+
+    if (dataset.isLn) {
+        // Isolated: no exponential to linearise.
+        if (dataset.lnMode === 'isolate') {
+            ctx.fillStyle = '#889';
+            ctx.font = '13px sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('Throw the switch to Charge or Discharge to see the ln plot.',
+                (plotXL + plotXR) / 2, (plotYT + plotYB) / 2);
+            return;
+        }
+        // The linearised data as a straight line (teal, matching the curve colour).
+        ctx.strokeStyle = dataset.color;
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        for (let i = 0; i < dataset.points.length; i++) {
+            const p = toPx(dataset.points[i].x, dataset.points[i].y);
+            if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+        }
+        ctx.stroke();
+
+        // White marker at the present time, following the scrubber - same as the
+        // other graphs (min(T1.t, xMax), y interpolated from the plotted points).
+        const tmLn = Math.min(T1.t, xMax);
+        const vmLn = dataset.points.length ? interpY(dataset.points, tmLn) : 0;
+        const mpLn = toPx(tmLn, vmLn);
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(mpLn.x, mpLn.y, 4, 0, Math.PI * 2); ctx.fill();
+
+        // Two endpoints read off the line for the gradient working.
+        const A = dataset.fitA, B = dataset.fitB;
+        if (A && B && A.y !== null && B.y !== null && dataset.grad !== null) {
+            const pA = toPx(A.x, A.y), pB = toPx(B.x, B.y);
+            // glowing endpoint markers (dice style)
+            const ends = [pA, pB];
+            for (let e = 0; e < 2; e++) {
+                ctx.beginPath();
+                ctx.arc(ends[e].x, ends[e].y, 6, 0, Math.PI * 2);
+                ctx.fillStyle = '#fb923c';
+                ctx.shadowColor = '#fb923c'; ctx.shadowBlur = 9; ctx.fill(); ctx.shadowBlur = 0;
+                ctx.lineWidth = 1.8; ctx.strokeStyle = '#fff'; ctx.stroke();
+            }
+            // coordinate labels beside each marker
+            ctx.font = 'bold 12px sans-serif';
+            ctx.fillStyle = '#fdba74';
+            ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+            const cA = '(' + A.x.toFixed(3) + ', ' + A.y.toFixed(2) + ')';
+            ctx.fillText(cA, pA.x + 10, pA.y - 6);
+            const cB = '(' + B.x.toFixed(3) + ', ' + B.y.toFixed(2) + ')';
+            let cBx = pB.x + 10;
+            const cBw = ctx.measureText(cB).width;
+            if (cBx + cBw > plotXR) cBx = plotXR - cBw;
+            ctx.fillText(cB, cBx, pB.y + 20);
+
+            // Gradient working box (dice gwDrawLn style): identity, substitution,
+            // value, then RC = -1/gradient with substitution and result. Anchored
+            // at the bottom-left, just to the right of the vertical axis.
+            const grad = dataset.grad;
+            const rc = dataset.rcFromGrad;
+            const dy = 22;
+            const nLines = 6;                 // total text rows below (incl the 0.3 gap)
+            const blockH = (nLines + 0.3) * dy;
+            const bx = plotXL + 10;
+            const by = plotYB - blockH - 6;   // sit just above the x-axis
+            let ln = 0;
+            ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+            ctx.font = 'bold 15px sans-serif'; ctx.fillStyle = '#e5e7eb';
+            ctx.fillText('gradient = \u22121/RC = (y\u2082 \u2212 y\u2081)/(x\u2082 \u2212 x\u2081)', bx, by + dy * (ln++));
+            ctx.font = '13px sans-serif'; ctx.fillStyle = '#cbd5e1';
+            ctx.fillText('= (' + B.y.toFixed(2) + ' \u2212 ' + A.y.toFixed(2) + ') / ('
+                + B.x.toFixed(3) + ' \u2212 ' + A.x.toFixed(3) + ')', bx, by + dy * (ln++));
+            ctx.fillText('= ' + grad.toFixed(3) + ' s\u207B\u00B9', bx, by + dy * (ln++));
+            ln += 0.3;
+            ctx.font = 'bold 15px sans-serif'; ctx.fillStyle = '#e5e7eb';
+            ctx.fillText('time constant  RC = \u22121 / gradient', bx, by + dy * (ln++));
+            ctx.font = '13px sans-serif'; ctx.fillStyle = '#cbd5e1';
+            ctx.fillText('= \u22121 / (' + grad.toFixed(3) + ')', bx, by + dy * (ln++));
+            ctx.font = 'bold 16px sans-serif'; ctx.fillStyle = dataset.color;
+            ctx.fillText('RC = ' + rc.toFixed(4) + ' s', bx, by + dy * (ln++));
+        }
+        return;
     }
 
     if (dataset.isQV) {
