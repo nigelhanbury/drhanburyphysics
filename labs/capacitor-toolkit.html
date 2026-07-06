@@ -1179,7 +1179,7 @@ canvas#canvas2 {
                             <span class="component-label">Potential</span>
                         </div>
                     </div>
-                    <p class="palette-note">Drag a tile onto the canvas, or on a touch screen tap the tile then tap the canvas to place it. Drag endpoints to rotate, resize or wire. Drag a label to move it. To delete a component, long-press it on a touch screen or right-click it on a computer &mdash; deleting resets the circuit&rsquo;s charge and delivered energy, since you&rsquo;re reconfiguring.</p>
+                    <p class="palette-note">Drag a tile onto the canvas, or on a touch screen tap the tile then tap the canvas to place it. Drag endpoints to rotate, resize or wire. Drag a label to move it. To delete a component, long-press it on a touch screen or right-click it on a computer &mdash; deleting a circuit component resets the circuit&rsquo;s charge and delivered energy, since you&rsquo;re reconfiguring (deleting a meter or probe doesn&rsquo;t).</p>
                     <button class="build-action" id="buildReset" onclick="T2resetCharge()" title="Clear all charge and energy" style="margin-top:10px;">&#8635; Reset charge &amp; energy</button>
                 </div>
                 <div class="panel" id="buildInspectorPanel" style="margin-top:12px;">
@@ -5371,18 +5371,28 @@ function T2distToSeg(px, py, x1, y1, x2, y2) {
 
 /* ---- Delete (long-press / right-click, DC kit onRightClick) ---- */
 function T2deleteItem(id) {
-    // Deleting a component means the circuit is being reconfigured, so we clear
-    // all stored charge and the delivered-energy total to avoid confusion (a
-    // stale delivered value that references charge no longer present). This is
-    // documented in the help. Charge starts fresh from the new configuration.
+    // Find what is being deleted BEFORE removing it. Instruments (voltmeter,
+    // energy meter, potential probe) are sensors: they form no nodes and hold no
+    // charge, so deleting one does NOT reconfigure the circuit and must not
+    // reset it. Deleting a real component (cell, capacitor, wire, switch) means
+    // the circuit is being reconfigured, so we clear all stored charge and the
+    // delivered-energy total to avoid confusion (a stale delivered value that
+    // references charge no longer present). This is documented in the help.
+    var deleted = null;
+    for (var d = 0; d < T2.items.length; d++) if (T2.items[d].id === id) { deleted = T2.items[d]; break; }
+    var isInstrument = deleted && T2isInstrument(deleted.type);
+
     T2.items = T2.items.filter(function (i) { return i.id !== id; });
     if (T2.selectedId === id) T2.selectedId = null;
-    for (var i = 0; i < T2.items.length; i++) {
-        var it = T2.items[i];
-        if (it.type === 'capacitor' || it.type === 'varCapacitor') it.storedQ = it.initialQ || 0;
+
+    if (!isInstrument) {
+        for (var i = 0; i < T2.items.length; i++) {
+            var it = T2.items[i];
+            if (it.type === 'capacitor' || it.type === 'varCapacitor') it.storedQ = it.initialQ || 0;
+        }
+        T2._netEmitted = 0;
+        T2._netDelivered = 0;
     }
-    T2._netEmitted = 0;
-    T2._netDelivered = 0;
     T2computeNodes(); T2settle(); T2refreshPalette(); T2draw();
 }
 /* Reverse a cell's polarity by swapping its endpoints (DC kit 'r' key). */
