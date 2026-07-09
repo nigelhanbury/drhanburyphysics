@@ -774,6 +774,12 @@ input[type="range"]:disabled { cursor: not-allowed; }
     box-shadow: 0 4px 20px rgba(155,89,182,0.3);
 }
 .drag-component.switch:hover { box-shadow: 0 6px 30px rgba(155,89,182,0.5); }
+.drag-component.spdt {
+    background: linear-gradient(135deg, rgba(230,126,34,0.3), rgba(211,84,0,0.2));
+    border: 2px solid rgba(230,126,34,0.5);
+    box-shadow: 0 4px 20px rgba(230,126,34,0.3);
+}
+.drag-component.spdt:hover { box-shadow: 0 6px 30px rgba(230,126,34,0.5); }
 .drag-component.wire {
     background: linear-gradient(135deg, rgba(52,152,219,0.3), rgba(41,128,185,0.2));
     border: 2px solid rgba(52,152,219,0.5);
@@ -1154,6 +1160,18 @@ canvas#canvas2 {
                             </svg>
                             <span class="component-label">Switch</span>
                         </div>
+                        <div class="drag-component spdt" data-btype="spdt">
+                            <svg class="component-icon" viewBox="0 0 50 30">
+                                <line x1="4" y1="15" x2="14" y2="15" stroke="#e67e22" stroke-width="3"/>
+                                <circle cx="14" cy="15" r="2.5" fill="#e67e22"/>
+                                <line x1="14" y1="15" x2="33" y2="7" stroke="#e67e22" stroke-width="3"/>
+                                <circle cx="35" cy="7" r="2.5" fill="#e67e22"/>
+                                <line x1="35" y1="7" x2="46" y2="7" stroke="#e67e22" stroke-width="3"/>
+                                <circle cx="35" cy="23" r="2.5" fill="#e67e22"/>
+                                <line x1="35" y1="23" x2="46" y2="23" stroke="#e67e22" stroke-width="3"/>
+                            </svg>
+                            <span class="component-label">SPDT Switch</span>
+                        </div>
                         <div class="drag-component wire" data-btype="wire">
                             <svg class="component-icon" viewBox="0 0 50 30">
                                 <line x1="5" y1="15" x2="45" y2="15" stroke="#3498db" stroke-width="3"/>
@@ -1275,9 +1293,10 @@ canvas#canvas2 {
         <p>To add a component, drag its tile from the palette onto the canvas, or on a touch screen tap the tile to highlight it and then tap the canvas to place it. Drag an <span class="key">endpoint</span> to rotate or resize a component, or onto another endpoint to wire the two together &mdash; a blue dot marks where three or more ends join. Only one cell is allowed; the cell tile greys out once one is placed.</p>
         <p><span class="key">Long-press</span> a component (or right-click on a computer) to delete it. Deleting resets the circuit&rsquo;s charge and delivered energy, since removing a part means you are reconfiguring.</p>
         <h3>Components</h3>
-        <p><span class="key">Cell</span> &mdash; the supply; set its EMF in the inspector, and press <span class="key">r</span> to reverse its polarity. <span class="key">Capacitor</span> &mdash; set its capacitance and, for a source-free circuit, an initial charge. <span class="key">Variable capacitor</span> &mdash; drag the arrow on its body to change the capacitance live. <span class="key">Switch</span> &mdash; tap its body to open or close it. <span class="key">Wire</span> &mdash; a zero-resistance link.</p>
-        <h3>The switch and trapped charge</h3>
-        <p>Closing a switch completes a path so charge can flow; opening it strands whatever charge is already on an isolated capacitor, which then holds that charge. Connect a charged capacitor to an empty one and the charge shares between them, settling at a common voltage &mdash; the total stored energy falls, as it does in a real circuit.</p>
+        <p><span class="key">Cell</span> &mdash; the supply; set its EMF in the inspector, and press <span class="key">r</span> to reverse its polarity. <span class="key">Capacitor</span> &mdash; set its capacitance and, for a source-free circuit, an initial charge. <span class="key">Variable capacitor</span> &mdash; drag the arrow on its body to change the capacitance live. <span class="key">Switch</span> &mdash; tap its body to open or close it. <span class="key">SPDT switch</span> &mdash; a changeover switch with three terminals; tap an arm to route the common to it (see below). <span class="key">Wire</span> &mdash; a zero-resistance link.</p>
+        <h3>The SPDT (changeover) switch</h3>
+        <p>The SPDT switch has three terminals: a common (<span class="key">C</span>) and two throws, <span class="key">A</span> and <span class="key">B</span>. Tap arm A to switch to A, tap arm B to switch to B, tap arm C to disconnect.</p>
+        <p>Wire the common to a capacitor, throw A to the cell and throw B to a second capacitor, and you have charge, isolate and share in one component: tap A to charge, tap C to isolate, tap B to share.</p>
         <h3>The inspector</h3>
         <p>Tap a component to select it; its editable properties appear in the <span class="key">Inspector</span> panel, along with the settled voltage and charge for a capacitor. Changes take effect at once.</p>
         <h3>Meters</h3>
@@ -1290,7 +1309,7 @@ canvas#canvas2 {
         <p><span class="key">Reset charge &amp; energy</span> &mdash; empties every capacitor and clears the delivered-energy total, without changing the circuit you have built.</p>
         <h3>Touch devices (iPad and Apple Pencil)</h3>
         <p>Everything works with a finger or an Apple Pencil. To add a component, <span class="key">tap</span> its tile in the palette so it highlights, then <span class="key">tap the canvas</span> where you want it &mdash; tap the highlighted tile again to cancel. On a computer you can instead drag a tile straight onto the canvas.</p>
-        <p>Tap a component to select it or, for a switch, to open and close it; a small movement is ignored so a tap does not nudge anything. Drag endpoints, probes, meters, wiper arrows and labels just as with a mouse. <span class="key">Long-press</span> a component to delete it.</p>
+        <p>Tap a component to select it or, for a switch, to open and close it; for an SPDT switch, tap the A, B or common arm to route the common to that terminal. A small movement is ignored so a tap does not nudge anything. Drag endpoints, probes, meters, wiper arrows and labels just as with a mouse. <span class="key">Long-press</span> a component to delete it.</p>
         <p>Use <span class="key">Annotate</span> to draw over the circuit and <span class="key">Scribble</span> for a free notepad; rest your palm on the screen while writing with the Pencil, as touches from your hand are ignored while a pen stroke is in progress.</p>
     </div>
 </div>
@@ -5010,6 +5029,7 @@ var T2_DEFS = {
     capacitor:    { len: 80, color: '#4fc3f7', value: 100,  unit: '\u00B5F' },
     varCapacitor: { len: 80, color: '#4fc3f7', value: 100,  unit: '\u00B5F' },
     switch:       { len: 80, color: '#9b59b6', value: 0,    unit: ''   },
+    spdt:         { len: 80, color: '#e67e22', value: 0,    unit: ''   },
     wire:         { len: 90, color: '#5a7fb0', value: 0,    unit: ''   },
     voltmeter:    { len: 70, color: '#ff6b9d', value: 0,    unit: 'V'  },
     energy:       { len: 70, color: '#2ecc71', value: 0,    unit: 'J'  },
@@ -5184,6 +5204,24 @@ function T2addItem(type, x, y) {
             angle1: 0,
             node: null, potential: NaN
         };
+    } else if (type === 'spdt') {
+        // First three-terminal component. Common (pivot) at {x1,y1} on the left;
+        // throw A at {x2,y2} upper-right; throw B at {x3,y3} lower-right. The
+        // pivot sits at the body centre (bodyX,bodyY). 'throw' routes the common
+        // to A, to B, or to neither (centre-off) - starts 'off' so a class can
+        // predict then reveal. Duplicated into its own shape so the working
+        // two-terminal switch and its {x1,y1,x2,y2}-only handlers are untouched.
+        var sbx = cx, sby = cy;                 // body/pivot centre
+        item = {
+            id: T2._seq++, type: 'spdt',
+            bodyX: sbx, bodyY: sby,
+            x1: sbx - 40, y1: sby,              // common (left lead end)
+            x2: sbx + 40, y2: sby - 24,         // throw A (upper-right)
+            x3: sbx + 40, y3: sby + 24,         // throw B (lower-right)
+            throw: 'off',                       // 'A' | 'off' | 'B'
+            value: def.value, unit: def.unit, color: def.color,
+            labelOffsetX: 0, labelOffsetY: 40   // 'SPDT' label below body, draggable
+        };
     } else {
         item = {
             id: T2._seq++,
@@ -5221,6 +5259,14 @@ function T2endpoints() {
     for (var i = 0; i < T2.items.length; i++) {
         var it = T2.items[i];
         if (T2isInstrument(it.type)) continue; // instruments are sensors
+        if (it.type === 'spdt') {
+            // Three terminals: common (1), throw A (2), throw B (3). The routing
+            // between them (which pair is tied) is applied in T2computeNodes.
+            eps.push({ x: it.x1, y: it.y1, item: it, endNum: 1 });
+            eps.push({ x: it.x2, y: it.y2, item: it, endNum: 2 });
+            eps.push({ x: it.x3, y: it.y3, item: it, endNum: 3 });
+            continue;
+        }
         eps.push({ x: it.x1, y: it.y1, item: it, endNum: 1 });
         eps.push({ x: it.x2, y: it.y2, item: it, endNum: 2 });
     }
@@ -5247,6 +5293,19 @@ function T2computeNodes() {
             for (var m = 0; m < eps.length; m++) {
                 if (eps[m].item === itk && m !== k) union(k, m);
             }
+        }
+    }
+    // An SPDT ties its common (endNum 1) to the live throw: endNum 2 when thrown
+    // to A, endNum 3 when thrown to B, and to neither when centre-off (both
+    // throws float, so charge on an isolated island is stranded and holds).
+    for (var s = 0; s < eps.length; s++) {
+        var its = eps[s].item;
+        if (its.type !== 'spdt') continue;
+        if (eps[s].endNum !== 1) continue;                 // act once, from the common
+        var liveEnd = (its.throw === 'A') ? 2 : (its.throw === 'B') ? 3 : 0;
+        if (!liveEnd) continue;                            // off: no tie
+        for (var mm = 0; mm < eps.length; mm++) {
+            if (eps[mm].item === its && eps[mm].endNum === liveEnd) union(s, mm);
         }
     }
     // Compress roots to node ids and record a representative position.
@@ -5351,6 +5410,23 @@ function T2hit(x, y) {
                     return { item: it, part: 'clabel' };
             }
         }
+        // SPDT: three terminals plus body plus its draggable label. Tested as its
+        // own shape so the generic two-terminal endpoint/body tests below never
+        // apply to it. Endpoints first (15px, DC kit), then the label, then the
+        // body region (near the pivot or along any of the three leads).
+        if (it.type === 'spdt') {
+            var slab = it._spdtLabel;
+            if (slab && T2inLabel(x, y, slab)) return { item: it, part: 'spdtlabel' };
+            if (Math.hypot(x - it.x1, y - it.y1) < 15) return { item: it, part: 'e1' };
+            if (Math.hypot(x - it.x2, y - it.y2) < 15) return { item: it, part: 'e2' };
+            if (Math.hypot(x - it.x3, y - it.y3) < 15) return { item: it, part: 'e3' };
+            var pxs = it.bodyX, pys = it.bodyY;
+            if (Math.hypot(x - pxs, y - pys) < 22) return { item: it, part: 'body' };
+            if (T2distToSeg(x, y, it.x1, it.y1, pxs, pys) < 12) return { item: it, part: 'body' };
+            if (T2distToSeg(x, y, pxs, pys, it.x2, it.y2) < 12) return { item: it, part: 'body' };
+            if (T2distToSeg(x, y, pxs, pys, it.x3, it.y3) < 12) return { item: it, part: 'body' };
+            continue;
+        }
         // Variable capacitor wiper handle (AC kit: within 18px of _wiperX/_wiperY).
         if (it.type === 'varCapacitor' && it._wiperX !== undefined &&
             Math.hypot(x - it._wiperX, y - it._wiperY) < 18) return { item: it, part: 'wiper' };
@@ -5438,12 +5514,22 @@ function T2down(x, y) {
             anchorX = cmx2 + ((hit.item.cqLabelOffX != null) ? hit.item.cqLabelOffX : 0);
             anchorY = cmy2 + ((hit.item.cqLabelOffY != null) ? hit.item.cqLabelOffY : 44);
             haveLab = true;
+        } else if (hit.part === 'spdtlabel') {
+            anchorX = hit.item.bodyX + ((hit.item.labelOffsetX != null) ? hit.item.labelOffsetX : 0);
+            anchorY = hit.item.bodyY + ((hit.item.labelOffsetY != null) ? hit.item.labelOffsetY : 40);
+            haveLab = true;
         }
         T2._drag = { id: hit.item.id, part: hit.part, ox: x, oy: y, sx: x, sy: y,
                      ldx: haveLab ? (x - anchorX) : 0, ldy: haveLab ? (y - anchorY) : 0 };
         // A tap on a switch body toggles it (DC kit). We defer the toggle to
         // pointer-up so a body drag still moves the switch.
         T2._switchTapId = (hit.item.type === 'switch' && hit.part === 'body') ? hit.item.id : null;
+        // SPDT: a body-region tap (not a drag) changes the throw. Defer to
+        // pointer-up so a body drag still moves the whole component. Record the
+        // down-point so up can tell WHICH region was tapped (A dot / B dot /
+        // pivot dot / elsewhere) and route accordingly.
+        T2._spdtTapId = (hit.item.type === 'spdt' && hit.part === 'body') ? hit.item.id : null;
+        T2._spdtTapX = x; T2._spdtTapY = y;
         T2draw();
         return true;
     }
@@ -5473,6 +5559,13 @@ function T2move(x, y) {
         var mxCq = (it.x1 + it.x2) / 2, myCq = (it.y1 + it.y2) / 2;
         it.cqLabelOffX = x - T2._drag.ldx - mxCq;
         it.cqLabelOffY = y - T2._drag.ldy - myCq;
+        T2._drag.ox = x; T2._drag.oy = y;
+        T2draw();
+        return;
+    }
+    if (T2._drag.part === 'spdtlabel' && it.type === 'spdt') {
+        it.labelOffsetX = x - T2._drag.ldx - it.bodyX;
+        it.labelOffsetY = y - T2._drag.ldy - it.bodyY;
         T2._drag.ox = x; T2._drag.oy = y;
         T2draw();
         return;
@@ -5526,6 +5619,25 @@ function T2move(x, y) {
         T2._drag.moving = true;
         // Re-anchor so the first applied delta is measured from here (no jump).
         T2._drag.ox = x; T2._drag.oy = y;
+        return;
+    }
+    if (it.type === 'spdt') {
+        // Body drag moves the whole three-terminal component (all terminals and
+        // the pivot) rigidly. An endpoint drag moves just that terminal; the
+        // pivot stays, so the lever and leads re-draw to the new position.
+        if (T2._drag.part === 'body') {
+            it.x1 += dx; it.y1 += dy; it.x2 += dx; it.y2 += dy;
+            it.x3 += dx; it.y3 += dy; it.bodyX += dx; it.bodyY += dy;
+        } else if (T2._drag.part === 'e1') {
+            it.x1 += dx; it.y1 += dy;
+        } else if (T2._drag.part === 'e2') {
+            it.x2 += dx; it.y2 += dy;
+        } else if (T2._drag.part === 'e3') {
+            it.x3 += dx; it.y3 += dy;
+        }
+        T2._drag.ox = x; T2._drag.oy = y;
+        T2computeNodes();
+        T2draw();
         return;
     }
     if (T2isInstrument(it.type)) {
@@ -5583,6 +5695,33 @@ function T2up() {
             }
         }
         T2._switchTapId = null;
+        // SPDT tap (no significant drag) sets the throw by which ARM was tapped:
+        // the A arm selects A, the B arm selects B, and the common (C) arm - the
+        // lead from C to the pivot - selects off. No cycling; the tapped arm is
+        // the destination, so it never depends on the current position. Deferred
+        // here (like the SPST) so a body DRAG still moves the whole component.
+        if (T2._spdtTapId != null && it && it.id === T2._spdtTapId) {
+            var movedS = Math.hypot(T2._drag.ox - T2._drag.sx, T2._drag.oy - T2._drag.sy);
+            if (movedS < 8) {
+                var px = it.bodyX, py = it.bodyY;
+                var tx = T2._spdtTapX, ty = T2._spdtTapY;
+                // Distance from the tap to each of the three arms (pivot-anchored
+                // segments). Nearest arm wins; the C arm maps to off.
+                var dCarm = T2distToSeg(tx, ty, it.x1, it.y1, px, py);
+                var dAarm = T2distToSeg(tx, ty, px, py, it.x2, it.y2);
+                var dBarm = T2distToSeg(tx, ty, px, py, it.x3, it.y3);
+                if (dAarm <= dCarm && dAarm <= dBarm) it.throw = 'A';
+                else if (dBarm <= dCarm && dBarm <= dAarm) it.throw = 'B';
+                else it.throw = 'off';   // common arm (or pivot) -> isolate
+                T2._spdtTapId = null;
+                T2._drag = null;
+                T2computeNodes();
+                T2settle();          // throw change is the key topology event
+                T2draw();
+                return;
+            }
+        }
+        T2._spdtTapId = null;
         // EMF label drag: just repositioned. A tap (barely moved) in symbol mode
         // reveals the value, matching the capacitor and charge labels.
         if (it && T2._drag.part === 'emflabel') {
@@ -5599,6 +5738,10 @@ function T2up() {
             T2draw();
             return;
         }
+        // SPDT label: reposition only (no symbol/reveal mode for the SPDT tag).
+        if (it && T2._drag.part === 'spdtlabel') {
+            T2._drag = null; T2draw(); return;
+        }
         // Label: a tap (barely moved) in symbol mode reveals that item's value
         // (DC kit <5px tap threshold); a real drag has already repositioned it.
         if (it && (T2._drag.part === 'clabel' || T2._drag.part === 'qlabel')) {
@@ -5613,6 +5756,29 @@ function T2up() {
         }
         if (it && T2._drag.part === 'wiper') {
             // wiper drag: nothing to snap
+        } else if (it && it.type === 'spdt') {
+            // Three-terminal snap. An endpoint snaps to a neighbour's endpoint
+            // (so it wires up) or to the grid. A body move snaps the whole
+            // component: snap the pivot to grid and shift every terminal by the
+            // same delta, preserving the three-terminal geometry.
+            if (T2._drag.part === 'e1') {
+                var sp1 = T2findSnap(it.x1, it.y1, it);
+                if (sp1) { it.x1 = sp1.x; it.y1 = sp1.y; }
+                else { it.x1 = T2snap(it.x1); it.y1 = T2snap(it.y1); }
+            } else if (T2._drag.part === 'e2') {
+                var sp2 = T2findSnap(it.x2, it.y2, it);
+                if (sp2) { it.x2 = sp2.x; it.y2 = sp2.y; }
+                else { it.x2 = T2snap(it.x2); it.y2 = T2snap(it.y2); }
+            } else if (T2._drag.part === 'e3') {
+                var sp3 = T2findSnap(it.x3, it.y3, it);
+                if (sp3) { it.x3 = sp3.x; it.y3 = sp3.y; }
+                else { it.x3 = T2snap(it.x3); it.y3 = T2snap(it.y3); }
+            } else if (T2._drag.part === 'body') {
+                var pbx = T2snap(it.bodyX), pby = T2snap(it.bodyY);
+                var sdx = pbx - it.bodyX, sdy = pby - it.bodyY;
+                it.bodyX = pbx; it.bodyY = pby;
+                it.x1 += sdx; it.y1 += sdy; it.x2 += sdx; it.y2 += sdy; it.x3 += sdx; it.y3 += sdy;
+            }
         } else if (it) {
             if (T2isInstrument(it.type)) {
                 // Only a probe drag re-snaps to the circuit; a body move leaves
@@ -5716,6 +5882,24 @@ function T2findNodeAtPoint(px, py) {
     for (var k = 0; k < T2.items.length; k++) {
         var it = T2.items[k];
         if (T2isInstrument(it.type)) continue;
+        if (it.type === 'spdt') {
+            // Probe along the SPDT: common lead and the live throw lead share the
+            // common's node; each throw lead maps to its own terminal node. Check
+            // the three leads (each from the pivot) and return the matching end.
+            var pxs = it.bodyX, pys = it.bodyY;
+            var dC = T2distToSeg(px, py, it.x1, it.y1, pxs, pys);
+            var dAe = T2distToSeg(px, py, pxs, pys, it.x2, it.y2);
+            var dBe = T2distToSeg(px, py, pxs, pys, it.x3, it.y3);
+            var endS = 0;
+            if (dC < PROBE && dC <= dAe && dC <= dBe) endS = 1;
+            else if (dAe < PROBE && dAe <= dBe) endS = 2;
+            else if (dBe < PROBE) endS = 3;
+            if (endS) {
+                for (var iS = 0; iS < eps.length; iS++)
+                    if (eps[iS].item === it && eps[iS].endNum === endS) return e2n[iS];
+            }
+            continue;
+        }
         var d = T2distToSeg(px, py, it.x1, it.y1, it.x2, it.y2);
         if (d < PROBE) {
             if (it.type === 'wire' || (it.type === 'switch' && it.isOn)) {
@@ -5953,6 +6137,8 @@ function T2drawItem(it, selected) {
         T2drawCapacitor(it, midX, midY, angle);
     } else if (it.type === 'switch') {
         T2drawSwitch(it, midX, midY, angle);
+    } else if (it.type === 'spdt') {
+        T2drawSpdt(it);
     } else if (T2isInstrument(it.type)) {
         T2drawInstrument(it);
     }
@@ -5960,7 +6146,8 @@ function T2drawItem(it, selected) {
     ctx2.shadowBlur = 0;
 
     // Endpoints: 6px colour dots, 10px white ring when selected (DC kit style).
-    if (it.type !== 'voltmeter' && it.type !== 'energy') {
+    // SPDT has three terminals and draws its own dots inside T2drawSpdt.
+    if (it.type !== 'voltmeter' && it.type !== 'energy' && it.type !== 'spdt') {
         ctx2.fillStyle = it.color;
         ctx2.beginPath(); ctx2.arc(it.x1, it.y1, 6, 0, Math.PI * 2); ctx2.fill();
         ctx2.beginPath(); ctx2.arc(it.x2, it.y2, 6, 0, Math.PI * 2); ctx2.fill();
@@ -6263,6 +6450,82 @@ function T2drawSwitch(it, midX, midY, angle) {
     if (it.isOn) { ctx2.lineTo(c2x, c2y); }
     else { var pa = angle - Math.PI / 4; ctx2.lineTo(c1x + 35 * Math.cos(pa), c1y + 35 * Math.sin(pa)); }
     ctx2.stroke();
+}
+
+/* SPDT (single-pole double-throw). Three terminals: common at {x1,y1}, throw A
+   at {x2,y2}, throw B at {x3,y3}. The pivot sits at the body centre; the lever
+   swings from the pivot to whichever throw is live (green), or points midway
+   between the throws when centre-off (grey). Own draw code so the two-terminal
+   drawSwitch and its handlers stay exactly as they are. Increment 1 renders the
+   geometry and the three endpoint dots; throw routing arrives in a later step. */
+function T2drawSpdt(it) {
+    var px = it.bodyX, py = it.bodyY;                 // pivot
+    var selected = (it.id === T2.selectedId);
+    if (selected) { ctx2.shadowColor = it.color; ctx2.shadowBlur = 15; }
+    ctx2.lineWidth = 3; ctx2.lineCap = 'round';
+    ctx2.strokeStyle = it.color;
+
+    // Leads: common lead to pivot; throw leads from each throw contact inward a
+    // little so the lever meets a contact dot, not the raw endpoint.
+    var cax = px + (it.x2 - px) * 0.55, cay = py + (it.y2 - py) * 0.55;  // A contact dot
+    var cbx = px + (it.x3 - px) * 0.55, cby = py + (it.y3 - py) * 0.55;  // B contact dot
+
+    ctx2.beginPath(); ctx2.moveTo(it.x1, it.y1); ctx2.lineTo(px, py); ctx2.stroke();      // common lead
+    ctx2.beginPath(); ctx2.moveTo(cax, cay); ctx2.lineTo(it.x2, it.y2); ctx2.stroke();    // throw A lead
+    ctx2.beginPath(); ctx2.moveTo(cbx, cby); ctx2.lineTo(it.x3, it.y3); ctx2.stroke();    // throw B lead
+
+    // Contact dots (A and B) and the pivot dot.
+    ctx2.fillStyle = it.color;
+    ctx2.beginPath(); ctx2.arc(cax, cay, 5, 0, Math.PI * 2); ctx2.fill();
+    ctx2.beginPath(); ctx2.arc(cbx, cby, 5, 0, Math.PI * 2); ctx2.fill();
+    ctx2.beginPath(); ctx2.arc(px, py, 4, 0, Math.PI * 2); ctx2.fill();
+
+    // Lever: to the live throw (green), or midway between throws when off (grey).
+    var lx, ly, lever;
+    if (it.throw === 'A') { lx = cax; ly = cay; lever = '#2ecc71'; }
+    else if (it.throw === 'B') { lx = cbx; ly = cby; lever = '#2ecc71'; }
+    else {
+        // centre-off: point between the two contacts but not touching either.
+        var mx = (cax + cbx) / 2, my = (cay + cby) / 2;
+        var dxo = mx - px, dyo = my - py, dlo = Math.hypot(dxo, dyo) || 1;
+        lx = px + dxo / dlo * 30; ly = py + dyo / dlo * 30; lever = '#8a94a6';
+    }
+    ctx2.strokeStyle = lever; ctx2.lineWidth = 4;
+    ctx2.beginPath(); ctx2.moveTo(px, py); ctx2.lineTo(lx, ly); ctx2.stroke();
+
+    ctx2.shadowBlur = 0;
+
+    // Three endpoint dots (6px, white ring when selected) - mirrors the shared
+    // two-terminal block, extended to the third terminal.
+    ctx2.fillStyle = it.color;
+    ctx2.beginPath(); ctx2.arc(it.x1, it.y1, 6, 0, Math.PI * 2); ctx2.fill();
+    ctx2.beginPath(); ctx2.arc(it.x2, it.y2, 6, 0, Math.PI * 2); ctx2.fill();
+    ctx2.beginPath(); ctx2.arc(it.x3, it.y3, 6, 0, Math.PI * 2); ctx2.fill();
+    if (selected) {
+        ctx2.strokeStyle = '#fff'; ctx2.lineWidth = 2;
+        ctx2.beginPath(); ctx2.arc(it.x1, it.y1, 10, 0, Math.PI * 2); ctx2.stroke();
+        ctx2.beginPath(); ctx2.arc(it.x2, it.y2, 10, 0, Math.PI * 2); ctx2.stroke();
+        ctx2.beginPath(); ctx2.arc(it.x3, it.y3, 10, 0, Math.PI * 2); ctx2.stroke();
+    }
+
+    // Terminal letters (redundant non-colour encoding, projector/colour-blind
+    // legibility) - C at common, A and B at the throws.
+    ctx2.fillStyle = '#e0e6f0'; ctx2.font = 'bold 11px Arial';
+    ctx2.textAlign = 'center'; ctx2.textBaseline = 'middle';
+    ctx2.fillText('C', it.x1 - 10, it.y1 - 10);
+    ctx2.fillText('A', it.x2 + 10, it.y2 - 10);
+    ctx2.fillText('B', it.x3 + 10, it.y3 + 10);
+    ctx2.textBaseline = 'alphabetic';
+
+    // 'SPDT' label below the body (draggable), matching the label conventions.
+    var loX = (it.labelOffsetX != null) ? it.labelOffsetX : 0;
+    var loY = (it.labelOffsetY != null) ? it.labelOffsetY : 40;
+    var slx = px + loX, sly = py + loY;
+    ctx2.fillStyle = it.color; ctx2.font = 'bold 12px Arial'; ctx2.textAlign = 'center';
+    var stateTxt = it.throw === 'A' ? 'SPDT (A)' : it.throw === 'B' ? 'SPDT (B)' : 'SPDT (off)';
+    ctx2.fillText(stateTxt, slx, sly);
+    var sw = ctx2.measureText(stateTxt).width;
+    it._spdtLabel = { x: slx, y: sly - 12 * 0.35, bx: slx, by: sly, w: Math.max(sw, 20), h: 16 };
 }
 
 /* Instruments drawn exactly like tab 1's meters (duplicated to draw on ctx2). */
