@@ -5344,6 +5344,32 @@ function T2nodesOf(item) {
 /* ---- Hit testing ---- */
 function T2hit(x, y) {
     var handleHeight = 50;
+    // PRIORITY PASS: instrument probe tips and handles always win, so a probe or
+    // meter that overlaps the component it measures can still be grabbed and
+    // moved instead of selecting the component beneath it. Instruments are the
+    // top visual layer, so they must be the top grab layer too. Only the tips,
+    // handles and body count here; if the tap is not on an instrument we fall
+    // through to the normal topmost-first scan below.
+    for (var pi = T2.items.length - 1; pi >= 0; pi--) {
+        var pit = T2.items[pi];
+        if (!T2isInstrument(pit.type)) continue;
+        var pa1 = (pit.angle1 != null) ? pit.angle1 : (pit.type === 'energy' ? 0 : -0.15);
+        var p1tX = pit.x1 + Math.sin(pa1) * handleHeight, p1tY = pit.y1 - Math.cos(pa1) * handleHeight;
+        var p1mX = pit.x1 + Math.sin(pa1) * handleHeight * 0.5, p1mY = pit.y1 - Math.cos(pa1) * handleHeight * 0.5;
+        if (Math.hypot(x - pit.x1, y - pit.y1) < 15) return { item: pit, part: 'e1' };
+        if (Math.hypot(x - p1tX, y - p1tY) < 20 || Math.hypot(x - p1mX, y - p1mY) < 18) return { item: pit, part: 'rot1' };
+        if (pit.type === 'voltmeter') {
+            var pa2 = (pit.angle2 != null) ? pit.angle2 : 0.15;
+            var p2tX = pit.x2 + Math.sin(pa2) * handleHeight, p2tY = pit.y2 - Math.cos(pa2) * handleHeight;
+            var p2mX = pit.x2 + Math.sin(pa2) * handleHeight * 0.5, p2mY = pit.y2 - Math.cos(pa2) * handleHeight * 0.5;
+            if (Math.hypot(x - pit.x2, y - pit.y2) < 15) return { item: pit, part: 'e2' };
+            if (Math.hypot(x - p2tX, y - p2tY) < 20 || Math.hypot(x - p2mX, y - p2mY) < 18) return { item: pit, part: 'rot2' };
+        }
+        var pbw = (pit.type === 'energy' || pit.type === 'probe') ? 56 : 50;
+        var pbh = (pit.type === 'energy' || pit.type === 'probe') ? 64 : 60;
+        if (x > pit.bodyX - pbw / 2 - 5 && x < pit.bodyX + pbw / 2 + 5 &&
+            y > pit.bodyY - pbh / 2 - 5 && y < pit.bodyY + pbh / 2 + 10) return { item: pit, part: 'body' };
+    }
     // topmost first
     for (var i = T2.items.length - 1; i >= 0; i--) {
         var it = T2.items[i];
@@ -6080,7 +6106,24 @@ function T2draw() {
     }
 
     // components
-    for (var i = 0; i < T2.items.length; i++) {
+    // Layered draw so overlaps never bury the parts you interact with. Base
+    // components first (drop order among themselves preserved), then SPDTs so
+    // their arms and terminals stay visible, then instruments (probes and
+    // meters) on the very top, matching their grab priority in T2hit. The
+    // items array itself is untouched, so config, solver and delete are
+    // unaffected; only paint order changes.
+    var i;
+    for (i = 0; i < T2.items.length; i++) {
+        var li = T2.items[i];
+        if (li.type === 'spdt' || T2isInstrument(li.type)) continue;
+        T2drawItem(li, li.id === T2.selectedId);
+    }
+    for (i = 0; i < T2.items.length; i++) {
+        if (T2.items[i].type !== 'spdt') continue;
+        T2drawItem(T2.items[i], T2.items[i].id === T2.selectedId);
+    }
+    for (i = 0; i < T2.items.length; i++) {
+        if (!T2isInstrument(T2.items[i].type)) continue;
         T2drawItem(T2.items[i], T2.items[i].id === T2.selectedId);
     }
 
