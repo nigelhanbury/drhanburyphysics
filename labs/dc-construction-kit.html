@@ -816,6 +816,138 @@ canvas {
 .reading-value.voltage { color: #2ecc71; }
 .reading-value.current { color: #e74c3c; }
 .reading-value.power { color: #f1c40f; }
+
+/* ===== SCRIBBLE PAD (ported from capacitor toolkit, self-contained) ===== */
+/* ===================================================================== */
+/* SELF-CONTAINED SCRIBBLE PAD styles (lift with the HTML + JS module).   */
+/* ===================================================================== */
+.doodle-window {
+    display: none;
+    position: fixed;
+    z-index: 9000;            /* on top of everything */
+    left: 80px; top: 80px;
+    width: 520px; height: 380px;
+    background: #15151f;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 12px;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.6);
+    flex-direction: column;
+    overflow: hidden;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;   /* stop the iOS copy/paste callout on hold */
+}
+.doodle-window.open { display: flex; }
+.doodle-header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 7px 10px;
+    background: linear-gradient(135deg, #23233a, #1a1a2c);
+    cursor: grab;
+}
+.doodle-header:active { cursor: grabbing; }
+.doodle-titlebar { display: flex; align-items: center; justify-content: space-between; }
+.doodle-title { color: #cdd6e6; font-weight: 700; font-size: 0.9em; white-space: nowrap; }
+.doodle-tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.doodle-pensize { display: inline-flex; align-items: center; gap: 5px; }
+.doodle-pensize label { color: #9aa3b5; font-size: 0.78em; white-space: nowrap; }
+.doodle-swatch {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.3); padding: 0; cursor: pointer;
+    touch-action: manipulation;
+}
+.doodle-swatch.active { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,0.4); }
+.doodle-tool {
+    background: rgba(255,255,255,0.1); color: #cdd6e6;
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 6px;
+    padding: 3px 8px; font-size: 0.82em; cursor: pointer;
+    touch-action: manipulation;
+}
+.doodle-tool.active { background: #4fc3f7; color: #10131c; border-color: #4fc3f7; }
+.doodle-tool-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 1px 6px; color: #2a2a3a;
+}
+.doodle-tool-icon svg { display: block; }
+.doodle-tool-icon.active { color: #10131c; }
+.doodle-thick { width: 80px; touch-action: none; }
+.doodle-close {
+    background: rgba(255,255,255,0.08); color: #cdd6e6;
+    border: 1px solid rgba(255,255,255,0.18); border-radius: 6px;
+    font-size: 0.95em; cursor: pointer; padding: 2px 8px; line-height: 1;
+    touch-action: manipulation;
+}
+.doodle-close:hover { background: rgba(231,76,60,0.6); border-color: rgba(231,76,60,0.8); }
+.doodle-body { flex: 1; min-height: 0; }
+#doodleCanvas, #doodleCanvas2 {
+    display: block; width: 100%; height: 100%; background: #f4f4f8;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+.doodle-resize-grip {
+    position: absolute; right: 0; bottom: 0; width: 22px; height: 22px;
+    cursor: nwse-resize; touch-action: none;
+    background:
+        linear-gradient(135deg, transparent 0 6px, rgba(20,20,20,0.7) 6px 7.5px, transparent 7.5px 11px, rgba(20,20,20,0.7) 11px 12.5px, transparent 12.5px 16px, rgba(20,20,20,0.7) 16px 17.5px, transparent 17.5px);
+    border-bottom-right-radius: 12px;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+}
+.doodle-resize-grip:hover { opacity: 1; }
+
+/* ===== CIRCUIT ANNOTATE overlay (ported from capacitor toolkit) ===== */
+/* The stage is itself a column flex container, so the circuit canvas inside it
+   is a stretched flex child - the identical layout mechanism it had when it sat
+   directly in .canvas-column. Displayed size is therefore unchanged from the
+   original app. The overlay is absolutely positioned over the same box, so ink
+   registration is preserved (both canvases share buffer size and display box). */
+.circuit-stage { position: relative; display: flex; flex-direction: column; }
+.circuit-annotate-canvas {
+    position: absolute;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    border-radius: 15px;
+    background: transparent !important;   /* override global canvas gradient so circuit shows through */
+    border: none !important;
+    box-shadow: none !important;
+    pointer-events: none;           /* transparent to input until annotate mode is on */
+    touch-action: none;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+.circuit-annotate-canvas.active { pointer-events: auto; }
+.circuit-stage.annotating canvas#canvas { box-shadow: inset 0 0 0 3px rgba(79,195,247,0.8), inset 0 0 50px rgba(0,0,0,0.5), 0 0 30px rgba(255,150,50,0.2); }
+.circuit-annotate-bar {
+    position: absolute;
+    left: 10px; top: 10px;
+    z-index: 5;                     /* above both canvases so the toolbar is always usable */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    max-width: calc(100% - 20px);
+    background: rgba(15,18,30,0.88);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 10px;
+    padding: 6px 10px;
+}
+.graphs-annotate-toggle {
+    background: rgba(255,255,255,0.08);
+    color: #cdd6e6;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.85em;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    touch-action: manipulation;
+}
+.graphs-annotate-toggle.active { background: #4fc3f7; color: #10131c; border-color: #4fc3f7; }
+
 </style>
 </head>
 <body>
@@ -825,7 +957,22 @@ canvas {
     
     <div class="main-area">
         <div class="canvas-column">
-            <canvas id="canvas" width="900" height="650"></canvas>
+            <div class="circuit-stage" id="circuitStage">
+                <canvas id="canvas" width="900" height="650"></canvas>
+                <canvas id="circuitAnnotateCanvas" width="900" height="650" class="circuit-annotate-canvas"></canvas>
+                <div class="circuit-annotate-bar" id="circuitAnnotateBar">
+                    <button class="graphs-annotate-toggle" id="caToggle" onclick="CircuitAnnotate.toggle()" title="Draw on the circuit">&#9999;&#65039; Annotate</button>
+                    <span class="doodle-tools" id="caToolsExpanded" style="display:none;">
+                        <button class="doodle-swatch" data-cacolor="#ffffff" style="background:#ffffff" title="White"></button>
+                        <button class="doodle-swatch" data-cacolor="#e74c3c" style="background:#e74c3c" title="Red"></button>
+                        <button class="doodle-swatch" data-cacolor="#2ecc71" style="background:#2ecc71" title="Green"></button>
+                        <button class="doodle-swatch" data-cacolor="#ffd166" style="background:#ffd166" title="Yellow"></button>
+                        <button class="doodle-tool doodle-tool-icon" id="caEraser" title="Eraser" aria-label="Eraser"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="pointer-events:none"><g transform="rotate(-40 12 12)"><rect x="4" y="8" width="16" height="9" rx="1.8" fill="#ff8fab" stroke="currentColor" stroke-width="1.5"/><rect x="4" y="12.5" width="16" height="4.5" fill="#dce3ee" stroke="currentColor" stroke-width="1.5"/><rect x="4" y="8" width="16" height="9" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.5"/></g></svg></button>
+                        <span class="doodle-pensize"><label for="caThickness">Pen size</label><input type="range" id="caThickness" class="doodle-thick" min="0.5" max="4" step="0.1" value="2" title="Pen size"></span>
+                        <button class="doodle-tool" id="caClear" title="Clear annotations">Clear</button>
+                    </span>
+                </div>
+            </div>
             <div class="display-options">
                 <div class="opt-group">
                     <div class="opt-group-label">Canvas</div>
@@ -939,6 +1086,7 @@ canvas {
         
         <div class="controls">
             <button id="helpBtn" class="help-btn" onclick="toggleHelp()">? Help</button>
+            <button id="doodleBtn" class="help-btn" onclick="DoodlePad.toggle()" title="Open a scribble pad to write or sketch with a stylus" style="margin-left:8px;">&#9999;&#65039; Scribble Pad</button>
             <div class="panel">
                 <h3>Components</h3>
                 <div class="components-grid">
@@ -991,7 +1139,7 @@ canvas {
                         </svg>
                         <span class="component-label">Thermistor</span>
                     </div>
-                    <div class="drag-component heatSource" onclick="addHeatSource()">
+                    <div class="drag-component heatSource" data-type="heatSource">
                         <svg class="component-icon" viewBox="0 0 50 30">
                             <ellipse cx="25" cy="26" rx="12" ry="4" fill="#8B4513"/>
                             <path d="M25 24 Q20 18 22 12 Q24 6 25 2 Q26 6 28 12 Q30 18 25 24" fill="#ff6600"/>
@@ -1017,7 +1165,7 @@ canvas {
                         </svg>
                         <span class="component-label">LDR</span>
                     </div>
-                    <div class="drag-component lightSource" onclick="addLightSource()">
+                    <div class="drag-component lightSource" data-type="lightSource">
                         <svg class="component-icon" viewBox="0 0 50 30">
                             <circle cx="25" cy="15" r="8" fill="#fff9c4"/>
                             <circle cx="25" cy="15" r="5" fill="#ffeb3b"/>
@@ -1103,13 +1251,13 @@ canvas {
                         </svg>
                         <span class="component-label">Ammeter</span>
                     </div>
-                    <div class="drag-component probe" id="probeBtn" onclick="toggleProbeMode()">
+                    <div class="drag-component probe" data-type="potprobe">
                         <svg class="component-icon" viewBox="0 0 50 30">
                             <line x1="25" y1="5" x2="25" y2="25" stroke="#ff6b9d" stroke-width="2"/>
                             <line x1="15" y1="15" x2="35" y2="15" stroke="#ff6b9d" stroke-width="2"/>
                             <circle cx="25" cy="15" r="4" fill="#ff6b9d"/>
                         </svg>
-                        <span class="component-label">Probe</span>
+                        <span class="component-label">Potential Probe</span>
                     </div>
                     <div class="drag-component textLabel" onclick="addTextLabel()">
                         <svg class="component-icon" viewBox="0 0 50 30">
@@ -1491,9 +1639,9 @@ const state = {
   draggingFromPalette: null,
   gridSize: 50,
   showGrid: true,
-  showCurrent: true,
+  showCurrent: false,
   showCurrentValues: true,
-  showValues: 'value', // 'value', 'symbol', 'hide' — resistance labels
+  showValues: 'hide', // 'value', 'symbol', 'hide' — resistance labels
   showBatteryValues: 'value', // 'value', 'symbol', 'hide' — battery voltage labels
   showAmmeterValues: 'value', // 'value', 'symbol', 'hide' — ammeter labels
   revealedCurrentLabels: new Set(), // itemIds of branch labels whose values are revealed
@@ -1554,7 +1702,8 @@ const componentDefs = {
   switch: { length: 80, color: '#9b59b6', defaultValue: 1, unit: '' },
   fuse: { length: 80, color: '#aab8c2', defaultValue: 500, unit: 'mA' },
   ammeter: { length: 80, color: '#e74c3c', defaultValue: 0, unit: 'A' },
-  voltmeter: { length: 160, color: '#ff6b9d', defaultValue: 0, unit: 'V' }
+  voltmeter: { length: 160, color: '#ff6b9d', defaultValue: 0, unit: 'V' },
+  potprobe: { length: 0, color: '#ff6b9d', defaultValue: 0, unit: 'V' }
 };
 
 // Event listeners
@@ -1665,19 +1814,19 @@ function resetGraphCheckboxes() {
   document.getElementById('showPower').checked = false;
   document.getElementById('showPowerValues').checked = true;
   document.getElementById('showPowerValues').disabled = true;
-  // Reset current — default: current on, values shown
-  state.showCurrent = true;
+  // Current — summer-school default: current OFF, values sub-control disabled
+  state.showCurrent = false;
   state.showCurrentValues = true;
   state.revealedCurrentLabels = new Set();
-  document.getElementById('showCurrent').checked = true;
+  document.getElementById('showCurrent').checked = false;
   document.getElementById('showCurrentValues').checked = true;
-  document.getElementById('showCurrentValues').disabled = false;
-  // Reset component label dropdowns to Value
-  state.showValues = 'value';
+  document.getElementById('showCurrentValues').disabled = true;
+  // Component label dropdowns: resistance HIDDEN (summer-school default), others Value
+  state.showValues = 'hide';
   state.showBatteryValues = 'value';
   state.showAmmeterValues = 'value';
   state.revealedResistanceLabels = new Set();
-  document.getElementById('showValues').value = 'value';
+  document.getElementById('showValues').value = 'hide';
   document.getElementById('showBatteryValues').value = 'value';
   document.getElementById('showAmmeterValues').value = 'value';
   // Reset KCL/KVL
@@ -2506,7 +2655,40 @@ function snapToGrid(val) {
 }
 
 function addItem(type, x, y) {
+  // Heat and light sources live in their own arrays (state.heatSources /
+  // state.lightSources), not state.items, but they place through the same
+  // palette flow as every other component: drag-drop on desktop, or select
+  // then tap the canvas on iPad. Route them here so all three placement
+  // paths land the source exactly where the user dropped or tapped.
+  if (type === 'heatSource') { addHeatSource(x, y); return; }
+  if (type === 'lightSource') { addLightSource(x, y); return; }
+
   const def = componentDefs[type];
+
+  // Placed potential probe: a single-tip instrument (like the cap toolkit's).
+  // The tip (x1,y1) reads the potential at that point on the circuit; the
+  // reading bubble floats above at bodyX/bodyY. Its own shape so none of the
+  // two-terminal component logic applies to it.
+  if (type === 'potprobe') {
+    const px = state.snapToGrid ? snapToGrid(x) : x;
+    const py = state.snapToGrid ? snapToGrid(y) : y;
+    const probe = {
+      id: Date.now() + Math.random(),
+      type: 'potprobe',
+      x1: px, y1: py,          // probe tip (the point that is read)
+      angle1: 0,               // handle angle (0 = straight up), adjustable
+      bodyX: px + 40, bodyY: py - 90, // reading meter body position (draggable)
+      color: '#ff6b9d', unit: def.unit,
+      potential: null,         // last read value
+      _readItem: null
+    };
+    state.items.push(probe);
+    state.selectedItem = probe;
+    updateSelectedInfo();
+    simulateCircuit();
+    return;
+  }
+
   const halfLen = def.length / 2;
   const sx = state.snapToGrid ? snapToGrid(x) : x;
   const sy = state.snapToGrid ? snapToGrid(y) : y;
@@ -2535,6 +2717,10 @@ function addItem(type, x, y) {
     bodyX: sx,
     bodyY: sy - 40,
     bodyAngle: 0,
+    // Adjustable probe handle angles (default matches the old hardcoded tilt so
+    // existing behaviour is preserved; now draggable via rotate handles).
+    angle1: -0.15,
+    angle2: 0.15,
     // Variable resistor / rheostat wiper position (0-1, 0.5 = middle)
     wiper: (type === 'varResistor' || type === 'rheostat') ? 0.5 : undefined,
     maxR: type === 'varResistor' ? def.defaultValue : type === 'rheostat' ? def.defaultValue : undefined,
@@ -2574,6 +2760,17 @@ function addItem(type, x, y) {
 }
 
 function getItemAt(x, y) {
+  // PRIORITY PASS: instruments (voltmeter, placed potential probe) are the top
+  // visual layer, so they must be the top grab layer too - this lets a probe or
+  // meter that overlaps the component it measures still be picked up instead of
+  // selecting the component beneath it. If the tap is not on an instrument we
+  // fall through to the normal topmost-first scan.
+  for (let i = state.items.length - 1; i >= 0; i--) {
+    const item = state.items[i];
+    if (item.type !== 'voltmeter' && item.type !== 'potprobe') continue;
+    const hit = getHitPart(item, x, y);
+    if (hit) return { item, part: hit };
+  }
   // Check in reverse (top first)
   for (let i = state.items.length - 1; i >= 0; i--) {
     const item = state.items[i];
@@ -2592,26 +2789,22 @@ function getHitPart(item, x, y) {
     const bodyWidth = 50;
     const bodyHeight = 60;
     const handleHeight = 50;
+    const a1 = (item.angle1 != null) ? item.angle1 : -0.15;
+    const a2 = (item.angle2 != null) ? item.angle2 : 0.15;
 
-    // Check probe handles (extend UPWARD from tip position, slightly angled)
-    // Use a circular hit area around the probe handle for easier selection
-    const probeHitRadius = 25;
+    // Probe tips first (within 15px = move/reconnect that probe).
+    if (Math.hypot(x - item.x1, y - item.y1) < 15) return 'start';
+    if (Math.hypot(x - item.x2, y - item.y2) < 15) return 'end';
 
-    // Probe 1 (+ red) - center of handle is above tip
-    const probe1CenterX = item.x1 - Math.sin(-0.15) * handleHeight / 2;
-    const probe1CenterY = item.y1 - Math.cos(-0.15) * handleHeight / 2;
-    if (Math.hypot(x - probe1CenterX, y - probe1CenterY) < probeHitRadius ||
-    Math.hypot(x - item.x1, y - item.y1) < 15) {
-      return 'start';
-    }
-
-    // Probe 2 (- black) - center of handle is above tip
-    const probe2CenterX = item.x2 - Math.sin(0.15) * handleHeight / 2;
-    const probe2CenterY = item.y2 - Math.cos(0.15) * handleHeight / 2;
-    if (Math.hypot(x - probe2CenterX, y - probe2CenterY) < probeHitRadius ||
-    Math.hypot(x - item.x2, y - item.y2) < 15) {
-      return 'end';
-    }
+    // Probe handles (the shaft above the tip) = ROTATE that probe. Check the
+    // handle top and mid points along the current angle, matching cap toolkit.
+    const rotHitRadius = 20;
+    const h1topX = item.x1 + Math.sin(a1) * handleHeight, h1topY = item.y1 - Math.cos(a1) * handleHeight;
+    const h1midX = item.x1 + Math.sin(a1) * handleHeight * 0.5, h1midY = item.y1 - Math.cos(a1) * handleHeight * 0.5;
+    if (Math.hypot(x - h1topX, y - h1topY) < rotHitRadius || Math.hypot(x - h1midX, y - h1midY) < 18) return 'rot1';
+    const h2topX = item.x2 + Math.sin(a2) * handleHeight, h2topY = item.y2 - Math.cos(a2) * handleHeight;
+    const h2midX = item.x2 + Math.sin(a2) * handleHeight * 0.5, h2midY = item.y2 - Math.cos(a2) * handleHeight * 0.5;
+    if (Math.hypot(x - h2topX, y - h2topY) < rotHitRadius || Math.hypot(x - h2midX, y - h2midY) < 18) return 'rot2';
 
     // Check if clicking on meter body (rectangular area)
     if (x >= item.bodyX - bodyWidth / 2 - 10 && x <= item.bodyX + bodyWidth / 2 + 10 &&
@@ -2622,7 +2815,22 @@ function getHitPart(item, x, y) {
     return null;
   }
 
-  // Check label first (labels always show - either values or symbolic)
+  // Placed potential probe: tip (move), handle (rotate), reading bubble (move).
+  if (item.type === 'potprobe') {
+    const handleHeight = 50;
+    const a1 = (item.angle1 != null) ? item.angle1 : 0;
+    // Tip first (move/reconnect the reading point)
+    if (Math.hypot(x - item.x1, y - item.y1) < 15) return 'start';
+    // Handle shaft = rotate
+    const hTopX = item.x1 + Math.sin(a1) * handleHeight, hTopY = item.y1 - Math.cos(a1) * handleHeight;
+    const hMidX = item.x1 + Math.sin(a1) * handleHeight * 0.5, hMidY = item.y1 - Math.cos(a1) * handleHeight * 0.5;
+    if (Math.hypot(x - hTopX, y - hTopY) < 20 || Math.hypot(x - hMidX, y - hMidY) < 18) return 'rot1';
+    // Reading bubble body (matches the 56x64 body + casing in drawPotProbe)
+    const bw = 56, bh = 64;
+    if (x >= item.bodyX - bw / 2 - 8 && x <= item.bodyX + bw / 2 + 8 &&
+        y >= item.bodyY - bh / 2 - 8 && y <= item.bodyY + bh / 2 + 12) return 'body';
+    return null;
+  }
   if (item.type !== 'wire') {
     // For thermistor, check both temp and resistance labels
     if (item.type === 'thermistor') {
@@ -2742,6 +2950,7 @@ function findWireSnapTarget(x, y, excludeItem) {
   for (const item of state.items) {
     if (item === excludeItem) continue;
     if (item.type === 'voltmeter') continue;
+    if (item.type === 'potprobe') continue;
 
     // First check endpoints
     let dist = Math.hypot(x - item.x1, y - item.y1);
@@ -3055,8 +3264,8 @@ function onMouseDown(e) {
     state.draggingPart = hit.part;
 
     if (hit.part === 'body') {
-      if (hit.item.type === 'voltmeter') {
-        // For voltmeter, offset is relative to body position
+      if (hit.item.type === 'voltmeter' || hit.item.type === 'potprobe') {
+        // For voltmeter/probe, offset is relative to the floating body position
         state.dragOffset = {
           dx: hit.item.bodyX - pos.x,
           dy: hit.item.bodyY - pos.y
@@ -3300,6 +3509,22 @@ function onMouseMove(e) {
       return;
     }
 
+    // Placed potential probe drag: tip (move read point), rotate, or bubble.
+    if (item.type === 'potprobe') {
+      if (state.draggingPart === 'start') {
+        item.x1 = pos.x; item.y1 = pos.y;
+      } else if (state.draggingPart === 'rot1') {
+        item.angle1 = Math.atan2(pos.x - item.x1, -(pos.y - item.y1));
+      } else if (state.draggingPart === 'body') {
+        item.bodyX = pos.x + state.dragOffset.dx;
+        item.bodyY = pos.y + state.dragOffset.dy;
+      }
+      // No snap targets for a probe tip; it reads wherever it is placed.
+      state.snapTargets = [];
+      simulateCircuit();
+      return;
+    }
+
     // Special handling for voltmeter
     if (item.type === 'voltmeter') {
       if (state.draggingPart === 'start') {
@@ -3310,6 +3535,12 @@ function onMouseMove(e) {
         // Move - probe only, meter stays fixed
         item.x2 = pos.x;
         item.y2 = pos.y;
+      } else if (state.draggingPart === 'rot1') {
+        // Rotate the red probe: angle from tip up toward the cursor. The handle
+        // is drawn using (sin a, -cos a), so a=atan2(dx, -dy) points it at cursor.
+        item.angle1 = Math.atan2(pos.x - item.x1, -(pos.y - item.y1));
+      } else if (state.draggingPart === 'rot2') {
+        item.angle2 = Math.atan2(pos.x - item.x2, -(pos.y - item.y2));
       } else if (state.draggingPart === 'body') {
         // Move the meter body only, probes stay fixed
         item.bodyX = pos.x + state.dragOffset.dx;
@@ -3575,6 +3806,10 @@ function onMouseUp(e) {
   if (state.draggingItem) {
     const item = state.draggingItem;
 
+    // Potential probe: no snapping - the tip reads wherever it is left.
+    if (item.type === 'potprobe') {
+      // nothing to snap; fall through to the shared cleanup below
+    } else
     // Handle voltmeter specially - probes can snap to anywhere on wires
     if (item.type === 'voltmeter') {
       if (state.draggingPart === 'start') {
@@ -4202,6 +4437,7 @@ function getPotentialAtPoint(px, py) {
   // Check each circuit item
   for (const item of state.items) {
     if (item.type === 'voltmeter') continue;
+    if (item.type === 'potprobe') continue;
 
     // Special handling for rheostat
     if (item.type === 'rheostat') {
@@ -4442,12 +4678,12 @@ function clearCanvas() {
 // Heat source functions
 let heatSourceIdCounter = 1;
 
-function addHeatSource() {
+function addHeatSource(x, y) {
   const id = heatSourceIdCounter++;
   state.heatSources.push({
     id: id,
-    x: 450 + Math.random() * 100,
-    y: 300 + Math.random() * 100,
+    x: (x != null) ? x : 450 + Math.random() * 100,
+    y: (y != null) ? y : 300 + Math.random() * 100,
     intensity: 0.8 // 0-1 scale
   });
   simulateCircuit();
@@ -4495,12 +4731,12 @@ function getThermistorResistance(item) {
 // Light source functions
 let lightSourceIdCounter = 1;
 
-function addLightSource() {
+function addLightSource(x, y) {
   const id = lightSourceIdCounter++;
   state.lightSources.push({
     id: id,
-    x: 550 + Math.random() * 100,
-    y: 300 + Math.random() * 100,
+    x: (x != null) ? x : 550 + Math.random() * 100,
+    y: (y != null) ? y : 300 + Math.random() * 100,
     intensity: 0.9 // 0-1 scale
   });
   simulateCircuit();
@@ -6479,6 +6715,7 @@ function simulateCircuit() {
   const endpoints = [];
   for (const item of state.items) {
     if (item.type === 'voltmeter') continue; // Voltmeter probes are sensors, not circuit nodes
+    if (item.type === 'potprobe') continue;  // Potential probe is a sensor too - no circuit nodes
     endpoints.push({ x: item.x1, y: item.y1, item, endNum: 1 });
     endpoints.push({ x: item.x2, y: item.y2, item, endNum: 2 });
     // Potentiometer has a third terminal
@@ -6961,6 +7198,7 @@ function simulateCircuit() {
     // Check if touching any wire segment (not just endpoints)
     for (const item of items) {
       if (item.type === 'voltmeter') continue; // Skip voltmeters
+      if (item.type === 'potprobe') continue; // Skip potential probes (sensors)
 
       // Special handling for rheostat - check all three wire segments
       if (item.type === 'rheostat') {
@@ -7288,6 +7526,7 @@ function findIVComponents() {
     // Then check along wire/component segments (same nodes as their endpoints)
     for (const item of state.items) {
       if (item.type === 'voltmeter') continue;
+      if (item.type === 'potprobe') continue;
       const dist = ptSegDist(px, py, item.x1, item.y1, item.x2, item.y2);
       if (dist < PROBE_DIST) {
         if (item.type === 'wire' || item.type === 'ammeter' || item.type === 'switch' && item.isOn || item.type === 'fuse' && !item.fuseBlown) {
@@ -7323,7 +7562,8 @@ function findIVComponents() {
   for (const item of state.items) {
     if (item === rheostat) continue; // Skip the sweep component itself
     if (item.type === 'wire' || item.type === 'voltmeter' || item.type === 'switch' ||
-    item.type === 'ammeter' || item.type === 'rheostat' || item.type === 'battery') continue;
+    item.type === 'ammeter' || item.type === 'rheostat' || item.type === 'battery' ||
+    item.type === 'potprobe') continue;
 
     // Get this component's nodes
     let itemNode1 = null,itemNode2 = null;
@@ -8039,6 +8279,7 @@ function findVIComponents() {
     }
     for (const item of state.items) {
       if (item.type === 'voltmeter') continue;
+      if (item.type === 'potprobe') continue;
       if (ptSegDist(px, py, item.x1, item.y1, item.x2, item.y2) < PROBE_DIST) {
         if (item.type === 'wire' || item.type === 'ammeter' || item.type === 'switch' && item.isOn || item.type === 'fuse' && !item.fuseBlown) {
           for (let i = 0; i < endpoints.length; i++) {
@@ -8838,7 +9079,7 @@ function drawPower() {
 
   for (const item of state.items) {
     const t = item.type;
-    if (t === 'wire' || t === 'voltmeter' || t === 'ammeter') continue;
+    if (t === 'wire' || t === 'voltmeter' || t === 'ammeter' || t === 'potprobe') continue;
     if (t === 'switch' || t === 'fuse') continue;
 
     let power,isBattery = false,isCharging = false;
@@ -9021,7 +9262,7 @@ function buildKVLNodeMap() {
 
   for (let i = 0; i < endpoints.length; i++) {
     if (endpoints[i].endNum > 2) {epToDot.push(-1);continue;}
-    if (endpoints[i].item.type === 'voltmeter') {epToDot.push(-1);continue;}
+    if (endpoints[i].item.type === 'voltmeter' || endpoints[i].item.type === 'potprobe') {epToDot.push(-1);continue;}
 
     const ex = endpoints[i].x,ey = endpoints[i].y;
     let dotIdx = -1;
@@ -9045,7 +9286,7 @@ function buildKVLNodeMap() {
   const seen = new Set();
   for (let i = 0; i < endpoints.length; i++) {
     const item = endpoints[i].item;
-    if (seen.has(item) || item.type === 'voltmeter') continue;
+    if (seen.has(item) || item.type === 'voltmeter' || item.type === 'potprobe') continue;
     if (endpoints[i].endNum > 2) continue;
     seen.add(item);
 
@@ -9440,8 +9681,18 @@ function draw() {
   // Draw light sparkle particles
   drawLightParticles();
 
+  // Layered draw so instruments never get buried by components dropped later.
+  // Base components first (their own drop order preserved), then instruments
+  // (voltmeter and placed potential probe) on top. The items array itself is
+  // untouched, so solve/hit/config are unaffected; only paint order changes.
+  // Grab priority in getItemAt is made to match (instruments first).
+  const isInstrument = (t) => t === 'voltmeter' || t === 'potprobe';
   for (const item of state.items) {
+    if (isInstrument(item.type)) continue;
     drawItem(item);
+  }
+  for (const item of state.items) {
+    if (isInstrument(item.type)) drawItem(item);
   }
 
   // Draw current arrows per branch (one arrow per continuous current path)
@@ -9791,6 +10042,13 @@ function drawGrid() {
 }
 
 function drawItem(item) {
+  // Placed potential probe has a single tip and its own drawing; handle it up
+  // front so the two-terminal midpoint/label code below never applies to it.
+  if (item.type === 'potprobe') {
+    drawPotProbe(item);
+    return;
+  }
+
   const isSelected = item === state.selectedItem;
   const midX = (item.x1 + item.x2) / 2;
   const midY = (item.y1 + item.y2) / 2;
@@ -9995,6 +10253,7 @@ function drawBranchCurrentArrows() {
   const endpoints = [];
   for (const item of state.items) {
     if (item.type === 'voltmeter') continue;
+    if (item.type === 'potprobe') continue;
     endpoints.push({ x: item.x1, y: item.y1, item, endNum: 1 });
     endpoints.push({ x: item.x2, y: item.y2, item, endNum: 2 });
     // Include rheostat's third terminal
@@ -10040,6 +10299,7 @@ function drawBranchCurrentArrows() {
   const itemToNodes = new Map();
   for (const item of state.items) {
     if (item.type === 'voltmeter') continue;
+    if (item.type === 'potprobe') continue;
     let node1 = null,node2 = null,node3 = null;
     for (let i = 0; i < endpoints.length; i++) {
       if (endpoints[i].item === item) {
@@ -10063,6 +10323,7 @@ function drawBranchCurrentArrows() {
 
   for (const item of state.items) {
     if (item.type === 'voltmeter') continue;
+    if (item.type === 'potprobe') continue;
     if (visited.has(item)) continue;
 
     // Start a new branch from this item
@@ -10086,7 +10347,7 @@ function drawBranchCurrentArrows() {
         // Find other items connected to this node
         for (const [otherItem, otherNodes] of itemToNodes) {
           if (otherItem === curr || visited.has(otherItem)) continue;
-          if (otherItem.type === 'voltmeter') continue;
+          if (otherItem.type === 'voltmeter' || otherItem.type === 'potprobe') continue;
           // Check all nodes of the other item
           const checkNodes = otherItem.type === 'rheostat' ? [otherNodes[0], otherNodes[1], otherNodes[2]] : [otherNodes[0], otherNodes[1]];
           if (checkNodes.includes(node)) {
@@ -11964,10 +12225,10 @@ function drawVoltmeter(item, midX, midY, len, angle) {
   const rightConnX = bodyX + 12;
   const rightConnY = bodyY + bodyHeight / 2 + 5;
 
-  // Probe handle dimensions and angles
+  // Probe handle dimensions and angles (per-item, adjustable via rotate handles)
   const probeHandleHeight = 50;
-  const probeAngle1 = -0.15; // Red probe tilts slightly left
-  const probeAngle2 = 0.15; // Black probe tilts slightly right
+  const probeAngle1 = (item.angle1 != null) ? item.angle1 : -0.15; // Red probe
+  const probeAngle2 = (item.angle2 != null) ? item.angle2 : 0.15; // Black probe
 
   // Calculate TOP of probe handles (where cables come out)
   // The handle extends upward from the tip, so top is at tip - handleHeight in the rotated direction
@@ -12058,9 +12319,9 @@ function drawVoltmeter(item, midX, midY, len, angle) {
   ctx.fill();
   ctx.stroke();
 
-  // Draw probe handles - red left (angled left), black right (angled right)
-  drawProbeHandle(item.x1, item.y1, '#cc4422', '#ff6644', '+', -0.15);
-  drawProbeHandle(item.x2, item.y2, '#222', '#444', '−', 0.15);
+  // Draw probe handles - red left (+), black right (-), at their adjustable angles
+  drawProbeHandle(item.x1, item.y1, '#cc4422', '#ff6644', '+', probeAngle1);
+  drawProbeHandle(item.x2, item.y2, '#222', '#444', '−', probeAngle2);
 }
 
 function drawCableLead(probeX, probeY, meterX, meterY, darkColor, midColor, lightColor, isRed) {
@@ -12186,9 +12447,73 @@ function drawProbeHandle(tipX, tipY, darkColor, lightColor, symbol, angle) {
   ctx.restore();
 }
 
+// Placed potential probe: matches the capacitor toolkit's potential probe -
+// a tall pink-faced meter body ("Potential" / status / white readout box) with
+// a single probe hanging below on a pink cable, tip reads via getPotentialAtPoint.
+function drawPotProbe(item) {
+  const isSelected = item === state.selectedItem;
+  const a1 = (item.angle1 != null) ? item.angle1 : 0;
+  const bodyX = item.bodyX, bodyY = item.bodyY;
+  const bodyWidth = 56, bodyHeight = 64;
+  const connX = bodyX, connY = bodyY + bodyHeight / 2 + 5;
+  const probeHandleHeight = 50;
+
+  // Read the potential at the tip.
+  const r = getPotentialAtPoint(item.x1, item.y1);
+  const reading = (r && r.potential != null) ? r.potential : null;
+  item.potential = reading;
+  item._readItem = r ? r.item : null;
+
+  // Cable from the probe handle top up to the body connection.
+  const p1TopX = item.x1 + Math.sin(a1) * probeHandleHeight;
+  const p1TopY = item.y1 - Math.cos(a1) * probeHandleHeight;
+  drawCableLead(p1TopX, p1TopY, connX, connY, '#7a1436', '#c0286a', '#ff6b9d', false);
+
+  ctx.save();
+  if (isSelected) { ctx.shadowColor = '#ff6b9d'; ctx.shadowBlur = 15; }
+  // Outer black casing
+  ctx.fillStyle = '#1a1a1a'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(bodyX - bodyWidth / 2 - 5, bodyY - bodyHeight / 2 - 5, bodyWidth + 10, bodyHeight + 15, 12);
+  ctx.fill(); ctx.stroke();
+  // Pink face
+  const fg = ctx.createLinearGradient(bodyX, bodyY - bodyHeight / 2, bodyX, bodyY + bodyHeight / 2);
+  fg.addColorStop(0, '#ff8fb6'); fg.addColorStop(0.5, '#ff6b9d'); fg.addColorStop(1, '#e04b80');
+  ctx.fillStyle = fg;
+  ctx.beginPath();
+  ctx.roundRect(bodyX - bodyWidth / 2, bodyY - bodyHeight / 2, bodyWidth, bodyHeight, 8);
+  ctx.fill();
+  // Labels
+  ctx.fillStyle = '#3a0c20'; ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('Potential', bodyX, bodyY - 20);
+  ctx.font = 'bold 9px Arial';
+  ctx.fillText((reading != null) ? 'at point' : '--', bodyX, bodyY - 8);
+  // White readout box
+  ctx.fillStyle = '#f8f8f8'; ctx.strokeStyle = '#999'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(bodyX - 26, bodyY + 2, 52, 20, 3); ctx.fill(); ctx.stroke();
+  const disp = (reading == null) ? '--' : (reading.toFixed(2) + ' V');
+  ctx.fillStyle = '#111'; ctx.font = 'bold 12px monospace';
+  ctx.fillText(disp, bodyX, bodyY + 12);
+  ctx.restore();
+
+  // Connection dot at the bottom of the body.
+  ctx.fillStyle = '#ff6b9d'; ctx.strokeStyle = '#7a1436'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(connX, connY, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+  // Probe handle (pink) at the tip.
+  drawProbeHandle(item.x1, item.y1, '#a01450', '#ff6b9d', 'V', a1);
+
+  // Tip selection ring.
+  if (isSelected) {
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(item.x1, item.y1, 10, 0, Math.PI * 2); ctx.stroke();
+  }
+}
+
 // Animation loop for heat source flames and light sources
 let lastThermistorUpdate = 0;
 let lastLDRUpdate = 0;
+
 function animate() {
   state.animationTime += 0.016; // Roughly 60fps
   updateParticles();
@@ -12250,5 +12575,451 @@ document.getElementById('showPowerValues').disabled = !state.showPower;
 // Start animation
 updateKirchhoffCheckboxes();
 animate();</script>
+
+<!-- ===== SCRIBBLE PAD (ported from capacitor toolkit) ===== -->
+<!-- module into any app; namespaced 'doodle' / DoodlePad, no dependencies) -->
+<!-- ===================================================================== -->
+<div id="doodleWindow" class="doodle-window">
+    <div class="doodle-header" id="doodleHeader">
+        <div class="doodle-titlebar">
+            <span class="doodle-title">&#9999;&#65039; Scribble pad</span>
+            <button class="doodle-close" onclick="DoodlePad.toggle()" title="Close" aria-label="Close">&#10005;</button>
+        </div>
+        <div class="doodle-tools">
+            <button class="doodle-swatch" data-color="#161616" style="background:#161616" title="Black"></button>
+            <button class="doodle-swatch" data-color="#e74c3c" style="background:#e74c3c" title="Red"></button>
+            <button class="doodle-swatch" data-color="#2ecc71" style="background:#2ecc71" title="Green"></button>
+            <button class="doodle-swatch" data-color="#4fc3f7" style="background:#4fc3f7" title="Blue"></button>
+            <button class="doodle-swatch" data-color="#ffb000" style="background:#ffb000" title="Orange"></button>
+            <button class="doodle-swatch" data-color="#9b59b6" style="background:#9b59b6" title="Purple"></button>
+            <button class="doodle-tool doodle-tool-icon" id="doodleEraser" title="Eraser" aria-label="Eraser"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" style="pointer-events:none"><g transform="rotate(-40 12 12)"><rect x="4" y="8" width="16" height="9" rx="1.8" fill="#ff8fab" stroke="currentColor" stroke-width="1.5"/><rect x="4" y="12.5" width="16" height="4.5" fill="#dce3ee" stroke="currentColor" stroke-width="1.5"/><rect x="4" y="8" width="16" height="9" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.5"/></g></svg></button>
+            <span class="doodle-pensize">
+                <label for="doodleThickness">Pen size</label>
+                <input type="range" id="doodleThickness" class="doodle-thick" min="0.5" max="3" step="0.1" value="3" title="Pen size">
+            </span>
+            <button class="doodle-tool" id="doodleClear" title="Clear all">Clear</button>
+        </div>
+    </div>
+    <div class="doodle-body">
+        <canvas id="doodleCanvas"></canvas>
+    </div>
+    <div class="doodle-resize-grip" id="doodleResizeGrip" title="Drag to resize"></div>
+</div>
+
+<script>
+/* =====================================================================
+   SELF-CONTAINED SCRIBBLE / DOODLE PAD module.
+   No external dependencies. Namespaced under DoodlePad. To lift into
+   another app: copy the matching HTML block, the CSS block, and this
+   <script>. Persists strokes in memory until the page is refreshed.
+   Pointer-event based with Pencil priority (palm rejection) and the
+   {passive:false}+preventDefault discipline used elsewhere in the suite.
+   ===================================================================== */
+const DoodlePad = (function () {
+    let win, canvas, ctx;
+    let color = '#161616';
+    let thickness = 3;
+    const ERASER_WIDTH = 26;     // fixed, large enough to rub out writing; not tied to the pen slider
+    let eraser = false;
+    let strokes = [];            // persisted in memory: {color, width, erase, pts:[{x,y}]}
+    let current = null;
+    let drawing = false;
+    let activePointerId = null;  // restrict to one pointer (palm rejection)
+    let dpr = 1;
+    const drag = { active: false, sx: 0, sy: 0, left: 0, top: 0 };
+    const rez = { active: false, sx: 0, sy: 0, w: 0, h: 0 };
+
+    function el(id) { return document.getElementById(id); }
+
+    function init() {
+        win = el('doodleWindow');
+        canvas = el('doodleCanvas');
+        if (!win || !canvas) return;
+        ctx = canvas.getContext('2d');
+
+        // Colour swatches.
+        const swatches = win.querySelectorAll('.doodle-swatch');
+        swatches.forEach(function (s) {
+            s.addEventListener('click', function () {
+                color = s.getAttribute('data-color');
+                eraser = false;
+                el('doodleEraser').classList.remove('active');
+                setActiveSwatch();
+            });
+        });
+        // Eraser.
+        el('doodleEraser').addEventListener('click', function () {
+            eraser = !eraser;
+            el('doodleEraser').classList.toggle('active', eraser);
+            setActiveSwatch();
+        });
+        // Thickness.
+        el('doodleThickness').addEventListener('input', function (e) {
+            thickness = parseFloat(e.target.value);
+        });
+        // Clear.
+        el('doodleClear').addEventListener('click', function () {
+            strokes = [];
+            repaint();
+        });
+
+        setActiveSwatch();
+        initDrawing();
+        initDragResize();
+        window.addEventListener('resize', function () { if (win.classList.contains('open')) resizeCanvas(); });
+    }
+
+    function setActiveSwatch() {
+        const swatches = win.querySelectorAll('.doodle-swatch');
+        swatches.forEach(function (s) {
+            s.classList.toggle('active', !eraser && s.getAttribute('data-color') === color);
+        });
+    }
+
+    function toggle() {
+        if (!win) return;
+        const open = win.classList.toggle('open');
+        if (open) {
+            // Size the backing store to the element and repaint stored strokes.
+            requestAnimationFrame(function () { resizeCanvas(); });
+        }
+    }
+
+    function resizeCanvas() {
+        dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width < 10 || rect.height < 10) return;
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        repaint();
+    }
+
+    function repaint() {
+        if (!ctx) return;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const rect = canvas.getBoundingClientRect();
+        ctx.clearRect(0, 0, rect.width, rect.height);
+        ctx.fillStyle = '#f4f4f8';
+        ctx.fillRect(0, 0, rect.width, rect.height);
+        for (let i = 0; i < strokes.length; i++) drawStroke(strokes[i]);
+        if (current) drawStroke(current);
+    }
+
+    function drawStroke(s) {
+        if (!s.pts.length) return;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = s.width;
+        if (s.erase) {
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = '#f4f4f8';   // opaque surface, so erase = paint background
+        } else {
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = s.color;
+        }
+        ctx.beginPath();
+        ctx.moveTo(s.pts[0].x, s.pts[0].y);
+        if (s.pts.length === 1) {
+            // a dot
+            ctx.lineTo(s.pts[0].x + 0.01, s.pts[0].y + 0.01);
+        } else {
+            for (let i = 1; i < s.pts.length; i++) ctx.lineTo(s.pts[i].x, s.pts[i].y);
+        }
+        ctx.stroke();
+    }
+
+    function localPoint(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    function initDrawing() {
+        // Belt-and-braces against the iOS Safari selection / copy-paste callout
+        // that otherwise steals stylus strokes: cancel the selection and context
+        // menu events on the canvas, and swallow raw touch events (we draw via
+        // pointer events instead).
+        canvas.addEventListener('selectstart', function (e) { e.preventDefault(); });
+        canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+        canvas.addEventListener('touchstart', function (e) { e.preventDefault(); }, { passive: false });
+        canvas.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
+
+        // Pointer events give us Pencil vs touch and pressure for free, and let
+        // us reject the palm by locking to a single pointer once drawing starts.
+        canvas.addEventListener('pointerdown', function (e) {
+            // If a stylus is in use, ignore touch (palm) pointers.
+            if (e.pointerType === 'touch' && activePointerId !== null) return;
+            activePointerId = e.pointerId;
+            drawing = true;
+            const p = localPoint(e.clientX, e.clientY);
+            const strokeWidth = eraser ? ERASER_WIDTH : thickness;
+            current = { color: color, width: strokeWidth, erase: eraser, pts: [p] };
+            try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+            e.preventDefault();
+        }, { passive: false });
+
+        canvas.addEventListener('pointermove', function (e) {
+            if (!drawing || e.pointerId !== activePointerId) return;
+            // Use coalesced events for smooth high-rate Pencil strokes.
+            let evs = [e];
+            if (e.getCoalescedEvents) {
+                const c = e.getCoalescedEvents();
+                if (c && c.length) evs = c;
+            }
+            for (let i = 0; i < evs.length; i++) {
+                current.pts.push(localPoint(evs[i].clientX, evs[i].clientY));
+            }
+            repaint();
+            e.preventDefault();
+        }, { passive: false });
+
+        function endStroke(e) {
+            if (e.pointerId !== activePointerId) return;
+            if (current && current.pts.length) strokes.push(current);
+            current = null;
+            drawing = false;
+            activePointerId = null;
+            try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
+        }
+        canvas.addEventListener('pointerup', endStroke, { passive: false });
+        canvas.addEventListener('pointercancel', endStroke, { passive: false });
+        canvas.addEventListener('pointerleave', function (e) {
+            // keep drawing only while captured; capture handles off-canvas moves
+        });
+    }
+
+    function initDragResize() {
+        const header = el('doodleHeader');
+        const grip = el('doodleResizeGrip');
+
+        const startDrag = function (cx, cy) {
+            const r = win.getBoundingClientRect();
+            drag.active = true; drag.sx = cx; drag.sy = cy; drag.left = r.left; drag.top = r.top;
+        };
+        const moveDrag = function (cx, cy) {
+            if (!drag.active) return;
+            let nl = drag.left + (cx - drag.sx);
+            let nt = drag.top + (cy - drag.sy);
+            nl = Math.max(-(win.offsetWidth - 80), Math.min(window.innerWidth - 80, nl));
+            nt = Math.max(0, Math.min(window.innerHeight - 40, nt));
+            win.style.left = nl + 'px';
+            win.style.top = nt + 'px';
+        };
+        const endDrag = function () { drag.active = false; };
+
+        header.addEventListener('mousedown', function (e) {
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+            startDrag(e.clientX, e.clientY); e.preventDefault();
+        });
+        document.addEventListener('mousemove', function (e) { if (drag.active) moveDrag(e.clientX, e.clientY); });
+        document.addEventListener('mouseup', endDrag);
+        header.addEventListener('touchstart', function (e) {
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+            const t = e.touches[0]; startDrag(t.clientX, t.clientY); e.preventDefault();
+        }, { passive: false });
+        document.addEventListener('touchmove', function (e) {
+            if (drag.active) { const t = e.touches[0]; moveDrag(t.clientX, t.clientY); e.preventDefault(); }
+        }, { passive: false });
+        document.addEventListener('touchend', endDrag);
+        document.addEventListener('touchcancel', endDrag);
+
+        const startRez = function (cx, cy) {
+            const r = win.getBoundingClientRect();
+            rez.active = true; rez.sx = cx; rez.sy = cy; rez.w = r.width; rez.h = r.height;
+        };
+        const moveRez = function (cx, cy) {
+            if (!rez.active) return;
+            let nw = Math.max(360, Math.min(window.innerWidth - 30, rez.w + (cx - rez.sx)));
+            let nh = Math.max(260, Math.min(window.innerHeight - 30, rez.h + (cy - rez.sy)));
+            win.style.width = nw + 'px';
+            win.style.height = nh + 'px';
+            resizeCanvas();
+        };
+        const endRez = function () { rez.active = false; };
+
+        grip.addEventListener('mousedown', function (e) { startRez(e.clientX, e.clientY); e.preventDefault(); e.stopPropagation(); });
+        document.addEventListener('mousemove', function (e) { if (rez.active) moveRez(e.clientX, e.clientY); });
+        document.addEventListener('mouseup', endRez);
+        grip.addEventListener('touchstart', function (e) { const t = e.touches[0]; startRez(t.clientX, t.clientY); e.preventDefault(); e.stopPropagation(); }, { passive: false });
+        document.addEventListener('touchmove', function (e) { if (rez.active) { const t = e.touches[0]; moveRez(t.clientX, t.clientY); e.preventDefault(); } }, { passive: false });
+        document.addEventListener('touchend', endRez);
+        document.addEventListener('touchcancel', endRez);
+    }
+
+    // Initialise once the DOM is ready.
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+    return { toggle: toggle };
+})();
+
+</script>
+
+
+<!-- ===== CIRCUIT ANNOTATE (ported from capacitor toolkit) ===== -->
+<script>
+const CircuitAnnotate = (function () {
+    let canvas, ctx, stage, toggleBtn, tools;
+    let on = false;
+    let color = '#ffffff';
+    let thickness = 2;
+    const ERASER_WIDTH = 22;
+    let eraser = false;
+    let strokes = [];            // persists until the user clears
+    let current = null;
+    let drawing = false;
+    let activePointerId = null;  // the single pointer we draw with (palm rejection)
+
+    function el(id) { return document.getElementById(id); }
+
+    function init() {
+        canvas = el('circuitAnnotateCanvas');
+        stage = el('circuitStage');
+        toggleBtn = el('caToggle');
+        tools = el('caToolsExpanded');
+        if (!canvas || !stage) return;
+        ctx = canvas.getContext('2d');
+
+        const swatches = tools.querySelectorAll('.doodle-swatch');
+        swatches.forEach(function (s) {
+            s.addEventListener('click', function () {
+                color = s.getAttribute('data-cacolor');
+                eraser = false;
+                el('caEraser').classList.remove('active');
+                setActiveSwatch();
+            });
+        });
+        el('caEraser').addEventListener('click', function () {
+            eraser = !eraser;
+            el('caEraser').classList.toggle('active', eraser);
+            setActiveSwatch();
+        });
+        el('caThickness').addEventListener('input', function (e) {
+            thickness = parseFloat(e.target.value);
+        });
+        el('caClear').addEventListener('click', function () {
+            strokes = [];
+            repaint();
+        });
+        setActiveSwatch();
+        initDrawing();
+    }
+
+    function setActiveSwatch() {
+        const swatches = tools.querySelectorAll('.doodle-swatch');
+        swatches.forEach(function (s) {
+            s.classList.toggle('active', !eraser && s.getAttribute('data-cacolor') === color);
+        });
+    }
+
+    function toggle() {
+        on = !on;
+        toggleBtn.classList.toggle('active', on);
+        tools.style.display = on ? 'flex' : 'none';
+        canvas.classList.toggle('active', on);
+        stage.classList.toggle('annotating', on);
+    }
+
+    function isOn() { return on; }
+
+    /* Map client coords into the 640x480 buffer, exactly like the circuit's
+       canvasPos() so annotations register where the circuit is drawn. */
+    function bufPos(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: (clientX - rect.left) * (canvas.width / rect.width),
+            y: (clientY - rect.top) * (canvas.height / rect.height)
+        };
+    }
+
+    function repaint() {
+        if (!ctx) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);   // transparent overlay
+        for (let i = 0; i < strokes.length; i++) drawStroke(strokes[i]);
+        if (current) drawStroke(current);
+    }
+
+    function drawStroke(s) {
+        if (!s.pts.length) return;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = s.width;
+        if (s.erase) {
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.strokeStyle = 'rgba(0,0,0,1)';
+        } else {
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = s.color;
+        }
+        ctx.beginPath();
+        ctx.moveTo(s.pts[0].x, s.pts[0].y);
+        if (s.pts.length === 1) {
+            ctx.lineTo(s.pts[0].x + 0.01, s.pts[0].y + 0.01);
+        } else {
+            for (let i = 1; i < s.pts.length; i++) ctx.lineTo(s.pts[i].x, s.pts[i].y);
+        }
+        ctx.stroke();
+        ctx.globalCompositeOperation = 'source-over';
+    }
+
+    function initDrawing() {
+        // Match GraphAnnotate exactly: pointer events with a single active
+        // pointer id, rejecting extra touches (palm) while one is down, and
+        // ignoring touch input when it isn't the active pointer. This is what
+        // stops a resting palm/finger from spraying strokes.
+        canvas.addEventListener('selectstart', function (e) { if (on) e.preventDefault(); });
+        canvas.addEventListener('contextmenu', function (e) { if (on) e.preventDefault(); });
+        canvas.addEventListener('touchstart', function (e) { if (on) e.preventDefault(); }, { passive: false });
+        canvas.addEventListener('touchmove', function (e) { if (on) e.preventDefault(); }, { passive: false });
+
+        canvas.addEventListener('pointerdown', function (e) {
+            if (!on) return;
+            // Reject additional touches while a stroke is already in progress
+            // (a resting palm arrives as a second touch pointer).
+            if (e.pointerType === 'touch' && activePointerId !== null) return;
+            activePointerId = e.pointerId;
+            drawing = true;
+            const p = bufPos(e.clientX, e.clientY);
+            current = { color: color, width: eraser ? ERASER_WIDTH : thickness, erase: eraser, pts: [p] };
+            try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+            e.preventDefault();
+        }, { passive: false });
+
+        canvas.addEventListener('pointermove', function (e) {
+            if (!drawing || e.pointerId !== activePointerId) return;
+            let evs = [e];
+            if (e.getCoalescedEvents) {
+                const c = e.getCoalescedEvents();
+                if (c && c.length) evs = c;
+            }
+            for (let i = 0; i < evs.length; i++) current.pts.push(bufPos(evs[i].clientX, evs[i].clientY));
+            repaint();
+            e.preventDefault();
+        }, { passive: false });
+
+        function endStroke(e) {
+            if (e.pointerId !== activePointerId) return;
+            if (current && current.pts.length) strokes.push(current);
+            current = null;
+            drawing = false;
+            activePointerId = null;
+            try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
+        }
+        canvas.addEventListener('pointerup', endStroke, { passive: false });
+        canvas.addEventListener('pointercancel', endStroke, { passive: false });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+    return { toggle: toggle, isOn: isOn, repaint: repaint };
+})();
+
+</script>
 </body>
 </html>
