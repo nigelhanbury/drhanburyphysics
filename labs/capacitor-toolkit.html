@@ -1200,7 +1200,7 @@ canvas#canvas2 {
                             <span class="component-label">Potential</span>
                         </div>
                     </div>
-                    <p class="palette-note">Drag a tile onto the canvas, or on a touch screen tap the tile then tap the canvas to place it. Drag endpoints to rotate, resize or wire. Drag a label to move it. To delete a component, long-press it on a touch screen or right-click it on a computer &mdash; deleting a circuit component resets the circuit&rsquo;s charge and delivered energy, since you&rsquo;re reconfiguring (deleting a meter or probe doesn&rsquo;t).</p>
+                    <p class="palette-note">Drag a tile onto the canvas, or on a touch screen tap the tile then tap the canvas to place it. Drag endpoints to rotate, resize or wire. Drag a label to move it. To delete a component, long-press it on a touch screen or right-click it on a computer &mdash; the rest of the circuit keeps its charge, just as on the bench; deleting the cell zeroes its delivered-energy total.</p>
                     <button class="build-action" id="buildReset" onclick="T2resetCharge()" title="Clear all charge and energy" style="margin-top:10px;">&#8635; Reset charge &amp; energy</button>
                 </div>
                 <div class="panel" id="buildInspectorPanel" style="margin-top:12px;">
@@ -1291,9 +1291,9 @@ canvas#canvas2 {
         <p>Build any arrangement of cells and capacitors and read the potential difference, charge and stored energy once the circuit has settled. In the settled state a capacitor is fully charged and no current flows, so this tab is about charge and energy rather than current. There are no resistors: they only affect how long charging takes, never the final settled state.</p>
         <h3>Building a circuit</h3>
         <p>To add a component, drag its tile from the palette onto the canvas, or on a touch screen tap the tile to highlight it and then tap the canvas to place it. Drag an <span class="key">endpoint</span> to rotate or resize a component, or onto another endpoint to wire the two together &mdash; a blue dot marks where three or more ends join. Only one cell is allowed; the cell tile greys out once one is placed.</p>
-        <p><span class="key">Long-press</span> a component (or right-click on a computer) to delete it. Deleting resets the circuit&rsquo;s charge and delivered energy, since removing a part means you are reconfiguring.</p>
+        <p><span class="key">Long-press</span> a component (or right-click on a computer) to delete it. The rest of the circuit keeps its charge, just as a real circuit would; a deleted capacitor takes its own charge away with it, and deleting the cell zeroes its delivered-energy total.</p>
         <h3>Components</h3>
-        <p><span class="key">Cell</span> &mdash; the supply; set its EMF in the inspector, and press <span class="key">r</span> to reverse its polarity. <span class="key">Capacitor</span> &mdash; set its capacitance and, for a source-free circuit, an initial charge. <span class="key">Variable capacitor</span> &mdash; drag the arrow on its body to change the capacitance live. <span class="key">Switch</span> &mdash; tap its body to open or close it. <span class="key">SPDT switch</span> &mdash; a changeover switch with three terminals; tap an arm to route the common to it (see below). <span class="key">Wire</span> &mdash; a zero-resistance link.</p>
+        <p><span class="key">Cell</span> &mdash; the supply; set its EMF in the inspector, and press <span class="key">r</span> to reverse its polarity. <span class="key">Capacitor</span> &mdash; set its capacitance and, for a source-free circuit, an initial charge; press <span class="key">r</span> to turn it around &mdash; a charged capacitor&rsquo;s charge goes with its plates. <span class="key">Variable capacitor</span> &mdash; drag the arrow on its body to change the capacitance live. <span class="key">Switch</span> &mdash; tap its body to open or close it. <span class="key">SPDT switch</span> &mdash; a changeover switch with three terminals; tap an arm to route the common to it (see below). <span class="key">Wire</span> &mdash; a zero-resistance link.</p>
         <h3>The SPDT (changeover) switch</h3>
         <p>The SPDT switch has three terminals: a common (<span class="key">C</span>) and two throws, <span class="key">A</span> and <span class="key">B</span>. Tap arm A to switch to A, tap arm B to switch to B, tap arm C to disconnect.</p>
         <p>Wire the common to a capacitor, throw A to the cell and throw B to a second capacitor, and you have charge, isolate and share in one component: tap A to charge, tap C to isolate, tap B to share.</p>
@@ -5476,13 +5476,14 @@ function T2distToSeg(px, py, x1, y1, x2, y2) {
 
 /* ---- Delete (long-press / right-click, DC kit onRightClick) ---- */
 function T2deleteItem(id) {
-    // Find what is being deleted BEFORE removing it. Instruments (voltmeter,
-    // energy meter, potential probe) are sensors: they form no nodes and hold no
-    // charge, so deleting one does NOT reconfigure the circuit and must not
-    // reset it. Deleting a real component (cell, capacitor, wire, switch) means
-    // the circuit is being reconfigured, so we clear all stored charge and the
-    // delivered-energy total to avoid confusion (a stale delivered value that
-    // references charge no longer present). This is documented in the help.
+    // Real-circuit deletion. Instruments (voltmeter, energy meter, potential
+    // probe) are sensors: they form no nodes and hold no charge, so deleting
+    // one never touches the circuit. Deleting a real component behaves as it
+    // would on the bench: every OTHER capacitor keeps the charge it holds (the
+    // settle conserves charge on whatever islands remain), and a deleted
+    // capacitor simply takes its own charge away with it. The one exception is
+    // the cell: its net emitted charge / delivered energy totals describe what
+    // THAT supply did, so removing the cell zeroes them.
     var deleted = null;
     for (var d = 0; d < T2.items.length; d++) if (T2.items[d].id === id) { deleted = T2.items[d]; break; }
     var isInstrument = deleted && T2isInstrument(deleted.type);
@@ -5490,21 +5491,30 @@ function T2deleteItem(id) {
     T2.items = T2.items.filter(function (i) { return i.id !== id; });
     if (T2.selectedId === id) T2.selectedId = null;
 
-    if (!isInstrument) {
-        for (var i = 0; i < T2.items.length; i++) {
-            var it = T2.items[i];
-            if (it.type === 'capacitor' || it.type === 'varCapacitor') it.storedQ = it.initialQ || 0;
-        }
+    if (!isInstrument && deleted && deleted.type === 'cell') {
         T2._netEmitted = 0;
         T2._netDelivered = 0;
     }
     T2computeNodes(); T2settle(); T2refreshPalette(); T2draw();
 }
-/* Reverse a cell's polarity by swapping its endpoints (DC kit 'r' key). */
+/* Reverse the selected component's polarity (DC kit 'r' key). A cell swaps its
+   endpoints: its EMF direction is defined by end order and it holds no state.
+   A capacitor is different: physically turning it around leaves the circuit
+   geometry unchanged but puts each plate at the other end, so the charge on
+   what is now plate 1 is minus what it was - negate storedQ (and initialQ so
+   the inspector still describes the same physical start in the new
+   orientation). Note swapping endpoints AND negating would cancel out: that is
+   the same physical state relabelled, not a rotation. */
 function T2reverseSelected() {
-    var it = T2sel(); if (!it || it.type !== 'cell') return;
-    var tx = it.x1, ty = it.y1; it.x1 = it.x2; it.y1 = it.y2; it.x2 = tx; it.y2 = ty;
-    T2computeNodes(); T2settle(); T2draw();
+    var it = T2sel(); if (!it) return;
+    if (it.type === 'cell') {
+        var tx = it.x1, ty = it.y1; it.x1 = it.x2; it.y1 = it.y2; it.x2 = tx; it.y2 = ty;
+        T2computeNodes(); T2settle(); T2draw();
+    } else if (it.type === 'capacitor' || it.type === 'varCapacitor') {
+        it.storedQ = -(it.storedQ || 0);                    // charge follows the plates
+        if (it.initialQ) it.initialQ = -it.initialQ;
+        T2computeNodes(); T2settle(); T2draw();
+    }
 }
 function T2sel() {
     for (var i = 0; i < T2.items.length; i++) if (T2.items[i].id === T2.selectedId) return T2.items[i];
@@ -7398,16 +7408,20 @@ function T2updateMeters() {
                 m.voltage = pots[rn] - pots[bn];   // real polarity: red minus black
             } else { m.voltage = NaN; }
         } else if (m.type === 'energy') {
-            if (m.component != null) {
-                var comp = null;
-                for (var k = 0; k < T2.items.length; k++) if (T2.items[k].id === m.component) { comp = T2.items[k]; break; }
-                if (comp && comp.type === 'cell') {
-                    m.energy = T2._netDelivered || 0;       // net energy delivered by the cell
-                } else if (comp) {
-                    var C = comp.value * 1e-6;
-                    var q = comp.storedQ || 0;
-                    m.energy = (C > 0) ? (q * q) / (2 * C) : NaN;   // 1/2 Q^2 / C from stored charge
-                } else { m.energy = NaN; }
+            // Position-based, resolved live on every update - the meter reads
+            // whatever cell or capacitor its probe currently sits on, exactly
+            // as the voltmeter and potential probe re-resolve their nodes each
+            // update. Dragging the target away (or dropping something else
+            // under the probe) changes the reading immediately.
+            var tgt = T2nearestEnergyTarget(m.x1, m.y1, 40);
+            m.component = tgt ? tgt.id : null;
+            m.compLabel = tgt ? ((tgt.type === 'cell') ? 'supplied' : 'stored') : null;
+            if (tgt && tgt.type === 'cell') {
+                m.energy = T2._netDelivered || 0;       // net energy delivered by the cell
+            } else if (tgt) {
+                var C = tgt.value * 1e-6;
+                var q = tgt.storedQ || 0;
+                m.energy = (C > 0) ? (q * q) / (2 * C) : NaN;   // 1/2 Q^2 / C from stored charge
             } else { m.energy = NaN; }
         } else if (m.type === 'probe') {
             // Potential at the probed node, against the circuit's 0 V reference.
