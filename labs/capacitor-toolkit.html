@@ -1114,6 +1114,8 @@ canvas#canvas2 {
                     <button class="build-preset-btn" onclick="T2preset4()">Series/Parallel</button>
                     <button class="build-preset-btn" onclick="T2preset5()">Capacitor charging capacitor</button>
                     <button class="build-preset-btn" onclick="T2preset6()">Capacitor bridge</button>
+                    <button class="build-preset-btn" onclick="T2preset8()">Trapped charge</button>
+                    <button class="build-preset-btn" onclick="T2preset7()">Trapped charge network</button>
                     <button class="build-preset-btn clear-btn" onclick="T2clearAll()">Clear all</button>
                 </div>
             </div>
@@ -7363,6 +7365,103 @@ function T2preset6() {
           "value": 100, "unit": "\u00B5F", "color": "#4fc3f7", "isOn": true,
           "labelOffsetX": 0, "labelOffsetY": 26,
           "cLabelOffX": 0, "cLabelOffY": 37, "qLabelOffX": 0, "qLabelOffY": -34,
+          "initialQ": 0, "storedQ": 0 }
+    ]);
+}
+
+function T2preset7() {
+    // Trapped charge. Close the supply switch (bottom): every capacitor charges.
+    // Close the second switch: it short-circuits the left-hand network, which
+    // discharges to zero while the 2.31 uF - now directly across the supply -
+    // charges to the full 12 V. Now REOPEN that switch: nothing changes! The
+    // fully charged 2.31 uF is in series with the left combination and its 12 V
+    // exactly opposes the supply, so no charge can flow; equivalently, the
+    // charge parked on its left plate is trapped on a junction that touches
+    // only capacitor plates, and charge cannot cross a dielectric. The circuit
+    // looks identical to its starting state but remembers its history. To
+    // recover: use the reset button, or discharge the 2.31 uF.
+    T2loadPreset([
+        { "id": 1, "type": "cell", "x1": 640, "y1": 160, "x2": 640, "y2": 420, "value": 12, "unit": "V", "color": "#2ecc71", "isOn": true, "labelOffsetX": 45.49019607843127, "labelOffsetY": 5.646753755076077, "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0, "cqLabelOffX": -85.49019607843138, "cqLabelOffY": 27.560839571407598 },
+        { "id": 2, "type": "capacitor", "x1": 420, "y1": 160, "x2": 500, "y2": 160, "value": 2.31, "unit": "\u00b5F", "color": "#4fc3f7", "isOn": true, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0 },
+        { "id": 3, "type": "wire", "x1": 500, "y1": 160, "x2": 640, "y2": 160, "value": 0, "unit": "", "color": "#5a7fb0", "isOn": true, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0 },
+        { "id": 5, "type": "capacitor", "x1": 220, "y1": 60, "x2": 300, "y2": 60, "value": 1.54, "unit": "\u00b5F", "color": "#4fc3f7", "isOn": true, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0 },
+        { "id": 6, "type": "capacitor", "x1": 220, "y1": 160, "x2": 300, "y2": 160, "value": 5.47, "unit": "\u00b5F", "color": "#4fc3f7", "isOn": true, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0 },
+        { "id": 7, "type": "capacitor", "x1": 220, "y1": 260, "x2": 300, "y2": 260, "value": 4.87, "unit": "\u00b5F", "color": "#4fc3f7", "isOn": true, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 0, "cLabelOffY": 37.47972014286415, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0 },
+        { "id": 8, "type": "wire", "x1": 360, "y1": 60, "x2": 360, "y2": 160, "value": 0, "unit": "", "color": "#5a7fb0", "isOn": true, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0 },
+        { "id": 9, "type": "wire", "x1": 300, "y1": 60, "x2": 360, "y2": 60, "value": 0, "unit": "", "color": "#5a7fb0", "isOn": true, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0 },
+        { "id": 10, "type": "wire", "x1": 360, "y1": 160, "x2": 420, "y2": 160, "value": 0, "unit": "", "color": "#5a7fb0", "isOn": true, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0 },
+        { "id": 11, "type": "wire", "x1": 360, "y1": 160, "x2": 300, "y2": 160, "value": 0, "unit": "", "color": "#5a7fb0", "isOn": true, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0 },
+        { "id": 12, "type": "capacitor", "x1": 100, "y1": 420, "x2": 100, "y2": 300, "value": 3.14, "unit": "\u00b5F", "color": "#4fc3f7", "isOn": true, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 48.627450980392155, "cLabelOffY": 5.384216448945608, "qLabelOffX": -58.03921568627451, "qLabelOffY": 5.140858163315215, "initialQ": 0, "storedQ": 0 },
+        { "id": 13, "type": "wire", "x1": 100, "y1": 220, "x2": 220, "y2": 220, "value": 0, "unit": "", "color": "#5a7fb0", "isOn": true, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0 },
+        { "id": 14, "type": "wire", "x1": 220, "y1": 220, "x2": 220, "y2": 160, "value": 0, "unit": "", "color": "#5a7fb0", "isOn": true, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0 },
+        { "id": 15, "type": "wire", "x1": 220, "y1": 220, "x2": 220, "y2": 260, "value": 0, "unit": "", "color": "#5a7fb0", "isOn": true, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0 },
+        { "id": 16, "type": "wire", "x1": 100, "y1": 60, "x2": 220, "y2": 60, "value": 0, "unit": "", "color": "#5a7fb0", "isOn": true, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0 },
+        { "id": 17, "type": "wire", "x1": 100, "y1": 220, "x2": 100, "y2": 60, "value": 0, "unit": "", "color": "#5a7fb0", "isOn": true, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0 },
+        { "id": 18, "type": "wire", "x1": 100, "y1": 220, "x2": 100, "y2": 300, "value": 0, "unit": "", "color": "#5a7fb0", "isOn": true, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0 },
+        { "id": 19, "type": "wire", "x1": 100, "y1": 420, "x2": 360, "y2": 420, "value": 0, "unit": "", "color": "#5a7fb0", "isOn": true, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0 },
+        { "id": 20, "type": "wire", "x1": 300, "y1": 260, "x2": 360, "y2": 260, "value": 0, "unit": "", "color": "#5a7fb0", "isOn": true, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0 },
+        { "id": 21, "type": "switch", "x1": 360, "y1": 420, "x2": 640, "y2": 420, "value": 0, "unit": "", "color": "#9b59b6", "isOn": false, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0 },
+        { "id": 28, "type": "wire", "x1": 360, "y1": 260, "x2": 360, "y2": 420, "value": 0, "unit": "", "color": "#5a7fb0", "isOn": true, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0 },
+        { "id": 29, "type": "switch", "x1": 360, "y1": 160, "x2": 360, "y2": 260, "value": 0, "unit": "", "color": "#9b59b6", "isOn": false, "labelOffsetX": 0, "labelOffsetY": 26, "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34, "initialQ": 0, "storedQ": 0 }
+    ]);
+}
+
+function T2preset8() {
+    // Trapped charge (minimal). Two equal capacitors in series. Close the
+    // supply switch: 300 uC each (3 V + 3 V). Close the second switch: it
+    // shorts capacitor B, so A - now directly across the supply - doubles to
+    // 600 uC while B drains to zero. Reopen the short: frozen at 600/0, and
+    // even toggling the supply switch changes nothing. A's full 6 V exactly
+    // opposes the supply, so no charge can flow; the 600 uC on the middle
+    // junction is trapped - it touches only capacitor plates. The circuit
+    // looks identical to its fresh state but remembers its history. Recover
+    // with the reset button, or by discharging capacitor A.
+    T2loadPreset([
+        { "id": 1, "type": "switch", "x1": 100, "y1": 80, "x2": 260, "y2": 80,
+          "value": 0, "unit": "", "color": "#9b59b6", "isOn": false,
+          "labelOffsetX": 0, "labelOffsetY": 26,
+          "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34,
+          "initialQ": 0, "storedQ": 0 },
+        { "id": 2, "type": "cell", "x1": 260, "y1": 80, "x2": 620, "y2": 80,
+          "value": 6, "unit": "V", "color": "#2ecc71", "isOn": true,
+          "labelOffsetX": 0, "labelOffsetY": -24,
+          "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34,
+          "cqLabelOffX": 0, "cqLabelOffY": -48,
+          "initialQ": 0, "storedQ": 0 },
+        { "id": 3, "type": "wire", "x1": 100, "y1": 80, "x2": 100, "y2": 300,
+          "value": 0, "unit": "", "color": "#5a7fb0", "isOn": true,
+          "labelOffsetX": 0, "labelOffsetY": 26,
+          "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34,
+          "initialQ": 0, "storedQ": 0 },
+        { "id": 4, "type": "capacitor", "x1": 100, "y1": 300, "x2": 360, "y2": 300,
+          "value": 100, "unit": "\u00B5F", "color": "#4fc3f7", "isOn": true,
+          "labelOffsetX": 0, "labelOffsetY": 26,
+          "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34,
+          "initialQ": 0, "storedQ": 0 },
+        { "id": 5, "type": "capacitor", "x1": 360, "y1": 300, "x2": 620, "y2": 300,
+          "value": 100, "unit": "\u00B5F", "color": "#4fc3f7", "isOn": true,
+          "labelOffsetX": 0, "labelOffsetY": 26,
+          "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34,
+          "initialQ": 0, "storedQ": 0 },
+        { "id": 6, "type": "wire", "x1": 620, "y1": 80, "x2": 620, "y2": 300,
+          "value": 0, "unit": "", "color": "#5a7fb0", "isOn": true,
+          "labelOffsetX": 0, "labelOffsetY": 26,
+          "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34,
+          "initialQ": 0, "storedQ": 0 },
+        { "id": 7, "type": "wire", "x1": 360, "y1": 300, "x2": 360, "y2": 420,
+          "value": 0, "unit": "", "color": "#5a7fb0", "isOn": true,
+          "labelOffsetX": 0, "labelOffsetY": 26,
+          "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34,
+          "initialQ": 0, "storedQ": 0 },
+        { "id": 8, "type": "switch", "x1": 360, "y1": 420, "x2": 620, "y2": 420,
+          "value": 0, "unit": "", "color": "#9b59b6", "isOn": false,
+          "labelOffsetX": 0, "labelOffsetY": 26,
+          "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34,
+          "initialQ": 0, "storedQ": 0 },
+        { "id": 9, "type": "wire", "x1": 620, "y1": 300, "x2": 620, "y2": 420,
+          "value": 0, "unit": "", "color": "#5a7fb0", "isOn": true,
+          "labelOffsetX": 0, "labelOffsetY": 26,
+          "cLabelOffX": 0, "cLabelOffY": 32, "qLabelOffX": 0, "qLabelOffY": -34,
           "initialQ": 0, "storedQ": 0 }
     ]);
 }
