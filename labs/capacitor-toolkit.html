@@ -872,6 +872,141 @@ canvas#canvas2 {
     color: rgba(255,255,255,0.45); font-size: 0.85em; pointer-events: none;
     text-align: center; width: 90%;
 }
+
+/* ---- Tab 2 Save / Load modals (DC kit pattern) ---- */
+.t2sl-overlay {
+    display: none;
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 2000;
+    justify-content: center; align-items: center;
+}
+.t2sl-modal {
+    background: #1a2332;
+    border: 1px solid rgba(100,180,255,0.3);
+    border-radius: 12px;
+    padding: 20px 24px;
+    max-width: 540px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+}
+.t2sl-modal h3 { margin: 0 0 6px 0; color: #ffcc33; font-size: 1.05em; }
+.t2sl-modal p { margin: 0 0 10px 0; color: #aaa; font-size: 0.82em; line-height: 1.4; }
+.t2sl-modal textarea {
+    width: 100%; height: 110px;
+    background: #0d1520;
+    border: 1px solid rgba(100,180,255,0.2);
+    border-radius: 6px;
+    color: #88ccff;
+    font-family: monospace;
+    font-size: 0.78em;
+    padding: 8px;
+    resize: vertical;
+    box-sizing: border-box;
+}
+.t2sl-modal textarea:focus { outline: none; border-color: rgba(100,180,255,0.5); }
+.t2sl-info { font-size: 0.75em; color: #666; margin: 6px 0 12px 0; }
+.t2sl-btns { display: flex; gap: 10px; justify-content: flex-end; }
+.t2sl-btns button {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    font-size: 0.85em;
+    font-weight: 600;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.t2sl-btn-cancel { background: rgba(255,255,255,0.1); color: #aaa; }
+.t2sl-btn-cancel:hover { background: rgba(255,255,255,0.16); }
+.t2sl-btn-primary { background: linear-gradient(135deg, #3498db, #2980b9); color: #fff; }
+.t2sl-btn-primary:hover { filter: brightness(1.12); }
+.t2sl-status { margin-top: 10px; font-size: 0.8em; color: #2ecc71; min-height: 1.2em; }
+.t2sl-status.error { color: #ff6b6b; }
+
+/* Save/Load: distinct from the blue preset buttons - the DC kit's colour
+   language (green = save, amber = load, red = clear), plus a separator so
+   they read as their own group, not more presets. */
+.build-preset-btn.io-save {
+    background: rgba(46,204,113,0.15);
+    border: 1px solid rgba(46,204,113,0.35);
+    color: #2ecc71;
+}
+.build-preset-btn.io-save:hover {
+    background: rgba(46,204,113,0.3);
+    border-color: rgba(46,204,113,0.6);
+    box-shadow: 0 3px 10px rgba(46,204,113,0.4);
+}
+.build-preset-btn.io-load {
+    background: rgba(255,204,51,0.12);
+    border: 1px solid rgba(255,204,51,0.35);
+    color: #ffcc33;
+}
+.build-preset-btn.io-load:hover {
+    background: rgba(255,204,51,0.28);
+    border-color: rgba(255,204,51,0.6);
+    box-shadow: 0 3px 10px rgba(255,204,51,0.4);
+}
+.build-io-sep {
+    display: inline-block;
+    width: 1px; height: 22px;
+    background: rgba(255,255,255,0.18);
+    margin: 0 6px; vertical-align: middle;
+}
+.build-io-group { display: inline-flex; align-items: center; gap: 3px; }
+.build-help-q {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; padding: 0; border-radius: 50%;
+    font-size: 10px; font-weight: bold; line-height: 1;
+    cursor: pointer; vertical-align: middle;
+    transition: all 0.2s;
+    background: rgba(46,204,113,0.25);
+    border: 1px solid rgba(46,204,113,0.5);
+    color: #2ecc71;
+    touch-action: manipulation;
+}
+.build-help-q:hover { background: rgba(46,204,113,0.5); color: #fff; box-shadow: 0 0 8px rgba(46,204,113,0.4); }
+
+
+/* Save/Load help modal - the DC kit's analysis-help pattern, cloned. */
+.t2ah-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 2001;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+}
+.t2ah-modal {
+    background: linear-gradient(135deg, #1a1a3e, #151530);
+    border-radius: 16px;
+    padding: 24px 28px;
+    max-width: 520px; width: 90%;
+    max-height: 85vh; overflow-y: auto;
+    box-shadow: 0 0 60px rgba(255,255,255,0.08), 0 20px 60px rgba(0,0,0,0.5);
+}
+.t2ah-modal h3 {
+    margin: 0 0 16px 0; color: #fff; font-size: 1.15em;
+    display: flex; align-items: center; gap: 10px;
+}
+.t2ah-section { margin-bottom: 14px; }
+.t2ah-title {
+    font-size: 0.7em; text-transform: uppercase;
+    letter-spacing: 1.5px; margin-bottom: 6px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 3px;
+}
+.t2ah-text {
+    font-size: 0.85em; color: #ccc; line-height: 1.7; padding-left: 4px;
+}
+.t2ah-text strong { color: #fff; }
+.t2ah-text .t2sl-c { color: #2ecc71; }
+.t2ah-text .t2ld-c { color: #ffcc33; }
+.t2ah-close {
+    display: block; margin: 18px auto 0; padding: 8px 32px;
+    border-radius: 8px; font-size: 0.9em;
+    cursor: pointer; transition: all 0.2s;
+    border: 1px solid; background: transparent;
+    touch-action: manipulation;
+}
 </style>
 </head>
 <body>
@@ -1116,6 +1251,15 @@ canvas#canvas2 {
                     <button class="build-preset-btn" onclick="T2preset6()">Capacitor bridge</button>
                     <button class="build-preset-btn" onclick="T2preset8()">Trapped charge</button>
                     <button class="build-preset-btn" onclick="T2preset7()">Trapped charge network</button>
+                    <span class="build-io-sep"></span>
+                    <span class="build-io-group">
+                        <button class="build-preset-btn io-save" onclick="T2showSave()">Save circuit</button>
+                        <button class="build-help-q" onclick="T2toggleIoHelp()" aria-label="How Save &amp; Load works">?</button>
+                    </span>
+                    <span class="build-io-group">
+                        <button class="build-preset-btn io-load" onclick="T2showLoad()">Load circuit</button>
+                        <button class="build-help-q" onclick="T2toggleIoHelp()" aria-label="How Save &amp; Load works">?</button>
+                    </span>
                     <button class="build-preset-btn clear-btn" onclick="T2clearAll()">Clear all</button>
                 </div>
             </div>
@@ -6201,7 +6345,11 @@ function T2drawItem(it, selected) {
     var midX = (it.x1 + it.x2) / 2, midY = (it.y1 + it.y2) / 2;
     var angle = Math.atan2(it.y2 - it.y1, it.x2 - it.x1);
     ctx2.save();
-    if (selected) { ctx2.shadowColor = it.color; ctx2.shadowBlur = 15; }
+    // Circuit components glow when selected. Instruments (voltmeter, energy
+    // meter, potential probe) do NOT: they are meters clipped to the circuit,
+    // not part of it, and a glowing meter reads as though it were a component.
+    // Their selection is already shown by the endpoint rings and the inspector.
+    if (selected && !T2isInstrument(it.type)) { ctx2.shadowColor = it.color; ctx2.shadowBlur = 15; }
 
     ctx2.strokeStyle = it.color;
     ctx2.fillStyle = it.color;
@@ -7549,6 +7697,466 @@ if (document.readyState === 'loading') {
 
 
 initTab1();
+
+/* ============================================================================
+   TAB 2 - SAVE / LOAD  (portable code string; no browser storage)
+
+   The code is a Crockford Base32 string with a CRC-32 header, chosen because a
+   saved code will be pasted into Word, TextEdit, email or a document and those
+   programs actively damage text: they wrap lines, insert spaces, substitute
+   non-breaking spaces and smart quotes, and autocapitalise. Base32 is
+   uppercase-only, so autocapitalisation cannot corrupt it by construction, and
+   the alphabet excludes the look-alikes I, L, O and U so a retyped code cannot
+   confuse 0/O or 1/l. On loading, T2sanitiseCode strips everything that is not
+   in the alphabet and repairs the look-alikes, so a code that has been wrapped,
+   indented and re-spaced still loads perfectly.
+
+   The CRC-32 is the guarantee: if the code has been damaged in a way the
+   sanitiser cannot repair (a character deleted, changed, or the code cut off),
+   the checksum fails and the load is REFUSED. A damaged circuit is never
+   loaded silently.
+
+   Loading REPLACES the canvas entirely: components, stored charge, display
+   dropdowns, the polarity checkbox, revealed labels, the cell's delivered
+   totals and the selection. It is the canvas exactly as it was when saved.
+   ========================================================================== */
+var T2_SAVE_PREFIX = 'CAPB1';
+var T2_B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';   /* Crockford: no I, L, O, U */
+
+function T2crc32(str) {
+    var c, crc = 0xFFFFFFFF, i, j;
+    for (i = 0; i < str.length; i++) {
+        c = (crc ^ str.charCodeAt(i)) & 0xFF;
+        for (j = 0; j < 8; j++) c = (c & 1) ? ((c >>> 1) ^ 0xEDB88320) : (c >>> 1);
+        crc = (crc >>> 8) ^ c;
+    }
+    return ((crc ^ 0xFFFFFFFF) >>> 0);
+}
+function T2toBytes(str) {
+    var utf = unescape(encodeURIComponent(str)), b = [], i;
+    for (i = 0; i < utf.length; i++) b.push(utf.charCodeAt(i) & 0xFF);
+    return b;
+}
+function T2fromBytes(bytes) {
+    var str = '', i;
+    for (i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]);
+    return decodeURIComponent(escape(str));
+}
+function T2b32encode(bytes) {
+    var out = '', bits = 0, val = 0, i;
+    for (i = 0; i < bytes.length; i++) {
+        val = (val << 8) | bytes[i]; bits += 8;
+        while (bits >= 5) { out += T2_B32.charAt((val >>> (bits - 5)) & 31); bits -= 5; }
+    }
+    if (bits > 0) out += T2_B32.charAt((val << (5 - bits)) & 31);
+    return out;
+}
+function T2b32decode(str) {
+    var bytes = [], bits = 0, val = 0, i, idx;
+    for (i = 0; i < str.length; i++) {
+        idx = T2_B32.indexOf(str.charAt(i));
+        if (idx < 0) return null;
+        val = (val << 5) | idx; bits += 5;
+        if (bits >= 8) { bytes.push((val >>> (bits - 8)) & 0xFF); bits -= 8; }
+    }
+    return bytes;
+}
+/* Repair what a word processor does: uppercase everything, map Crockford's
+   excluded look-alikes onto their real symbols, and strip every character that
+   is not in the alphabet (spaces, tabs, newlines, non-breaking spaces,
+   zero-width characters, smart quotes, en/em dashes). Q, V, W and the rest are
+   REAL symbols and are left alone - only I, L, O and U are remapped. */
+function T2sanitiseCode(raw) {
+    var s = String(raw).toUpperCase();
+    s = s.replace(/O/g, '0');
+    s = s.replace(/[IL]/g, '1');
+    s = s.replace(/U/g, 'V');
+    var out = '', i, ch;
+    for (i = 0; i < s.length; i++) {
+        ch = s.charAt(i);
+        if (T2_B32.indexOf(ch) >= 0) out += ch;
+    }
+    return out;
+}
+
+/* The complete canvas state. Everything the user can see or set; nothing that
+   is derived. Nodes, potentials and solve results are NOT saved - they are
+   recomputed on load from the items, so a saved code can never disagree with
+   itself. Transient interaction state (drags, timers, palette arming) is not
+   saved either. */
+/* Fields whose restore default is truly zero - only these may be omitted from
+   a save when their value is zero. Everything else is always written. */
+var T2_ZERO_OK = { storedQ: 1, initialQ: 1, labelOffsetX: 1, cLabelOffX: 1,
+                   qLabelOffX: 1, cqLabelOffX: 1, cqLabelOffY: 1, minVal: 1 };
+var T2_SAVE_TYPES = ['cell','capacitor','varCapacitor','switch','spdt','wire','voltmeter','energy','probe'];
+/* Long field name -> short key. Colour and unit are NOT saved: they are fixed
+   per type in T2_DEFS and restored from there, which keeps codes short and
+   means a code can never carry a wrong colour. Any field left at its default
+   is omitted entirely. */
+var T2_SAVE_MAP = [
+    ['id','i'], ['x1','a'], ['y1','b'], ['x2','c'], ['y2','d'], ['x3','e'], ['y3','f'],
+    ['value','v'], ['isOn','o'], ['throw','w'], ['storedQ','s'], ['initialQ','n'],
+    ['bodyX','B'], ['bodyY','C'],
+    ['labelOffsetX','L'], ['labelOffsetY','M'],
+    ['cLabelOffX','N'], ['cLabelOffY','P'],
+    ['qLabelOffX','Q'], ['qLabelOffY','R'],
+    ['cqLabelOffX','S'], ['cqLabelOffY','T'],
+    ['angle1','g'], ['angle2','h'],
+    /* NOTE: the energy meter's 'component' / 'compLabel' are NOT saved. They are
+       derived - T2updateMeters re-resolves the meter's target from its probe
+       position on every update - so saving them would risk a code that
+       disagrees with itself. The probe position is what matters, and that IS
+       saved. Same reasoning as nodes and potentials. */
+    /* Variable capacitor: the wiper position and its range are real state -
+       the wiper is where the user dragged the arrow, and min/max define the
+       scale. Without these a loaded varCapacitor has no range and the
+       inspector cannot format it. */
+    ['wiper','W'], ['minVal','X'], ['maxVal','Y']
+];
+/* Round to 6 significant figures - plenty for coordinates (integers) and for
+   charge (which is ~1e-6 anyway), and it keeps the JSON short. */
+function T2sq(x) {
+    if (typeof x !== 'number' || !isFinite(x)) return x;
+    if (x === 0) return 0;
+    return parseFloat(x.toPrecision(6));
+}
+function T2buildSaveData() {
+    var items = [], i, it, o, m, from, to, val;
+    for (i = 0; i < T2.items.length; i++) {
+        it = T2.items[i];
+        o = { t: T2_SAVE_TYPES.indexOf(it.type) };
+        for (m = 0; m < T2_SAVE_MAP.length; m++) {
+            from = T2_SAVE_MAP[m][0]; to = T2_SAVE_MAP[m][1];
+            val = it[from];
+            if (val === undefined || val === null) continue;
+            if (typeof val === 'number') {
+                /* A zero may be omitted ONLY where the restore default is also
+                   zero. Coordinates have no default (omitting one refused the
+                   whole load), the wiper defaults to 0.5 (a wiper at minimum
+                   came back mid-range), and several label offsets default to
+                   nonzero positions (labels jumped). Those must always be
+                   written, even when zero. */
+                if (val === 0 && T2_ZERO_OK[from]) continue;
+                o[to] = T2sq(val);
+            } else if (typeof val === 'boolean') {
+                o[to] = val ? 1 : 0;
+            } else {
+                o[to] = val;
+            }
+        }
+        items.push(o);
+    }
+    return {
+        v: 1,
+        I: items,
+        q: T2._seq,
+        S: (T2.selectedId === null ? -1 : T2.selectedId),
+        D: [T2DISP.c, T2DISP.q, T2DISP.cellq, T2DISP.emf, T2DISP.polarity ? 1 : 0],
+        rc: T2keysOf(T2revealC), rq: T2keysOf(T2revealQ),
+        rk: T2keysOf(T2revealCellQ), re: T2keysOf(T2revealEmf),
+        E: T2sq(T2._netEmitted),
+        F: T2sq(T2._netDelivered)
+    };
+}
+function T2keysOf(obj) {
+    var out = [], k;
+    for (k in obj) { if (obj.hasOwnProperty(k) && obj[k]) out.push(parseFloat(k)); }
+    return out;
+}
+function T2objOf(arr) {
+    var o = {}, i;
+    if (!arr || !arr.length) return o;
+    for (i = 0; i < arr.length; i++) o[arr[i]] = true;
+    return o;
+}
+
+function T2encodeSave(data) {
+    var json = JSON.stringify(data);
+    var crc = T2crc32(json);
+    var bytes = [(crc >>> 24) & 255, (crc >>> 16) & 255, (crc >>> 8) & 255, crc & 255].concat(T2toBytes(json));
+    var body = T2b32encode(bytes), grouped = '', i;
+    for (i = 0; i < body.length; i += 5) grouped += (i ? ' ' : '') + body.substr(i, 5);
+    return T2_SAVE_PREFIX + ' ' + grouped;
+}
+/* -> { ok: true, data: {...} }  or  { ok: false, err: 'message' } */
+function T2decodeSave(raw) {
+    var s = T2sanitiseCode(raw);
+    var pfx = T2sanitiseCode(T2_SAVE_PREFIX);
+    if (!s.length) return { ok: false, err: 'Please paste a circuit code first.' };
+    if (s.indexOf(pfx) !== 0) return { ok: false, err: 'This does not look like a saved circuit code.' };
+    s = s.substring(pfx.length);
+    if (!s.length) return { ok: false, err: 'The code is empty.' };
+    var bytes = T2b32decode(s);
+    if (!bytes || bytes.length < 5) return { ok: false, err: 'The code is too short \u2014 it may have been cut off. Please copy the whole code.' };
+    var crc = ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]) >>> 0;
+    var json;
+    try { json = T2fromBytes(bytes.slice(4)); }
+    catch (e) { return { ok: false, err: 'This code has been damaged and cannot be read.' }; }
+    json = json.replace(/\u0000+$/, '');
+    if (T2crc32(json) !== crc) {
+        return { ok: false, err: 'This code has been damaged in transit (checksum failed). Please copy and paste it again, making sure you select the whole code.' };
+    }
+    var data;
+    try { data = JSON.parse(json); }
+    catch (e) { return { ok: false, err: 'This code has been damaged and cannot be read.' }; }
+    if (!data || !(data.I || data.items) || !(data.I || data.items).length) return { ok: false, err: 'That code contains no circuit.' };
+    return { ok: true, data: data };
+}
+
+/* Restore. Wipes the canvas and rebuilds it exactly. Every item is validated
+   against T2_DEFS: an unknown type, or a coordinate that is not a finite
+   number, means the whole load is refused rather than half-applied. */
+function T2restoreSave(data) {
+    var items = [], i, si, type, def, it, m, from, to, val;
+    var list = data.I || data.items;      /* I = compact form */
+    if (!list || !list.length) return false;
+    for (i = 0; i < list.length; i++) {
+        si = list[i];
+        if (!si) return false;
+        /* Two shapes are accepted. The compact form (current) stores the type
+           as an index in 't' and uses short keys. The long form (codes saved by
+           an earlier build, and anything hand-written) stores 'type' as a
+           string with full field names. Reading both means an old saved code
+           never becomes unloadable. */
+        if (si.t !== undefined && typeof si.t === 'number') {
+            type = T2_SAVE_TYPES[si.t];
+        } else {
+            type = si.type;
+        }
+        if (!type || !T2_DEFS[type]) return false;
+        def = T2_DEFS[type];
+        it = { type: type };
+        for (m = 0; m < T2_SAVE_MAP.length; m++) {
+            from = T2_SAVE_MAP[m][0]; to = T2_SAVE_MAP[m][1];
+            val = si[to];                      /* compact key */
+            if (val === undefined) val = si[from];   /* long key fallback */
+            if (val === undefined) continue;
+            it[from] = val;
+        }
+        /* Some instruments are single-point: the potential probe and the energy
+           meter have a tip (x1,y1) and a body, but NO second endpoint, so x2/y2
+           are legitimately absent. Rather than enumerate which types those are -
+           the mistake that refused the probe, and then the energy meter - judge
+           by the saved geometry itself: an item that never had a second
+           endpoint is not required to have one. Every item must have a first. */
+        if (!isFinite(it.x1) || !isFinite(it.y1)) return false;
+        var hadX2 = (si.c !== undefined || si.x2 !== undefined);
+        if (hadX2 && (!isFinite(it.x2) || !isFinite(it.y2))) return false;
+        if (!hadX2 && !T2isInstrument(type)) return false;   /* only instruments may be single-point */
+        /* Defaults for everything omitted from the code. */
+        if (it.id === undefined) it.id = i + 1;
+        if (it.value === undefined || !isFinite(it.value)) it.value = def.value;
+        it.unit = def.unit;
+        it.color = def.color;
+        if (si.o !== undefined) it.isOn = !!si.o;
+        else if (si.isOn !== undefined) it.isOn = !!si.isOn;
+        else it.isOn = (type === 'switch' || type === 'spdt') ? false : true;
+        if (it.storedQ === undefined || !isFinite(it.storedQ)) it.storedQ = 0;
+        if (it.initialQ === undefined || !isFinite(it.initialQ)) it.initialQ = 0;
+        if (it.labelOffsetX === undefined) it.labelOffsetX = 0;
+        if (it.labelOffsetY === undefined) it.labelOffsetY = (type === 'cell') ? -24 : 26;
+        if (it.cLabelOffX === undefined) it.cLabelOffX = 0;
+        if (it.cLabelOffY === undefined) it.cLabelOffY = 32;
+        if (it.qLabelOffX === undefined) it.qLabelOffX = 0;
+        if (it.qLabelOffY === undefined) it.qLabelOffY = -34;
+        if (type === 'spdt' && it.throw === undefined) it.throw = 'off';
+        if (type === 'varCapacitor') {
+            if (!isFinite(it.minVal)) it.minVal = 0;
+            if (!isFinite(it.maxVal)) it.maxVal = 100;
+            if (!isFinite(it.wiper)) it.wiper = 0.5;
+        }
+        if (T2isInstrument(type)) {
+            if (!isFinite(it.bodyX)) it.bodyX = it.x1;
+            if (!isFinite(it.bodyY)) it.bodyY = it.y1 - 80;
+        }
+        items.push(it);
+    }
+    T2.items = items;
+    var _seq = (data.q !== undefined) ? data.q : data.seq;
+    T2._seq = (_seq && isFinite(_seq)) ? _seq : (items.length + 1);
+    var _sel = (data.S !== undefined) ? data.S : data.sel;
+    T2.selectedId = (_sel !== undefined && _sel !== null && _sel !== -1) ? _sel : null;
+    var _nE = (data.E !== undefined) ? data.E : data.netE;
+    var _nD = (data.F !== undefined) ? data.F : data.netD;
+    T2._netEmitted = (_nE && isFinite(_nE)) ? _nE : 0;
+    T2._netDelivered = (_nD && isFinite(_nD)) ? _nD : 0;
+    T2._drag = null;
+    if (data.D && data.D.length >= 5) {
+        T2DISP.c = data.D[0]; T2DISP.q = data.D[1];
+        T2DISP.cellq = data.D[2]; T2DISP.emf = data.D[3];
+        T2DISP.polarity = !!data.D[4];
+    } else if (data.disp) {                      /* long form */
+        if (data.disp.c) T2DISP.c = data.disp.c;
+        if (data.disp.q) T2DISP.q = data.disp.q;
+        if (data.disp.cellq) T2DISP.cellq = data.disp.cellq;
+        if (data.disp.emf) T2DISP.emf = data.disp.emf;
+        T2DISP.polarity = (data.disp.polarity !== undefined) ? !!data.disp.polarity : true;
+    }
+    T2revealC = data.rc ? T2objOf(data.rc) : (data.revC || {});
+    T2revealQ = data.rq ? T2objOf(data.rq) : (data.revQ || {});
+    T2revealCellQ = data.rk ? T2objOf(data.rk) : (data.revCellQ || {});
+    T2revealEmf = data.re ? T2objOf(data.re) : (data.revEmf || {});
+    /* Push the restored display settings back into the controls so the panel
+       matches the canvas. */
+    var cs = document.getElementById('dispBuildC');
+    var qs = document.getElementById('dispBuildQ');
+    var cqs = document.getElementById('dispBuildCellQ');
+    var es = document.getElementById('dispBuildEmf');
+    var ps = document.getElementById('dispBuildPolarity');
+    if (cs) cs.value = T2DISP.c;
+    if (qs) qs.value = T2DISP.q;
+    if (cqs) cqs.value = T2DISP.cellq;
+    if (es) es.value = T2DISP.emf;
+    if (ps) ps.checked = !!T2DISP.polarity;
+    T2computeNodes();
+    T2settle();
+    T2refreshPalette();
+    T2updateInspector();
+    T2draw();
+    return true;
+}
+
+function T2showSave() {
+    if (!T2.items.length) { alert('Nothing to save \u2014 build a circuit first.'); return; }
+    var code = T2encodeSave(T2buildSaveData());
+    var ta = document.getElementById('t2saveText');
+    ta.value = code;
+    var n = 0, charged = false, i, it;
+    for (i = 0; i < T2.items.length; i++) {
+        it = T2.items[i];
+        if (it.type !== 'wire') n++;
+        if ((it.type === 'capacitor' || it.type === 'varCapacitor') && Math.abs(it.storedQ || 0) > 1e-15) charged = true;
+    }
+    var d = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    document.getElementById('t2saveInfo').textContent =
+        n + ' component' + (n !== 1 ? 's' : '') + ' \u2022 ' + T2.items.length + ' items \u2022 ' +
+        code.length + ' chars' + (charged ? ' \u2022 carries stored charge' : '') + ' \u2022 ' + d;
+    document.getElementById('t2saveStatus').textContent = '';
+    document.getElementById('t2saveStatus').className = 't2sl-status';
+    document.getElementById('t2saveOverlay').style.display = 'flex';
+    setTimeout(function () { ta.select(); }, 50);
+}
+function T2closeSave() { document.getElementById('t2saveOverlay').style.display = 'none'; }
+function T2copySave() {
+    var ta = document.getElementById('t2saveText');
+    var st = document.getElementById('t2saveStatus');
+    ta.select();
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(ta.value).then(function () {
+                st.textContent = '\u2713 Copied to clipboard';
+                st.className = 't2sl-status';
+            }, function () {
+                st.textContent = 'Press Ctrl+C (or Cmd+C) to copy.';
+                st.className = 't2sl-status error';
+            });
+            return;
+        }
+        document.execCommand('copy');
+        st.textContent = '\u2713 Copied to clipboard';
+        st.className = 't2sl-status';
+    } catch (e) {
+        st.textContent = 'Press Ctrl+C (or Cmd+C) to copy.';
+        st.className = 't2sl-status error';
+    }
+}
+function T2showLoad() {
+    document.getElementById('t2loadText').value = '';
+    var st = document.getElementById('t2loadStatus');
+    st.textContent = ''; st.className = 't2sl-status';
+    document.getElementById('t2loadOverlay').style.display = 'flex';
+    setTimeout(function () { document.getElementById('t2loadText').focus(); }, 50);
+}
+function T2closeLoad() { document.getElementById('t2loadOverlay').style.display = 'none'; }
+function T2loadFromCode() {
+    var st = document.getElementById('t2loadStatus');
+    var res = T2decodeSave(document.getElementById('t2loadText').value);
+    if (!res.ok) { st.textContent = res.err; st.className = 't2sl-status error'; return; }
+    if (!T2restoreSave(res.data)) {
+        st.textContent = 'That code contains a component this version does not recognise, so it was not loaded.';
+        st.className = 't2sl-status error';
+        return;
+    }
+    T2closeLoad();
+}
+
+
+
+/* Save/Load help - DC kit pattern: one combined modal, toggled. */
+function T2toggleIoHelp() {
+    var o = document.getElementById('t2slHelpOverlay');
+    o.style.display = (o.style.display === 'none' || !o.style.display) ? 'flex' : 'none';
+}
 </script>
+
+<!-- Tab 2: Save Circuit -->
+<div id="t2saveOverlay" class="t2sl-overlay" onclick="if(event.target===this)T2closeSave()">
+    <div class="t2sl-modal">
+        <h3>Save Circuit</h3>
+        <p>Copy this code and keep it anywhere &mdash; Word, a document, an email, a note. To restore the circuit exactly as it is now, use <strong>Load circuit</strong> and paste it back. The code is designed to survive word processors: spaces, line breaks and capitalisation changes are all repaired on loading, and a damaged code is refused rather than loaded wrongly.</p>
+        <textarea id="t2saveText" readonly onclick="this.select()"></textarea>
+        <div class="t2sl-info" id="t2saveInfo"></div>
+        <div class="t2sl-btns">
+            <button class="t2sl-btn-cancel" onclick="T2closeSave()">Close</button>
+            <button class="t2sl-btn-primary" onclick="T2copySave()">Copy to clipboard</button>
+        </div>
+        <div class="t2sl-status" id="t2saveStatus"></div>
+    </div>
+</div>
+
+<!-- Tab 2: Load Circuit -->
+<div id="t2loadOverlay" class="t2sl-overlay" onclick="if(event.target===this)T2closeLoad()">
+    <div class="t2sl-modal">
+        <h3>Load Circuit</h3>
+        <p>Paste a saved circuit code below. This replaces everything on the canvas &mdash; components, stored charge, display settings and revealed labels &mdash; with the saved circuit.</p>
+        <textarea id="t2loadText" placeholder="Paste circuit code here..."></textarea>
+        <div class="t2sl-btns">
+            <button class="t2sl-btn-cancel" onclick="T2closeLoad()">Cancel</button>
+            <button class="t2sl-btn-primary" onclick="T2loadFromCode()">Load circuit</button>
+        </div>
+        <div class="t2sl-status" id="t2loadStatus"></div>
+    </div>
+</div>
+
+
+<!-- Tab 2: Save & Load help (DC kit analysis-help pattern) -->
+<div id="t2slHelpOverlay" class="t2ah-overlay" style="display:none" onclick="if(event.target===this)T2toggleIoHelp()">
+    <div class="t2ah-modal" style="border: 1px solid rgba(46,204,113,0.3);">
+        <h3><span style="color:#2ecc71">&#128190;</span> Save &amp; Load Circuits</h3>
+
+        <div class="t2ah-section">
+            <div class="t2ah-title" style="color:#2ecc71">Saving a Circuit</div>
+            <div class="t2ah-text">
+                <strong>1.</strong> Click <span class="t2sl-c">Save circuit</span> to generate a text code representing your entire circuit.<br>
+                <strong>2.</strong> The code captures everything on the canvas &mdash; components, stored charge, switch positions, display settings, revealed labels and label positions.<br>
+                <strong>3.</strong> Click <strong>Copy to clipboard</strong> to copy the code.<br>
+                <strong>4.</strong> <strong>Paste the code</strong> anywhere you like &mdash; a document, email, message, or note &mdash; to keep it for later.
+            </div>
+        </div>
+
+        <div class="t2ah-section">
+            <div class="t2ah-title" style="color:#ffcc33">Loading a Circuit</div>
+            <div class="t2ah-text">
+                <strong>1.</strong> Click <span class="t2ld-c">Load circuit</span>.<br>
+                <strong>2.</strong> <strong>Paste</strong> a previously saved circuit code into the text box.<br>
+                <strong>3.</strong> Click <strong>Load circuit</strong> to restore it.<br>
+                <strong>4.</strong> This <strong>replaces</strong> whatever is currently on the canvas with the saved circuit, exactly as it was when saved.
+            </div>
+        </div>
+
+        <div class="t2ah-section">
+            <div class="t2ah-title" style="color:#2ecc71">Tips</div>
+            <div class="t2ah-text">
+                &bull; Codes start with <strong>CAPB1</strong> &mdash; this identifies them as capacitor circuit saves.<br>
+                &bull; You can share codes with other people &mdash; they just paste it into their Load dialog.<br>
+                &bull; The code is built to survive word processors: extra spaces, line breaks and capitalisation changes are repaired automatically on loading.<br>
+                &bull; A damaged or incomplete code is <strong>refused</strong> with a message &mdash; a wrong circuit is never loaded silently.<br>
+                &bull; If a circuit was saved holding charge, it loads holding that same charge.
+            </div>
+        </div>
+
+        <button class="t2ah-close" style="color:#2ecc71; border-color:rgba(46,204,113,0.4); background:rgba(46,204,113,0.1);" onclick="T2toggleIoHelp()">Got it</button>
+    </div>
+</div>
 </body>
 </html>
