@@ -7783,6 +7783,11 @@ function T2preset8() {
 
 function T2loadPreset(items) {
     T2.items = [];
+    /* A preset is a clean slate, so annotations from the previous circuit go
+       too. Without this, text labels and boxes survived onto a new preset and
+       sat over the top of a circuit they no longer describe. */
+    T2textLabels = [];
+    T2textLabelId = 1;
     var maxId = 0;
     for (var i = 0; i < items.length; i++) {
         var it = JSON.parse(JSON.stringify(items[i]));   // deep copy, verbatim
