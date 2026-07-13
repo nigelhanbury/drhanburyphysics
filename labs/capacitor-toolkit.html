@@ -804,6 +804,17 @@ input[type="range"]:disabled { cursor: not-allowed; }
     box-shadow: 0 4px 20px rgba(255,107,157,0.3);
 }
 .drag-component.probe:hover { box-shadow: 0 6px 30px rgba(255,107,157,0.5); }
+/* Text label / text box tiles - verbatim from the DC kit. Click to add
+   (they are not dragged onto the canvas like components). */
+.drag-component.textLabel {
+    background: linear-gradient(135deg, rgba(79,195,247,0.3), rgba(41,182,246,0.2));
+    border: 2px solid rgba(79,195,247,0.5);
+    box-shadow: 0 4px 20px rgba(79,195,247,0.3);
+    cursor: pointer;
+}
+.drag-component.textLabel:hover {
+    box-shadow: 0 6px 30px rgba(79,195,247,0.5);
+}
 .drag-component.selected { outline: 3px solid #ffd166; outline-offset: 1px; }
 .drag-component.disabled {
     opacity: 0.3 !important;
@@ -906,6 +917,17 @@ canvas#canvas2 {
 }
 .t2sl-modal textarea:focus { outline: none; border-color: rgba(100,180,255,0.5); }
 .t2sl-info { font-size: 0.75em; color: #666; margin: 6px 0 12px 0; }
+.t2sl-note {
+    font-size: 0.75em;
+    color: #9fb3c8;
+    line-height: 1.5;
+    background: rgba(100,180,255,0.07);
+    border-left: 3px solid rgba(100,180,255,0.35);
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin: 0 0 12px 0;
+}
+.t2sl-note strong { color: #cfe3f5; }
 .t2sl-btns { display: flex; gap: 10px; justify-content: flex-end; }
 .t2sl-btns button {
     padding: 8px 16px;
@@ -1344,6 +1366,22 @@ canvas#canvas2 {
                                 <text x="25" y="20" font-size="12" fill="#ff6b9d" text-anchor="middle" font-weight="bold">&#966;</text>
                             </svg>
                             <span class="component-label">Potential</span>
+                        </div>
+                        <div class="drag-component textLabel" onclick="T2addTextLabel()">
+                            <svg class="component-icon" viewBox="0 0 50 30">
+                                <text x="10" y="22" fill="#4fc3f7" font-size="18" font-weight="bold">Aa</text>
+                            </svg>
+                            <span class="component-label">Text Label</span>
+                        </div>
+                        <div class="drag-component textLabel" onclick="T2addTextBox()">
+                            <svg class="component-icon" viewBox="0 0 50 30">
+                                <rect x="2" y="2" width="46" height="26" rx="3" fill="#fff" stroke="#333" stroke-width="1.5"/>
+                                <text x="10" y="20" fill="#222" font-size="14" font-weight="bold">T</text>
+                                <line x1="20" y1="8" x2="42" y2="8" stroke="#999" stroke-width="1"/>
+                                <line x1="20" y1="15" x2="38" y2="15" stroke="#999" stroke-width="1"/>
+                                <line x1="20" y1="22" x2="35" y2="22" stroke="#999" stroke-width="1"/>
+                            </svg>
+                            <span class="component-label">Text Box</span>
                         </div>
                     </div>
                     <p class="palette-note">Drag a tile onto the canvas, or on a touch screen tap the tile then tap the canvas to place it. Drag endpoints to rotate, resize or wire. Drag a label to move it. To delete a component, long-press it on a touch screen or right-click it on a computer &mdash; the rest of the circuit keeps its charge, just as on the bench; deleting the cell zeroes its delivered-energy total.</p>
@@ -5137,6 +5175,20 @@ var T2_GRID = 20;
    mirroring tab 1's DISP/dispText. 'c' = capacitance, 'q' = charge. Tapping a
    symbol label on the canvas reveals that item's value (DC kit per-item reveal
    Sets keyed by item id). */
+/* Text labels and text boxes. Deliberately NOT components: they live in their
+   own array, have no endpoints, and are never seen by T2computeNodes or
+   T2settle. Annotation has no electrical meaning, so keeping it out of
+   T2.items means it can never create a node, be caught by wiring hit
+   detection, or disturb charge accounting. (Matches the DC kit, where these
+   live in state.textLabels rather than state.items.) */
+var T2textLabels = [];
+var T2textLabelId = 1;
+var T2_editingLabel = null;
+var T2_draggingLabel = null;
+var T2_resizingBox = null;
+var T2_labelDragOff = { dx: 0, dy: 0 };
+var T2_resizeStartX = 0, T2_resizeStartW = 220;
+
 var T2DISP = { c: 'value', q: 'value', cellq: 'value', emf: 'value', polarity: true };
 var T2revealC = {};   // itemId -> true when this cap's capacitance label is revealed
 var T2revealQ = {};   // itemId -> true when this cap's charge label is revealed
@@ -5669,6 +5721,24 @@ function T2sel() {
 
 /* ---- Pointer handling (down/move/up), matching the circuit tab ---- */
 function T2down(x, y) {
+    /* Text labels and boxes sit on top of the circuit, so they are tested
+       first: resize handle, then body. They are not components, so this never
+       touches T2.selectedId's electrical meaning. */
+    var lh = T2labelAt(x, y);
+    if (lh) {
+        if (lh.mode === 'resize') {
+            T2_resizingBox = lh.label;
+            T2_resizeStartX = x;
+            T2_resizeStartW = lh.label.boxWidth || 220;
+        } else {
+            T2_draggingLabel = lh.label;
+            T2_labelDragOff.dx = x - lh.label.x;
+            T2_labelDragOff.dy = y - lh.label.y;
+        }
+        T2.selectedId = null;
+        T2draw();
+        return true;
+    }
     var hit = T2hit(x, y);
     if (hit) {
         T2.selectedId = hit.item.id;
@@ -5726,6 +5796,20 @@ function T2inLabel(x, y, lab) {
            y >= lab.y - lab.h / 2 - 6 && y <= lab.y + lab.h / 2 + 6;
 }
 function T2move(x, y) {
+    if (T2_resizingBox) {
+        var nw = T2_resizeStartW + (x - T2_resizeStartX);
+        if (nw < 80) nw = 80;
+        if (nw > 600) nw = 600;
+        T2_resizingBox.boxWidth = nw;
+        T2draw();
+        return;
+    }
+    if (T2_draggingLabel) {
+        T2_draggingLabel.x = x - T2_labelDragOff.dx;
+        T2_draggingLabel.y = y - T2_labelDragOff.dy;
+        T2draw();
+        return;
+    }
     if (!T2._drag) return;
     var it = T2sel(); if (!it) return;
     var dx = x - T2._drag.ox, dy = y - T2._drag.oy;
@@ -5867,6 +5951,12 @@ function T2findSnap(x, y, excludeItem) {
 }
 
 function T2up() {
+    if (T2_draggingLabel || T2_resizingBox) {
+        T2_draggingLabel = null;
+        T2_resizingBox = null;
+        T2draw();
+        return;
+    }
     if (T2._drag) {
         var it = T2sel();
         // Switch body tap (no significant drag) toggles open/closed - DC kit.
@@ -6153,15 +6243,27 @@ function T2bindCanvas() {
         if (T2down(p.x, p.y)) e.preventDefault();
     });
     window.addEventListener('mousemove', function (e) {
-        if (!T2._drag) return;
+        /* A text label / box drag sets T2_draggingLabel or T2_resizingBox, NOT
+           T2._drag, so this guard must admit those too or the label is grabbed
+           and then never moves. */
+        if (!T2._drag && !T2_draggingLabel && !T2_resizingBox) return;
         var p = T2pos(e.clientX, e.clientY);
         T2move(p.x, p.y); e.preventDefault();
     });
     window.addEventListener('mouseup', function () { T2up(); });
 
-    // Right-click deletes a component (DC kit onRightClick).
+    // Double-click a label or box to edit its text (DC kit).
+    canvas2.addEventListener('dblclick', function (e) {
+        var p = T2pos(e.clientX, e.clientY);
+        var lh = T2labelAt(p.x, p.y);
+        if (lh) { T2openTextEdit(lh.label); e.preventDefault(); }
+    });
+
+    // Right-click deletes a component, or a text label / box.
     canvas2.addEventListener('contextmenu', function (e) {
         var p = T2pos(e.clientX, e.clientY);
+        var lh = T2labelAt(p.x, p.y);
+        if (lh) { T2deleteTextLabel(lh.label); e.preventDefault(); return; }
         var hit = T2hit(p.x, p.y);
         if (hit) { T2deleteItem(hit.item.id); e.preventDefault(); }
     });
@@ -6189,6 +6291,24 @@ function T2bindCanvas() {
             e.preventDefault();
             return;
         }
+        // A long-press on a text label or box opens its editor. There is no
+        // double-click on an iPad, so this is the touch equivalent of the DC
+        // kit's dblclick-to-edit. Delete is not bound to long-press here: an
+        // accidental hold would destroy typed text, so labels are deleted from
+        // the editor's Delete button (or right-click on a computer).
+        var lhT = T2labelAt(p.x, p.y);
+        if (lhT) {
+            T2._lpStart = { x: t.clientX, y: t.clientY };
+            T2._lpLabel = lhT.label;
+            T2._lpTimer = setTimeout(function () {
+                if (T2._lpLabel) {
+                    T2openTextEdit(T2._lpLabel);
+                    T2_draggingLabel = null;
+                    T2_resizingBox = null;
+                }
+                T2clearLongPress();
+            }, 600);
+        }
         // Arm long-press delete if a component was touched (but not on a probe
         // rotate handle - the user may hold still while re-orienting it).
         var hit = T2hit(p.x, p.y);
@@ -6210,7 +6330,7 @@ function T2bindCanvas() {
             var d = Math.hypot(t.clientX - T2._lpStart.x, t.clientY - T2._lpStart.y);
             if (d > 10) T2clearLongPress();
         }
-        if (!T2._drag) return;
+        if (!T2._drag && !T2_draggingLabel && !T2_resizingBox) return;
         var p = T2pos(t.clientX, t.clientY);
         T2move(p.x, p.y); e.preventDefault();
     }, { passive: false });
@@ -6221,6 +6341,9 @@ function T2bindCanvas() {
         if (e.cancelable) e.preventDefault();
     }, { passive: false });
     canvas2.addEventListener('touchcancel', function () { T2clearLongPress(); T2up(); });
+
+    // Drag a saved .txt file onto the canvas to load it.
+    T2initFileDrop();
 
     // 'r' reverses a selected cell's polarity (DC kit).
     document.addEventListener('keydown', function (e) {
@@ -6237,6 +6360,7 @@ function T2bindCanvas() {
 }
 
 function T2clearLongPress() {
+    T2._lpLabel = null;
     if (T2._lpTimer) { clearTimeout(T2._lpTimer); T2._lpTimer = null; }
     T2._lpStart = null; T2._lpId = null;
 }
@@ -6332,6 +6456,47 @@ function T2draw() {
         ctx2.beginPath(); ctx2.roundRect(boxX, boxY, mw + padX * 2, boxH, 8); ctx2.fill(); ctx2.stroke();
         ctx2.fillStyle = '#ff9a9a';
         ctx2.fillText(msg, canvas2.width / 2, boxY + 8);
+        ctx2.restore();
+    }
+
+    // Text labels and boxes draw last, on top of the circuit.
+    for (var tli = 0; tli < T2textLabels.length; tli++) T2drawTextLabel(T2textLabels[tli]);
+
+    // Drop target highlight while a file is dragged over the canvas.
+    if (T2._dropHover) {
+        ctx2.save();
+        ctx2.fillStyle = 'rgba(46,204,113,0.10)';
+        ctx2.fillRect(0, 0, canvas2.width, canvas2.height);
+        ctx2.strokeStyle = 'rgba(46,204,113,0.85)';
+        ctx2.lineWidth = 3;
+        ctx2.setLineDash([10, 6]);
+        ctx2.strokeRect(6, 6, canvas2.width - 12, canvas2.height - 12);
+        ctx2.setLineDash([]);
+        ctx2.fillStyle = '#2ecc71';
+        ctx2.font = 'bold 18px "Segoe UI", Arial, sans-serif';
+        ctx2.textAlign = 'center';
+        ctx2.textBaseline = 'middle';
+        ctx2.fillText('Drop a saved circuit file to load it',
+                      canvas2.width / 2, canvas2.height / 2);
+        ctx2.restore();
+    }
+    // Transient message after a drop.
+    if (T2_dropMsg) {
+        ctx2.save();
+        ctx2.font = 'bold 14px "Segoe UI", Arial, sans-serif';
+        ctx2.textAlign = 'center';
+        ctx2.textBaseline = 'top';
+        var dm = T2_dropMsg.text;
+        var dw = ctx2.measureText(dm).width;
+        var dpx = 14, dh = 30, dy = 12, dx = canvas2.width / 2 - dw / 2 - dpx;
+        ctx2.fillStyle = T2_dropMsg.error ? 'rgba(60,10,20,0.94)' : 'rgba(10,50,30,0.94)';
+        ctx2.strokeStyle = T2_dropMsg.error ? '#ff5a5a' : '#2ecc71';
+        ctx2.lineWidth = 2;
+        ctx2.beginPath();
+        ctx2.roundRect(dx, dy, dw + dpx * 2, dh, 8);
+        ctx2.fill(); ctx2.stroke();
+        ctx2.fillStyle = T2_dropMsg.error ? '#ff9a9a' : '#8ef0b8';
+        ctx2.fillText(dm, canvas2.width / 2, dy + 8);
         ctx2.restore();
     }
 
@@ -7220,6 +7385,8 @@ function T2preset1() {
 
 /* Clear the whole circuit. */
 function T2clearAll() {
+    T2textLabels = [];
+    T2textLabelId = 1;
     T2loadPreset([]);
 }
 
@@ -7846,9 +8013,20 @@ function T2buildSaveData() {
         }
         items.push(o);
     }
+    /* Text labels and boxes travel with the circuit, so a saved annotated
+       diagram loads back annotated. Compact keys; kind/boxWidth only present
+       on text boxes. */
+    var tls = [], ti, tl, o2;
+    for (ti = 0; ti < T2textLabels.length; ti++) {
+        tl = T2textLabels[ti];
+        o2 = { x: T2sq(tl.x), y: T2sq(tl.y), t: tl.text, f: tl.fontSize, c: tl.color };
+        if (tl.kind === 'textBox') { o2.b = 1; o2.w = T2sq(tl.boxWidth || 220); }
+        tls.push(o2);
+    }
     return {
         v: 1,
         I: items,
+        T: tls,
         q: T2._seq,
         S: (T2.selectedId === null ? -1 : T2.selectedId),
         D: [T2DISP.c, T2DISP.q, T2DISP.cellq, T2DISP.emf, T2DISP.polarity ? 1 : 0],
@@ -7883,8 +8061,14 @@ function T2decodeSave(raw) {
     var s = T2sanitiseCode(raw);
     var pfx = T2sanitiseCode(T2_SAVE_PREFIX);
     if (!s.length) return { ok: false, err: 'Please paste a circuit code first.' };
-    if (s.indexOf(pfx) !== 0) return { ok: false, err: 'This does not look like a saved circuit code.' };
-    s = s.substring(pfx.length);
+    /* Find the prefix ANYWHERE, not just at the start. A saved .txt file
+       carries a human-readable header before the code, and a pasted code often
+       arrives with a stray word or line in front of it. Requiring the prefix at
+       position 0 made every such file and paste fail. Everything before the
+       prefix is discarded; the checksum still guards everything after it. */
+    var at = s.indexOf(pfx);
+    if (at < 0) return { ok: false, err: 'This does not look like a saved circuit code.' };
+    s = s.substring(at + pfx.length);
     if (!s.length) return { ok: false, err: 'The code is empty.' };
     var bytes = T2b32decode(s);
     if (!bytes || bytes.length < 5) return { ok: false, err: 'The code is too short \u2014 it may have been cut off. Please copy the whole code.' };
@@ -7910,6 +8094,12 @@ function T2restoreSave(data) {
     var items = [], i, si, type, def, it, m, from, to, val;
     var list = data.I || data.items;      /* I = compact form */
     if (!list || !list.length) return false;
+    /* Sanity cap. A corrupted or hostile code could otherwise declare tens of
+       thousands of components and lock the browser solid - not a security
+       breach, but it would look like a crash to a student. No real teaching
+       circuit comes close to this. */
+    if (list.length > 500) return false;
+    if (data.T && data.T.length > 200) return false;
     for (i = 0; i < list.length; i++) {
         si = list[i];
         if (!si) return false;
@@ -7991,6 +8181,24 @@ function T2restoreSave(data) {
         if (data.disp.cellq) T2DISP.cellq = data.disp.cellq;
         if (data.disp.emf) T2DISP.emf = data.disp.emf;
         T2DISP.polarity = (data.disp.polarity !== undefined) ? !!data.disp.polarity : true;
+    }
+    /* Restore text labels (absent in older codes -> empty, which is correct). */
+    T2textLabels = [];
+    T2textLabelId = 1;
+    if (data.T && data.T.length) {
+        for (i = 0; i < data.T.length; i++) {
+            var st = data.T[i];
+            if (!st || !isFinite(st.x) || !isFinite(st.y)) continue;
+            var ntl = {
+                id: T2textLabelId++,
+                x: st.x, y: st.y,
+                text: (st.t !== undefined) ? String(st.t) : '',
+                fontSize: isFinite(st.f) ? st.f : 16,
+                color: st.c || '#4fc3f7'
+            };
+            if (st.b) { ntl.kind = 'textBox'; ntl.boxWidth = isFinite(st.w) ? st.w : 220; }
+            T2textLabels.push(ntl);
+        }
     }
     T2revealC = data.rc ? T2objOf(data.rc) : (data.revC || {});
     T2revealQ = data.rq ? T2objOf(data.rq) : (data.revQ || {});
@@ -8087,17 +8295,412 @@ function T2toggleIoHelp() {
     var o = document.getElementById('t2slHelpOverlay');
     o.style.display = (o.style.display === 'none' || !o.style.display) ? 'flex' : 'none';
 }
+
+/* --- Text labels / text boxes: word wrap, draw, hit test (ES5 port of the DC
+   kit's wrapText and drawTextLabel, matched exactly) --- */
+function T2wrapText(ctx, text, maxWidth) {
+    var paragraphs = String(text).split('\n');
+    var wrapped = [], p, words, line, w, testLine;
+    for (p = 0; p < paragraphs.length; p++) {
+        words = paragraphs[p].split(' ');
+        line = '';
+        for (w = 0; w < words.length; w++) {
+            testLine = line ? (line + ' ' + words[w]) : words[w];
+            if (ctx.measureText(testLine).width > maxWidth && line) {
+                wrapped.push(line);
+                line = words[w];
+            } else {
+                line = testLine;
+            }
+        }
+        wrapped.push(line);
+    }
+    return wrapped;
+}
+function T2roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+function T2drawTextLabel(label) {
+    ctx2.save();
+    var isBox = (label.kind === 'textBox');
+    var padding = isBox ? 12 : 8;
+    var lineHeight = label.fontSize * 1.35;
+    ctx2.font = 'bold ' + label.fontSize + 'px "Segoe UI", Arial, sans-serif';
+
+    var lines, contentWidth, innerW, maxWidth, li, wid;
+    if (isBox && label.boxWidth) {
+        innerW = label.boxWidth - padding * 2;
+        lines = T2wrapText(ctx2, label.text, innerW);
+        contentWidth = label.boxWidth;
+    } else {
+        lines = String(label.text).split('\n');
+        maxWidth = 0;
+        for (li = 0; li < lines.length; li++) {
+            wid = ctx2.measureText(lines[li] || ' ').width;
+            if (wid > maxWidth) maxWidth = wid;
+        }
+        contentWidth = maxWidth + padding * 2;
+    }
+    var boxWidth = contentWidth;
+    var boxHeight = lines.length * lineHeight + padding * 2;
+
+    label._bounds = {
+        x: label.x - boxWidth / 2,
+        y: label.y - boxHeight / 2,
+        width: boxWidth,
+        height: boxHeight
+    };
+    var bx = label._bounds.x, by = label._bounds.y;
+
+    if (isBox) {
+        ctx2.fillStyle = '#fff';
+        T2roundRect(ctx2, bx, by, boxWidth, boxHeight, 5);
+        ctx2.fill();
+        ctx2.strokeStyle = '#999';
+        ctx2.lineWidth = 1;
+        ctx2.stroke();
+
+        ctx2.fillStyle = '#222';
+        ctx2.textAlign = 'left';
+        ctx2.textBaseline = 'top';
+        for (li = 0; li < lines.length; li++) {
+            ctx2.fillText(lines[li], bx + padding, by + padding + li * lineHeight);
+        }
+        /* resize handle, bottom-right */
+        var hx = bx + boxWidth, hy = by + boxHeight;
+        ctx2.strokeStyle = '#999';
+        ctx2.lineWidth = 1;
+        ctx2.beginPath();
+        ctx2.moveTo(hx - 10, hy - 2); ctx2.lineTo(hx - 2, hy - 2);
+        ctx2.lineTo(hx - 2, hy - 10);
+        ctx2.stroke();
+        ctx2.beginPath();
+        ctx2.moveTo(hx - 6, hy - 2); ctx2.lineTo(hx - 2, hy - 6);
+        ctx2.stroke();
+        label._resizeBounds = { x: hx - 14, y: hy - 14, width: 16, height: 16 };
+    } else {
+        ctx2.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        T2roundRect(ctx2, bx, by, boxWidth, boxHeight, 5);
+        ctx2.fill();
+        if (T2_editingLabel === label) {
+            ctx2.strokeStyle = '#fff';
+            ctx2.lineWidth = 2;
+        } else {
+            ctx2.strokeStyle = label.color;
+            ctx2.lineWidth = 1;
+        }
+        ctx2.stroke();
+        ctx2.fillStyle = label.color;
+        ctx2.textAlign = 'center';
+        ctx2.textBaseline = 'top';
+        for (li = 0; li < lines.length; li++) {
+            ctx2.fillText(lines[li], label.x, by + padding + li * lineHeight);
+        }
+        label._resizeBounds = null;
+    }
+    ctx2.restore();
+}
+function T2addTextLabel() {
+    var id = T2textLabelId++;
+    /* Cascade successive labels so a second one does not land on top of the
+       first (which would make it impossible to grab the one underneath). */
+    var n = T2textLabels.length;
+    T2textLabels.push({
+        id: id,
+        x: 360 + (n % 5) * 28 + Math.random() * 12,
+        y: 240 + (n % 5) * 34 + Math.random() * 12,
+        text: 'Label ' + id,
+        fontSize: 16,
+        color: '#4fc3f7'
+    });
+    T2draw();
+}
+function T2addTextBox() {
+    var id = T2textLabelId++;
+    var n = T2textLabels.length;
+    var tb = {
+        id: id,
+        x: 360 + (n % 5) * 28 + Math.random() * 12,
+        y: 240 + (n % 5) * 34 + Math.random() * 12,
+        text: 'Type here...',
+        fontSize: 14,
+        color: '#222',
+        kind: 'textBox',
+        boxWidth: 220
+    };
+    T2textLabels.push(tb);
+    T2draw();
+    T2openTextEdit(tb);
+}
+/* --- Edit modal (DC kit pattern) --- */
+var T2_textEditTarget = null;
+function T2openTextEdit(tl) {
+    T2_textEditTarget = tl;
+    var modal = document.getElementById('t2TextEditModal');
+    var area = document.getElementById('t2TextEditArea');
+    document.getElementById('t2TextEditTitle').textContent =
+        (tl.kind === 'textBox') ? 'Edit Text Box' : 'Edit Text Label';
+    area.value = tl.text;
+    modal.style.display = 'flex';
+    setTimeout(function () { area.focus(); area.select(); }, 50);
+}
+function T2closeTextEdit() {
+    document.getElementById('t2TextEditModal').style.display = 'none';
+    T2_textEditTarget = null;
+}
+function T2confirmTextEdit() {
+    if (T2_textEditTarget) {
+        var v = document.getElementById('t2TextEditArea').value;
+        if (v.trim() !== '') T2_textEditTarget.text = v;
+        T2draw();
+    }
+    T2closeTextEdit();
+}
+function T2deleteFromEditor() {
+    if (T2_textEditTarget) T2deleteTextLabel(T2_textEditTarget);
+    T2closeTextEdit();
+}
+function T2deleteTextLabel(label) {
+    var i = T2textLabels.indexOf(label);
+    if (i >= 0) T2textLabels.splice(i, 1);
+    T2draw();
+}
+/* Hit test: resize handle first, then body. Returns
+   {label:..., mode:'resize'|'drag'} or null. */
+function T2labelAt(x, y) {
+    var i, label, rb, b;
+    for (i = T2textLabels.length - 1; i >= 0; i--) {
+        label = T2textLabels[i];
+        rb = label._resizeBounds;
+        if (rb && x >= rb.x && x <= rb.x + rb.width && y >= rb.y && y <= rb.y + rb.height) {
+            return { label: label, mode: 'resize' };
+        }
+        b = label._bounds;
+        if (b && x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height) {
+            return { label: label, mode: 'drag' };
+        }
+    }
+    return null;
+}
+
+/* ============================================================================
+   TAB 2 - SAVE / LOAD VIA FILE
+
+   Three routes in and out, all feeding the SAME codec: copy/paste, a .txt
+   file, and drag-and-drop onto the canvas. No second format and no second
+   validation path - a file simply carries the same CAPB1 code string, so the
+   checksum and the "damaged codes are refused" guarantee apply identically.
+
+   The file carries a short plain-text header (title, date, counts). The load
+   sanitiser strips everything that is not in the Base32 alphabet, so the
+   header is ignored automatically and the same file is both human-readable
+   and machine-loadable.
+   ========================================================================== */
+function T2saveFileName() {
+    var d = new Date();
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return 'circuit_' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
+           '_' + p(d.getHours()) + p(d.getMinutes()) + '.txt';
+}
+function T2saveFileText(code) {
+    var n = 0, charged = false, i, it;
+    for (i = 0; i < T2.items.length; i++) {
+        it = T2.items[i];
+        if (it.type !== 'wire') n++;
+        if ((it.type === 'capacitor' || it.type === 'varCapacitor') &&
+            Math.abs(it.storedQ || 0) > 1e-15) charged = true;
+    }
+    var d = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    var head = 'Capacitor Toolkit - saved circuit\n';
+    head += '================================\n\n';
+    head += 'Saved: ' + d + '\n';
+    head += 'Components: ' + n + (charged ? '\nThis circuit carries stored charge.' : '') + '\n\n';
+    head += 'To restore it: open the Capacitor Toolkit, go to the Circuit Builder\n';
+    head += 'tab, click Load circuit, and either open this file or paste the code\n';
+    head += 'below. You can also drag this file straight onto the canvas.\n\n';
+    head += 'CIRCUIT CODE\n------------\n';
+    return head + code + '\n';
+}
+/* Fallback for browsers without showSaveFilePicker: generate the file in memory
+   and let the browser put it in Downloads. No location choice is possible by
+   this route - the browser decides.
+
+   In practice this is Safari on a Mac. Safari on an iPad hands off to the Files
+   app's own save sheet, which DOES let the user pick a folder (including iCloud,
+   OneDrive or Google Drive), so the iPad gets a proper location chooser either
+   way. Confirmed by testing on both. */
+function T2downloadFallback(text, name, st) {
+    try {
+        var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        st.textContent = '\u2713 Saved to Downloads as ' + name;
+        st.className = 't2sl-status';
+    } catch (e) {
+        st.textContent = 'Failed to save file. Use Copy to clipboard instead.';
+        st.className = 't2sl-status error';
+    }
+}
+/* Save the circuit to a file the user names and places themselves.
+
+   Where the File System Access API exists (Chrome, Edge, and Chromebooks) this
+   opens the operating system's own Save dialog: choose the folder, type the
+   filename. On a Chromebook that includes saving straight into Google Drive,
+   because Drive is a location in the OS file picker.
+
+   Crucially this grants the tool NO standing access to anything. Unlike an
+   OAuth integration - which hands a third party a token that can reach your
+   whole Drive whenever it likes - the picker hands back a handle to the ONE
+   file the user chose, and nothing else. The tool cannot browse, cannot read
+   other files, and retains no access once the write completes.
+
+   Where the API is absent the fallback below is used instead. */
+function T2downloadSave() {
+    var st = document.getElementById('t2saveStatus');
+    var code = document.getElementById('t2saveText').value;
+    if (!code) return;
+    var text = T2saveFileText(code);
+    var name = T2saveFileName();
+
+    if (typeof window.showSaveFilePicker !== 'function') {
+        T2downloadFallback(text, name, st);
+        return;
+    }
+    st.textContent = '';
+    st.className = 't2sl-status';
+    window.showSaveFilePicker({
+        suggestedName: name,
+        types: [{
+            description: 'Capacitor circuit (text file)',
+            accept: { 'text/plain': ['.txt'] }
+        }]
+    }).then(function (handle) {
+        return handle.createWritable().then(function (wr) {
+            return wr.write(text).then(function () {
+                return wr.close();
+            }).then(function () {
+                st.textContent = '\u2713 Saved as ' + handle.name;
+                st.className = 't2sl-status';
+            });
+        });
+    })['catch'](function (err) {
+        /* AbortError means the user pressed Cancel - that is not a failure, so
+           say nothing at all. Anything else is a genuine problem: the folder may
+           be read-only, full, or blocked by a school policy (a network or cloud
+           folder that is not writable, for instance). Say so, then still fall
+           back to a plain download so the work is never lost. */
+        if (err && (err.name === 'AbortError' || err.code === 20)) return;
+        T2downloadFallback(text, name, st);
+        if (st.className.indexOf('error') < 0) {
+            st.textContent = 'Failed to save file to that location. Saved to Downloads as ' + name + ' instead.';
+            st.className = 't2sl-status error';
+        }
+    });
+}
+/* Shared by the file button and the canvas drop. Reads the text, feeds it to
+   the same decoder as the paste box, and reports through the same messages. */
+function T2loadFileText(text, statusEl) {
+    var res = T2decodeSave(text);
+    if (!res.ok) {
+        if (statusEl) { statusEl.textContent = res.err; statusEl.className = 't2sl-status error'; }
+        else T2fileDropMessage(res.err, true);
+        return false;
+    }
+    if (!T2restoreSave(res.data)) {
+        var m = 'That file contains a component this version does not recognise, so it was not loaded.';
+        if (statusEl) { statusEl.textContent = m; statusEl.className = 't2sl-status error'; }
+        else T2fileDropMessage(m, true);
+        return false;
+    }
+    return true;
+}
+function T2loadFromFileInput(ev) {
+    var f = ev.target.files && ev.target.files[0];
+    var st = document.getElementById('t2loadStatus');
+    ev.target.value = '';                 /* allow re-picking the same file */
+    if (!f) return;
+    var rdr = new FileReader();
+    rdr.onload = function () {
+        if (T2loadFileText(String(rdr.result), st)) T2closeLoad();
+    };
+    rdr.onerror = function () {
+        st.textContent = 'That file could not be read.';
+        st.className = 't2sl-status error';
+    };
+    rdr.readAsText(f);
+}
+/* --- Drag a saved .txt straight onto the canvas --- */
+var T2_dropMsg = null, T2_dropMsgTimer = null;
+function T2fileDropMessage(msg, isError) {
+    T2_dropMsg = { text: msg, error: !!isError };
+    T2draw();
+    if (T2_dropMsgTimer) clearTimeout(T2_dropMsgTimer);
+    T2_dropMsgTimer = setTimeout(function () { T2_dropMsg = null; T2draw(); }, 4000);
+}
+function T2initFileDrop() {
+    if (!canvas2) return;
+    var wrap = canvas2.parentNode || canvas2;
+    function over(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        if (!T2._dropHover) { T2._dropHover = true; T2draw(); }
+    }
+    function leave(e) {
+        e.preventDefault();
+        if (T2._dropHover) { T2._dropHover = false; T2draw(); }
+    }
+    function drop(e) {
+        e.preventDefault();
+        T2._dropHover = false;
+        var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (!f) { T2draw(); return; }
+        var rdr = new FileReader();
+        rdr.onload = function () {
+            if (T2loadFileText(String(rdr.result), null)) {
+                T2fileDropMessage('Circuit loaded from ' + f.name, false);
+            }
+        };
+        rdr.onerror = function () { T2fileDropMessage('That file could not be read.', true); };
+        rdr.readAsText(f);
+    }
+    canvas2.addEventListener('dragover', over);
+    canvas2.addEventListener('dragenter', over);
+    canvas2.addEventListener('dragleave', leave);
+    canvas2.addEventListener('drop', drop);
+    /* Stop the browser from navigating away if a file misses the canvas. */
+    wrap.addEventListener('dragover', function (e) { e.preventDefault(); });
+    wrap.addEventListener('drop', function (e) { e.preventDefault(); });
+}
 </script>
 
 <!-- Tab 2: Save Circuit -->
 <div id="t2saveOverlay" class="t2sl-overlay" onclick="if(event.target===this)T2closeSave()">
     <div class="t2sl-modal">
         <h3>Save Circuit</h3>
-        <p>Copy this code and keep it anywhere &mdash; Word, a document, an email, a note. To restore the circuit exactly as it is now, use <strong>Load circuit</strong> and paste it back. The code is designed to survive word processors: spaces, line breaks and capitalisation changes are all repaired on loading, and a damaged code is refused rather than loaded wrongly.</p>
+        <p>Copy this code and keep it anywhere &mdash; Word, a document, an email, a note. To restore the circuit exactly as it is now, use <strong>Load circuit</strong> and paste it back.</p>
+        <p>Or use the <strong>Save .txt file</strong> button instead.</p>
         <textarea id="t2saveText" readonly onclick="this.select()"></textarea>
         <div class="t2sl-info" id="t2saveInfo"></div>
+        <div class="t2sl-note"><strong>Save .txt file</strong> lets you choose the folder and filename, including a cloud drive. In Safari on a Mac the file goes straight to Downloads.</div>
         <div class="t2sl-btns">
             <button class="t2sl-btn-cancel" onclick="T2closeSave()">Close</button>
+            <button class="t2sl-btn-primary" onclick="T2downloadSave()" style="background:linear-gradient(135deg,#2ecc71,#27ae60);">Save .txt file</button>
             <button class="t2sl-btn-primary" onclick="T2copySave()">Copy to clipboard</button>
         </div>
         <div class="t2sl-status" id="t2saveStatus"></div>
@@ -8109,9 +8712,13 @@ function T2toggleIoHelp() {
     <div class="t2sl-modal">
         <h3>Load Circuit</h3>
         <p>Paste a saved circuit code below. This replaces everything on the canvas &mdash; components, stored charge, display settings and revealed labels &mdash; with the saved circuit.</p>
-        <textarea id="t2loadText" placeholder="Paste circuit code here..."></textarea>
+        <p>Or you can open a saved <strong>.txt</strong> file, or drag one straight onto the canvas.</p>
+        <textarea id="t2loadText" placeholder="Paste circuit code here, or drop a saved .txt file onto the canvas."></textarea>
+        <input type="file" id="t2loadFile" accept=".txt,.rtf,.text,text/plain,text/rtf,application/rtf" style="display:none" onchange="T2loadFromFileInput(event)">
+        <div class="t2sl-note">Use whichever route suits you &mdash; a pasted code, a saved <strong>.txt</strong> file, or a file dragged onto the canvas all restore the circuit identically.</div>
         <div class="t2sl-btns">
             <button class="t2sl-btn-cancel" onclick="T2closeLoad()">Cancel</button>
+            <button class="t2sl-btn-cancel" onclick="document.getElementById('t2loadFile').click()" style="margin-right:auto; background:rgba(46,204,113,0.15); color:#2ecc71; border:1px solid rgba(46,204,113,0.35);">Open .txt file&hellip;</button>
             <button class="t2sl-btn-primary" onclick="T2loadFromCode()">Load circuit</button>
         </div>
         <div class="t2sl-status" id="t2loadStatus"></div>
@@ -8129,8 +8736,8 @@ function T2toggleIoHelp() {
             <div class="t2ah-text">
                 <strong>1.</strong> Click <span class="t2sl-c">Save circuit</span> to generate a text code representing your entire circuit.<br>
                 <strong>2.</strong> The code captures everything on the canvas &mdash; components, stored charge, switch positions, display settings, revealed labels and label positions.<br>
-                <strong>3.</strong> Click <strong>Copy to clipboard</strong> to copy the code.<br>
-                <strong>4.</strong> <strong>Paste the code</strong> anywhere you like &mdash; a document, email, message, or note &mdash; to keep it for later.
+                <strong>3.</strong> Click <strong>Copy to clipboard</strong>, then <strong>paste the code</strong> anywhere you like &mdash; a document, email, message, or note &mdash; to keep it for later.<br>
+                <strong>4.</strong> Or click <strong>Save .txt file</strong> to keep it as a file instead, choosing the folder and filename &mdash; including a cloud drive. In Safari on a Mac the file goes straight to Downloads.
             </div>
         </div>
 
@@ -8138,9 +8745,9 @@ function T2toggleIoHelp() {
             <div class="t2ah-title" style="color:#ffcc33">Loading a Circuit</div>
             <div class="t2ah-text">
                 <strong>1.</strong> Click <span class="t2ld-c">Load circuit</span>.<br>
-                <strong>2.</strong> <strong>Paste</strong> a previously saved circuit code into the text box.<br>
-                <strong>3.</strong> Click <strong>Load circuit</strong> to restore it.<br>
-                <strong>4.</strong> This <strong>replaces</strong> whatever is currently on the canvas with the saved circuit, exactly as it was when saved.
+                <strong>2.</strong> <strong>Paste</strong> a previously saved circuit code into the text box, then click <strong>Load circuit</strong>.<br>
+                <strong>3.</strong> Or click <strong>Open .txt file</strong> to load a saved file, or simply <strong>drag the file straight onto the canvas</strong>.<br>
+                <strong>4.</strong> Whichever route you use, this <strong>replaces</strong> whatever is currently on the canvas with the saved circuit, exactly as it was when saved.
             </div>
         </div>
 
@@ -8156,6 +8763,22 @@ function T2toggleIoHelp() {
         </div>
 
         <button class="t2ah-close" style="color:#2ecc71; border-color:rgba(46,204,113,0.4); background:rgba(46,204,113,0.1);" onclick="T2toggleIoHelp()">Got it</button>
+    </div>
+</div>
+
+<!-- Tab 2: Text label / text box edit modal (DC kit textEditModal, cloned) -->
+<div id="t2TextEditModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; align-items:center; justify-content:center;">
+    <div style="background:#2a2a3a; border:1px solid #555; border-radius:8px; padding:20px; width:380px; max-width:90vw; box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <span style="color:#fff; font-weight:bold; font-size:1.05em;" id="t2TextEditTitle">Edit Text Box</span>
+            <button onclick="T2closeTextEdit()" style="background:none; border:none; color:#aaa; font-size:1.3em; cursor:pointer; padding:0 4px; touch-action:manipulation;">&times;</button>
+        </div>
+        <textarea id="t2TextEditArea" rows="6" style="width:100%; box-sizing:border-box; background:#1a1a2a; color:#fff; border:1px solid #555; border-radius:4px; padding:8px; font-family:Segoe UI, Arial, sans-serif; font-size:14px; resize:vertical; outline:none;"></textarea>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+            <button onclick="T2deleteFromEditor()" style="background:rgba(231,76,60,0.85); color:#fff; border:none; border-radius:4px; padding:6px 16px; cursor:pointer; font-size:0.9em; margin-right:auto; touch-action:manipulation;">Delete</button>
+            <button onclick="T2closeTextEdit()" style="background:#444; color:#ccc; border:none; border-radius:4px; padding:6px 16px; cursor:pointer; font-size:0.9em; touch-action:manipulation;">Cancel</button>
+            <button onclick="T2confirmTextEdit()" style="background:#2196F3; color:#fff; border:none; border-radius:4px; padding:6px 16px; cursor:pointer; font-size:0.9em; font-weight:bold; touch-action:manipulation;">Done</button>
+        </div>
     </div>
 </div>
 </body>
