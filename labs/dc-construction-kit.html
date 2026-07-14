@@ -457,43 +457,54 @@ canvas {
     color: #666;
     margin: 6px 0 12px 0;
 }
+.sl-note {
+    font-size: 0.75em;
+    color: #9fb3c8;
+    line-height: 1.5;
+    background: rgba(100,180,255,0.07);
+    border-left: 3px solid rgba(100,180,255,0.35);
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin: 0 0 12px 0;
+}
+.sl-note strong { color: #cfe3f5; }
 .sl-btns {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     justify-content: flex-end;
 }
 .sl-btns button {
-    padding: 6px 16px;
+    padding: 8px 16px;
     border-radius: 6px;
-    border: 1px solid rgba(100,180,255,0.3);
-    font-size: 0.82em;
+    border: none;
+    font-size: 0.85em;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
+    touch-action: manipulation;
 }
 .sl-btn-primary {
-    background: rgba(46,204,113,0.2);
-    color: #2ecc71;
-    border-color: rgba(46,204,113,0.4);
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: #fff;
 }
 .sl-btn-primary:hover {
-    background: rgba(46,204,113,0.35);
+    filter: brightness(1.12);
 }
 .sl-btn-cancel {
-    background: rgba(255,255,255,0.05);
-    color: #888;
-}
-.sl-btn-cancel:hover {
     background: rgba(255,255,255,0.1);
     color: #aaa;
 }
+.sl-btn-cancel:hover {
+    background: rgba(255,255,255,0.16);
+}
 .sl-status {
     color: #2ecc71;
-    font-size: 0.78em;
-    margin-top: 8px;
+    font-size: 0.8em;
+    margin-top: 10px;
     min-height: 1.2em;
 }
 .sl-status.error {
-    color: #e74c3c;
+    color: #ff6b6b;
 }
 
 .display-options {
@@ -744,6 +755,7 @@ canvas {
 .ah-text .iv-c { color: #ff6b9d; }
 .ah-text .vi-c { color: #4fc3f7; }
 .ah-text .sl-c { color: #2ecc71; }
+.ah-text .ld-c { color: #ffcc33; }
 .ah-text .pwr-c { color: #ff80ff; }
 .ah-text .key {
     display: inline-block; background: rgba(255,255,255,0.1);
@@ -1551,29 +1563,29 @@ canvas {
             <div class="ah-title" style="color:#2ecc71">Saving a Circuit</div>
             <div class="ah-text">
                 <strong>1.</strong> Click <span class="sl-c">Save Circuit</span> to generate a text code representing your entire circuit.<br>
-                <strong>2.</strong> The code contains all components, positions, connections, settings, and display options.<br>
-                <strong>3.</strong> Click <strong>Copy to Clipboard</strong> to copy the code.<br>
-                <strong>4.</strong> <strong>Paste the code</strong> anywhere you like &mdash; a document, email, message, or note &mdash; to keep it for later.
+                <strong>2.</strong> The code captures everything on the canvas &mdash; components, positions, connections, wiper and switch states, revealed labels, label positions, graph states and all display settings.<br>
+                <strong>3.</strong> Click <strong>Copy to clipboard</strong>, then <strong>paste the code</strong> anywhere you like &mdash; a document, email, message, or note &mdash; to keep it for later.<br>
+                <strong>4.</strong> Or click <strong>Save .txt file</strong> to keep it as a file instead, choosing the folder and filename &mdash; including a cloud drive. In Safari on a Mac the file goes straight to Downloads.
             </div>
         </div>
 
         <div class="ah-section">
-            <div class="ah-title" style="color:#2ecc71">Loading a Circuit</div>
+            <div class="ah-title" style="color:#ffcc33">Loading a Circuit</div>
             <div class="ah-text">
-                <strong>1.</strong> Click <span class="sl-c">Load Circuit</span>.<br>
-                <strong>2.</strong> <strong>Paste</strong> a previously saved circuit code into the text box.<br>
-                <strong>3.</strong> Click <strong>Load Circuit</strong> to restore it.<br>
-                <strong>4.</strong> This <strong>replaces</strong> whatever is currently on the canvas with the saved circuit, including all display settings and graph states.
+                <strong>1.</strong> Click <span class="ld-c">Load Circuit</span>.<br>
+                <strong>2.</strong> <strong>Paste</strong> a previously saved circuit code into the text box, then click <strong>Load Circuit</strong>.<br>
+                <strong>3.</strong> Or click <strong>Open .txt file</strong> to load a saved file, or simply <strong>drag the file straight onto the canvas</strong>.<br>
+                <strong>4.</strong> Whichever route you use, this <strong>replaces</strong> whatever is currently on the canvas with the saved circuit, exactly as it was when saved.
             </div>
         </div>
 
         <div class="ah-section">
             <div class="ah-title" style="color:#2ecc71">Tips</div>
             <div class="ah-text">
-                &bull; Codes start with <strong>DCCB1:</strong> &mdash; this identifies them as DC Circuit Builder saves.<br>
+                &bull; Codes start with <strong>DCCB2</strong> &mdash; this identifies them as DC Circuit Builder saves. Older <strong>DCCB1:</strong> codes still load.<br>
                 &bull; You can share codes with other people &mdash; they just paste it into their Load dialog.<br>
-                &bull; Save codes capture everything: component values, wiper positions, switch states, label positions, heat/light source positions, revealed labels, graph states, and all display toggles.<br>
-                &bull; Use <span class="key">Ctrl+Enter</span> as a shortcut to load, or <span class="key">Escape</span> to cancel.
+                &bull; The code is built to survive word processors: extra spaces, line breaks and capitalisation changes are repaired automatically on loading.<br>
+                &bull; A damaged or incomplete code is <strong>refused</strong> with a message &mdash; a wrong circuit is never loaded silently.
             </div>
         </div>
 
@@ -1585,12 +1597,15 @@ canvas {
 <div id="saveOverlay" class="sl-overlay" onclick="if(event.target===this)closeSaveModal()">
     <div class="sl-modal">
         <h3>Save Circuit</h3>
-        <p>Copy this code and paste it anywhere &mdash; Google Docs, Word, email, notepad. To restore, use <strong>Load Circuit</strong> and paste it back.</p>
+        <p>Copy this code and keep it anywhere &mdash; Word, a document, an email, a note. To restore the circuit exactly as it is now, use <strong>Load Circuit</strong> and paste it back.</p>
+        <p>Or use the <strong>Save .txt file</strong> button instead.</p>
         <textarea id="saveTextArea" readonly onclick="this.select()"></textarea>
         <div class="sl-info" id="saveInfo"></div>
+        <div class="sl-note"><strong>Save .txt file</strong> lets you choose the folder and filename, including a cloud drive. In Safari on a Mac the file goes straight to Downloads.</div>
         <div class="sl-btns">
             <button class="sl-btn-cancel" onclick="closeSaveModal()">Close</button>
-            <button class="sl-btn-primary" onclick="copySaveCode()">Copy to Clipboard</button>
+            <button class="sl-btn-primary" onclick="downloadSaveFile()" style="background:linear-gradient(135deg,#2ecc71,#27ae60);">Save .txt file</button>
+            <button class="sl-btn-primary" onclick="copySaveCode()">Copy to clipboard</button>
         </div>
         <div class="sl-status" id="saveStatus"></div>
     </div>
@@ -1600,10 +1615,14 @@ canvas {
 <div id="loadOverlay" class="sl-overlay" onclick="if(event.target===this)closeLoadModal()">
     <div class="sl-modal">
         <h3>Load Circuit</h3>
-        <p>Paste a previously saved circuit code below. This will replace the current circuit.</p>
-        <textarea id="loadTextArea" placeholder="Paste circuit code here..."></textarea>
+        <p>Paste a saved circuit code below. This replaces everything on the canvas &mdash; components, settings, revealed labels and graph states &mdash; with the saved circuit.</p>
+        <p>Or you can open a saved <strong>.txt</strong> file, or drag one straight onto the canvas.</p>
+        <textarea id="loadTextArea" placeholder="Paste circuit code here, or drop a saved .txt file onto the canvas."></textarea>
+        <input type="file" id="loadFileInput" style="display:none" onchange="loadFromFileInput(event)">
+        <div class="sl-note">Use whichever route suits you &mdash; a pasted code, a saved <strong>.txt</strong> file, or a file dragged onto the canvas all restore the circuit identically.</div>
         <div class="sl-btns">
             <button class="sl-btn-cancel" onclick="closeLoadModal()">Cancel</button>
+            <button class="sl-btn-cancel" onclick="document.getElementById('loadFileInput').click()" style="margin-right:auto; background:rgba(46,204,113,0.15); color:#2ecc71; border:1px solid rgba(46,204,113,0.35);">Open .txt file&hellip;</button>
             <button class="sl-btn-primary" onclick="loadFromCode()">Load Circuit</button>
         </div>
         <div class="sl-status" id="loadStatus"></div>
@@ -4849,7 +4868,150 @@ function wrapText(ctx, text, maxWidth) {
 }
 
 // ============ SAVE / LOAD CIRCUIT ============
+// DCCB1: (legacy) = plain base64 of the JSON, case-sensitive and unchecksummed.
+//   A word processor's autocapitalisation silently corrupts base64, and without
+//   a checksum a truncated code can still decode into valid-looking JSON and
+//   load a subtly wrong circuit. It is kept ONLY for loading old saved codes.
+// DCCB2  (current) = the hardened scheme ported from the Capacitor Toolkit:
+//   Crockford Base32 (uppercase-only, alphabet excludes I/L/O/U so retyping can
+//   never confuse 0/O or 1/l; Q is a real symbol), a CRC-32 header that REFUSES
+//   any damaged code rather than loading it silently, sanitisation on load that
+//   strips everything not in the alphabet, and 5-character grouping. The same
+//   buildSaveData() JSON travels inside both formats, so nothing about the
+//   circuit schema changes - only the transport is hardened.
 const SAVE_PREFIX = 'DCCB1:';
+const SAVE_PREFIX_V2 = 'DCCB2';
+const B32_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'; // Crockford: no I, L, O, U
+
+function crc32(str) {
+  let c, crc = 0xFFFFFFFF;
+  for (let i = 0; i < str.length; i++) {
+    c = (crc ^ str.charCodeAt(i)) & 0xFF;
+    for (let j = 0; j < 8; j++) c = (c & 1) ? ((c >>> 1) ^ 0xEDB88320) : (c >>> 1);
+    crc = (crc >>> 8) ^ c;
+  }
+  return ((crc ^ 0xFFFFFFFF) >>> 0);
+}
+function saveToBytes(str) {
+  const utf = unescape(encodeURIComponent(str));
+  const b = [];
+  for (let i = 0; i < utf.length; i++) b.push(utf.charCodeAt(i) & 0xFF);
+  return b;
+}
+function saveFromBytes(bytes) {
+  let str = '';
+  for (let i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]);
+  return decodeURIComponent(escape(str));
+}
+function b32encode(bytes) {
+  let out = '', bits = 0, val = 0;
+  for (let i = 0; i < bytes.length; i++) {
+    val = (val << 8) | bytes[i]; bits += 8;
+    while (bits >= 5) { out += B32_ALPHABET.charAt((val >>> (bits - 5)) & 31); bits -= 5; }
+  }
+  if (bits > 0) out += B32_ALPHABET.charAt((val << (5 - bits)) & 31);
+  return out;
+}
+function b32decode(str) {
+  const bytes = [];
+  let bits = 0, val = 0;
+  for (let i = 0; i < str.length; i++) {
+    const idx = B32_ALPHABET.indexOf(str.charAt(i));
+    if (idx < 0) return null;
+    val = (val << 5) | idx; bits += 5;
+    if (bits >= 8) { bytes.push((val >>> (bits - 8)) & 0xFF); bits -= 8; }
+  }
+  return bytes;
+}
+// Repair what a word processor does to a code: uppercase everything, map
+// Crockford's excluded look-alikes (I,L -> 1; O -> 0; U -> V) onto their real
+// symbols, and strip every character that is not in the alphabet (spaces, tabs,
+// newlines, non-breaking spaces, zero-width characters, smart quotes, dashes).
+// Q, V, W and the rest are REAL symbols and are left alone.
+function sanitiseCode(raw) {
+  let s = String(raw).toUpperCase();
+  s = s.replace(/O/g, '0');
+  s = s.replace(/[IL]/g, '1');
+  s = s.replace(/U/g, 'V');
+  let out = '';
+  for (let i = 0; i < s.length; i++) {
+    const ch = s.charAt(i);
+    if (B32_ALPHABET.indexOf(ch) >= 0) out += ch;
+  }
+  return out;
+}
+// Encode a data object as a DCCB2 code: JSON -> CRC-32 header -> Base32 -> 5-char groups.
+function encodeSaveV2(data) {
+  const json = JSON.stringify(data);
+  const crc = crc32(json);
+  const bytes = [(crc >>> 24) & 255, (crc >>> 16) & 255, (crc >>> 8) & 255, crc & 255].concat(saveToBytes(json));
+  const body = b32encode(bytes);
+  let grouped = '';
+  for (let i = 0; i < body.length; i += 5) grouped += (i ? ' ' : '') + body.substr(i, 5);
+  return SAVE_PREFIX_V2 + ' ' + grouped;
+}
+// Decode a DCCB2 code. -> { ok:true, data:{...} }  or  { ok:false, err:'message' }
+function decodeSaveV2(raw) {
+  const s = sanitiseCode(raw);
+  const pfx = sanitiseCode(SAVE_PREFIX_V2);
+  if (!s.length) return { ok: false, err: 'Please paste a circuit code first.' };
+  // Find the prefix ANYWHERE, not just at the start. A saved .txt file carries a
+  // human-readable header before the code, and a pasted code often arrives with
+  // a stray word or line in front of it. Everything before the prefix is
+  // discarded; the checksum still guards everything after it.
+  const at = s.indexOf(pfx);
+  if (at < 0) return { ok: false, err: 'This does not look like a saved circuit code.' };
+  const body = s.substring(at + pfx.length);
+  if (!body.length) return { ok: false, err: 'The code is empty.' };
+  const bytes = b32decode(body);
+  if (!bytes || bytes.length < 5) return { ok: false, err: 'The code is too short — it may have been cut off. Please copy the whole code.' };
+  const crc = ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]) >>> 0;
+  let json;
+  try { json = saveFromBytes(bytes.slice(4)); }
+  catch (e) { return { ok: false, err: 'This code has been damaged and cannot be read.' }; }
+  json = json.replace(/ +$/, '');
+  if (crc32(json) !== crc) {
+    return { ok: false, err: 'This code has been damaged in transit (checksum failed). Please copy and paste it again, making sure you select the whole code.' };
+  }
+  let data;
+  try { data = JSON.parse(json); }
+  catch (e) { return { ok: false, err: 'This code has been damaged and cannot be read.' }; }
+  if (!data || !data.items || !data.items.length) return { ok: false, err: 'That code contains no circuit.' };
+  return { ok: true, data: data };
+}
+// Decode a legacy DCCB1: base64 code. Kept so old saved codes and files never
+// break. Base64 is case-sensitive, so this cannot be sanitised the way DCCB2
+// can - but we still search for the prefix anywhere and take everything after
+// it, so an old file with a header, or a paste with a stray leading word, loads.
+function decodeSaveV1(raw) {
+  const at = raw.indexOf(SAVE_PREFIX);
+  if (at < 0) return { ok: false, err: 'This does not look like a saved circuit code.' };
+  const b64 = raw.substring(at + SAVE_PREFIX.length).replace(/\s+/g, '');
+  let data;
+  try {
+    const json = decodeURIComponent(escape(atob(b64)));
+    data = JSON.parse(json);
+  } catch (e) {
+    return { ok: false, err: 'Invalid circuit code — it may be corrupted or incomplete.' };
+  }
+  if (!data || !data.items || !data.items.length) {
+    return { ok: false, err: 'Circuit code contains no components.' };
+  }
+  return { ok: true, data: data };
+}
+// The single entry point every route (paste, file, drop) funnels through. It
+// picks the format by looking for each prefix in the (sanitised) text, so the
+// caller never has to care which format a code is in.
+function decodeSaveAny(raw) {
+  const text = String(raw == null ? '' : raw);
+  if (!text.trim()) return { ok: false, err: 'Please paste a circuit code first.' };
+  // Prefer DCCB2 (hardened). Search the sanitised text so a wrapped/re-spaced
+  // code is still recognised.
+  if (sanitiseCode(text).indexOf(sanitiseCode(SAVE_PREFIX_V2)) >= 0) return decodeSaveV2(text);
+  // Fall back to the legacy base64 format.
+  if (text.indexOf(SAVE_PREFIX) >= 0) return decodeSaveV1(text);
+  return { ok: false, err: 'This does not look like a saved circuit code.' };
+}
 
 function buildSaveData() {
   // Build ID map for items (sequential 1,2,3...)
@@ -4865,11 +5027,17 @@ function buildSaveData() {
       id: i + 1,
       type: it.type,
       x1: Math.round(it.x1), y1: Math.round(it.y1),
-      x2: Math.round(it.x2), y2: Math.round(it.y2),
       value: it.value, unit: it.unit, color: it.color,
       lox: it.labelOffsetX || 0,
       loy: it.labelOffsetY || 0
     };
+
+    // Two-endpoint components carry a second endpoint. Single-point instruments
+    // (the potential probe) legitimately have no x2/y2, so we only write them
+    // when they are real numbers - never as null, which used to corrupt the probe.
+    if (isFinite(it.x2) && isFinite(it.y2)) {
+      si.x2 = Math.round(it.x2); si.y2 = Math.round(it.y2);
+    }
 
     // Switch state
     if (it.type === 'switch') si.isOn = it.isOn;
@@ -4879,6 +5047,21 @@ function buildSaveData() {
       si.bx = Math.round(it.bodyX || (it.x1 + it.x2) / 2);
       si.by = Math.round(it.bodyY || (it.y1 + it.y2) / 2 - 80);
     }
+
+    // Potential probe: a single-point instrument (no x2/y2). Save its floating
+    // reading-body position so it round-trips in place - previously it was never
+    // saved and the probe reappeared mid-canvas.
+    if (it.type === 'potprobe') {
+      si.bx = Math.round(it.bodyX != null ? it.bodyX : it.x1);
+      si.by = Math.round(it.bodyY != null ? it.bodyY : it.y1 - 90);
+    }
+
+    // Rotation handles: the voltmeter has two (red probe angle1, black probe
+    // angle2), the potential probe has one (angle1). Save whichever are present
+    // so a rotated instrument comes back at the same angle - matching the
+    // capacitor toolkit, which saves angle1/angle2 the same way.
+    if (it.angle1 !== undefined && it.angle1 !== null) si.angle1 = it.angle1;
+    if (it.angle2 !== undefined && it.angle2 !== null) si.angle2 = it.angle2;
 
     // Variable resistor / rheostat wiper
     if (it.wiper !== undefined) {
@@ -5007,9 +5190,7 @@ function showSaveModal() {
     alert('Nothing to save \u2014 build a circuit first.');
     return;
   }
-  const data = buildSaveData();
-  const json = JSON.stringify(data);
-  const encoded = SAVE_PREFIX + btoa(unescape(encodeURIComponent(json)));
+  const encoded = encodeSaveV2(buildSaveData());
 
   const ta = document.getElementById('saveTextArea');
   ta.value = encoded;
@@ -5024,6 +5205,7 @@ function showSaveModal() {
   info.textContent = nComps + ' component' + (nComps !== 1 ? 's' : '') + ' \u2022 ' + state.items.length + ' items total \u2022 ' + encoded.length + ' chars \u2022 ' + dateStr;
 
   document.getElementById('saveStatus').textContent = '';
+  document.getElementById('saveStatus').className = 'sl-status';
   document.getElementById('saveOverlay').style.display = 'flex';
   setTimeout(function() { ta.select(); }, 50);
 }
@@ -5075,44 +5257,216 @@ function closeLoadModal() {
 
 function loadFromCode() {
   const status = document.getElementById('loadStatus');
-  const raw = document.getElementById('loadTextArea').value.trim();
+  const raw = document.getElementById('loadTextArea').value;
 
-  if (!raw) {
-    status.textContent = 'Please paste a circuit code first.';
+  // One decoder for both formats (hardened DCCB2 and legacy DCCB1:). It finds
+  // the prefix anywhere, repairs word-processor damage, and refuses a damaged
+  // code rather than loading it silently.
+  const res = decodeSaveAny(raw);
+  if (!res.ok) {
+    status.textContent = res.err;
     status.className = 'sl-status error';
     return;
   }
-
-  // Strip prefix
-  if (raw.indexOf(SAVE_PREFIX) !== 0) {
-    status.textContent = 'This doesn\u2019t look like a saved circuit code. It should start with "' + SAVE_PREFIX + '".';
+  if (!restoreCircuit(res.data)) {
+    status.textContent = 'That code contains a component this version does not recognise, so it was not loaded.';
     status.className = 'sl-status error';
     return;
   }
-  const b64 = raw.substring(SAVE_PREFIX.length);
-
-  let data;
-  try {
-    const json = decodeURIComponent(escape(atob(b64)));
-    data = JSON.parse(json);
-  } catch (e) {
-    status.textContent = 'Invalid circuit code \u2014 it may be corrupted or incomplete.';
-    status.className = 'sl-status error';
-    return;
-  }
-
-  if (!data.items || !data.items.length) {
-    status.textContent = 'Circuit code contains no components.';
-    status.className = 'sl-status error';
-    return;
-  }
-
-  // Restore
-  restoreCircuit(data);
   closeLoadModal();
 }
 
+// ============ SAVE / LOAD VIA FILE ============
+// Three routes in and out, all feeding the SAME codec: copy/paste, a .txt file,
+// and drag-and-drop onto the canvas. A file simply carries the same DCCB2 code
+// string, so the checksum and the "damaged codes are refused" guarantee apply
+// identically. The file also carries a short plain-text header; the load
+// sanitiser strips everything that is not in the Base32 alphabet, so the header
+// is ignored automatically and the same file is both human-readable and
+// machine-loadable.
+function saveFileName() {
+  const d = new Date();
+  const p = function (n) { return (n < 10 ? '0' : '') + n; };
+  return 'circuit_' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
+         '_' + p(d.getHours()) + p(d.getMinutes()) + '.txt';
+}
+function saveFileBody(code) {
+  let n = 0;
+  for (let i = 0; i < state.items.length; i++) {
+    if (state.items[i].type !== 'wire') n++;
+  }
+  const d = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  let head = 'DC Circuit Builder - saved circuit\n';
+  head += '==================================\n\n';
+  head += 'Saved: ' + d + '\n';
+  head += 'Components: ' + n + '\n\n';
+  head += 'To restore it: open the DC Circuit Builder, click Load Circuit, and\n';
+  head += 'either open this file or paste the code below. You can also drag this\n';
+  head += 'file straight onto the canvas.\n\n';
+  head += 'CIRCUIT CODE\n------------\n';
+  return head + code + '\n';
+}
+// Fallback for browsers without showSaveFilePicker: generate the file in memory
+// and let the browser put it in Downloads. In practice this is Safari on a Mac.
+// Safari on an iPad hands off to the Files app's own save sheet, which DOES let
+// the user pick a folder (including iCloud, OneDrive or Google Drive).
+function downloadFallback(text, name, st) {
+  try {
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    st.textContent = '✓ Saved to Downloads as ' + name;
+    st.className = 'sl-status';
+  } catch (e) {
+    st.textContent = 'Failed to save file. Use Copy to clipboard instead.';
+    st.className = 'sl-status error';
+  }
+}
+// Save the circuit to a file the user names and places themselves. Where the
+// File System Access API exists (Chrome, Edge, Chromebooks) this opens the OS's
+// own Save dialog - choose the folder, type the filename, including a cloud
+// drive. It grants the tool NO standing access: the picker hands back a handle
+// to the ONE file the user chose and nothing else. Where the API is absent the
+// fallback above is used instead.
+function downloadSaveFile() {
+  const st = document.getElementById('saveStatus');
+  const code = document.getElementById('saveTextArea').value;
+  if (!code) return;
+  const text = saveFileBody(code);
+  const name = saveFileName();
+
+  if (typeof window.showSaveFilePicker !== 'function') {
+    downloadFallback(text, name, st);
+    return;
+  }
+  st.textContent = '';
+  st.className = 'sl-status';
+  window.showSaveFilePicker({
+    suggestedName: name,
+    types: [{ description: 'DC circuit (text file)', accept: { 'text/plain': ['.txt'] } }]
+  }).then(function (handle) {
+    return handle.createWritable().then(function (wr) {
+      return wr.write(text).then(function () {
+        return wr.close();
+      }).then(function () {
+        st.textContent = '✓ Saved as ' + handle.name;
+        st.className = 'sl-status';
+      });
+    });
+  })['catch'](function (err) {
+    // AbortError means the user pressed Cancel - that is not a failure, so say
+    // nothing at all. Anything else is a genuine problem (folder read-only,
+    // full, or blocked by a school policy): say so, then still fall back to a
+    // plain download so the work is never lost.
+    if (err && (err.name === 'AbortError' || err.code === 20)) return;
+    downloadFallback(text, name, st);
+    if (st.className.indexOf('error') < 0) {
+      st.textContent = 'Failed to save file to that location. Saved to Downloads as ' + name + ' instead.';
+      st.className = 'sl-status error';
+    }
+  });
+}
+// Shared by the Open .txt button and the canvas drop. Reads the text, feeds it
+// to the same decoder as the paste box, and reports through the same messages.
+function loadFileText(text, statusEl) {
+  const res = decodeSaveAny(text);
+  if (!res.ok) {
+    if (statusEl) { statusEl.textContent = res.err; statusEl.className = 'sl-status error'; }
+    else fileDropMessage(res.err, true);
+    return false;
+  }
+  if (!restoreCircuit(res.data)) {
+    const m = 'That file contains a component this version does not recognise, so it was not loaded.';
+    if (statusEl) { statusEl.textContent = m; statusEl.className = 'sl-status error'; }
+    else fileDropMessage(m, true);
+    return false;
+  }
+  return true;
+}
+function loadFromFileInput(ev) {
+  const f = ev.target.files && ev.target.files[0];
+  const st = document.getElementById('loadStatus');
+  ev.target.value = '';                 // allow re-picking the same file
+  if (!f) return;
+  const rdr = new FileReader();
+  rdr.onload = function () {
+    if (loadFileText(String(rdr.result), st)) closeLoadModal();
+  };
+  rdr.onerror = function () {
+    st.textContent = 'That file could not be read.';
+    st.className = 'sl-status error';
+  };
+  rdr.readAsText(f);
+}
+// --- Drag a saved .txt straight onto the canvas ---
+let _dropMsgTimer = null;
+function fileDropMessage(msg, isError) {
+  state._dropMsg = { text: msg, error: !!isError };
+  draw();
+  if (_dropMsgTimer) clearTimeout(_dropMsgTimer);
+  _dropMsgTimer = setTimeout(function () { state._dropMsg = null; draw(); }, 4000);
+}
+function initFileDrop() {
+  if (!canvas) return;
+  const wrap = canvas.parentNode || canvas;
+  function over(e) {
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    if (!state._dropHover) { state._dropHover = true; draw(); }
+  }
+  function leave(e) {
+    e.preventDefault();
+    if (state._dropHover) { state._dropHover = false; draw(); }
+  }
+  function drop(e) {
+    e.preventDefault();
+    state._dropHover = false;
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!f) { draw(); return; }
+    const rdr = new FileReader();
+    rdr.onload = function () {
+      if (loadFileText(String(rdr.result), null)) {
+        fileDropMessage('Circuit loaded from ' + f.name, false);
+      }
+    };
+    rdr.onerror = function () { fileDropMessage('That file could not be read.', true); };
+    rdr.readAsText(f);
+  }
+  canvas.addEventListener('dragover', over);
+  canvas.addEventListener('dragenter', over);
+  canvas.addEventListener('dragleave', leave);
+  canvas.addEventListener('drop', drop);
+  // Stop the browser from navigating away if a file misses the canvas.
+  wrap.addEventListener('dragover', function (e) { e.preventDefault(); });
+  wrap.addEventListener('drop', function (e) { e.preventDefault(); });
+}
+
 function restoreCircuit(data) {
+  // Validate BEFORE touching the canvas, so a damaged code never wipes the
+  // user's work half-way through. The CRC-32 already refuses damaged DCCB2
+  // codes; this is the second line of defence, and it also guards hand-written
+  // and legacy codes. Judge each item by the geometry it actually carried, not
+  // a hard-coded list of types (which once wrongly refused the single-point
+  // potential probe). The caps stop a corrupted code from declaring tens of
+  // thousands of components and hanging the browser.
+  if (!data || !data.items || !data.items.length) return false;
+  if (data.items.length > 500) return false;
+  if (data.tls && data.tls.length > 300) return false;
+  for (let v = 0; v < data.items.length; v++) {
+    const sv = data.items[v];
+    if (!sv || !componentDefs[sv.type]) return false;
+    if (!isFinite(sv.x1) || !isFinite(sv.y1)) return false;
+    const hadX2 = (sv.x2 !== undefined && sv.x2 !== null);
+    if (hadX2 && (!isFinite(sv.x2) || !isFinite(sv.y2))) return false;
+    if (!hadX2 && sv.type !== 'potprobe') return false; // only the probe may be single-point
+  }
+
   clearCanvas();
 
   // Rebuild items
@@ -5122,11 +5476,16 @@ function restoreCircuit(data) {
     const def = componentDefs[si.type];
     if (!def) continue;
 
+    const isProbe = (si.type === 'potprobe');
     const item = {
       id: Date.now() + Math.random() + i,
       type: si.type,
       x1: si.x1, y1: si.y1,
-      x2: si.x2, y2: si.y2,
+      // Single-point instruments (the potential probe) have no second endpoint.
+      // Old codes stored it as null; keep it genuinely absent so nothing tries
+      // to draw a phantom second terminal.
+      x2: (si.x2 == null ? undefined : si.x2),
+      y2: (si.y2 == null ? undefined : si.y2),
       value: si.value,
       unit: si.unit || def.unit,
       color: si.color || def.color,
@@ -5135,8 +5494,15 @@ function restoreCircuit(data) {
       current: 0,
       voltage: 0,
       isOn: si.isOn !== undefined ? si.isOn : (si.type === 'switch' ? false : true),
-      bodyX: si.bx || (si.x1 + si.x2) / 2,
-      bodyY: si.by || (si.y1 + si.y2) / 2 - 40,
+      // Instrument rotation: the voltmeter's two probe handles (angle1/angle2)
+      // and the potential probe's single handle (angle1). Left undefined when a
+      // code did not save them, so the draw code falls back to its defaults.
+      angle1: si.angle1 !== undefined ? si.angle1 : (isProbe ? 0 : undefined),
+      angle2: si.angle2 !== undefined ? si.angle2 : undefined,
+      potential: isProbe ? null : undefined,
+      _readItem: isProbe ? null : undefined,
+      bodyX: (si.bx != null) ? si.bx : (isProbe ? (si.x1 + 40) : (si.x1 + si.x2) / 2),
+      bodyY: (si.by != null) ? si.by : (isProbe ? (si.y1 - 90) : (si.y1 + si.y2) / 2 - 40),
       bodyAngle: 0,
       // Variable resistor / rheostat
       wiper: si.wiper,
@@ -5331,6 +5697,7 @@ function restoreCircuit(data) {
 
   updateSelectedInfo();
   draw();
+  return true;
 }
 
 function getIlluminationAtPoint(px, py) {
@@ -9863,6 +10230,44 @@ function draw() {
       ctx.restore();
     }
   }
+
+  // Drop target highlight while a saved .txt file is dragged over the canvas.
+  if (state._dropHover) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(46,204,113,0.10)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = 'rgba(46,204,113,0.85)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([10, 6]);
+    ctx.strokeRect(6, 6, canvas.width - 12, canvas.height - 12);
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#2ecc71';
+    ctx.font = 'bold 18px "Segoe UI", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Drop a saved circuit file to load it', canvas.width / 2, canvas.height / 2);
+    ctx.restore();
+  }
+  // Transient message after a drop.
+  if (state._dropMsg) {
+    ctx.save();
+    ctx.font = 'bold 14px "Segoe UI", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    const dm = state._dropMsg.text;
+    const dw = ctx.measureText(dm).width;
+    const dpx = 14, dh = 30, dy = 12, dx = canvas.width / 2 - dw / 2 - dpx;
+    ctx.fillStyle = state._dropMsg.error ? 'rgba(60,10,20,0.94)' : 'rgba(10,50,30,0.94)';
+    ctx.strokeStyle = state._dropMsg.error ? '#ff5a5a' : '#2ecc71';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    if (ctx.roundRect) { ctx.roundRect(dx, dy, dw + dpx * 2, dh, 8); }
+    else { ctx.rect(dx, dy, dw + dpx * 2, dh); }
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = state._dropMsg.error ? '#ff9a9a' : '#8ef0b8';
+    ctx.fillText(dm, canvas.width / 2, dy + 8);
+    ctx.restore();
+  }
 }
 
 // Measures total width of "base" + subscript "sub" text
@@ -12470,7 +12875,9 @@ function drawPotProbe(item) {
   drawCableLead(p1TopX, p1TopY, connX, connY, '#7a1436', '#c0286a', '#ff6b9d', false);
 
   ctx.save();
-  if (isSelected) { ctx.shadowColor = '#ff6b9d'; ctx.shadowBlur = 15; }
+  // No selection glow - the voltmeter doesn't glow when selected, so the
+  // potential probe matches it.
+  ctx.shadowBlur = 0;
   // Outer black casing
   ctx.fillStyle = '#1a1a1a'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
   ctx.beginPath();
@@ -12571,6 +12978,9 @@ document.getElementById('showAmmeterValues').value = state.showAmmeterValues;
 document.getElementById('showPower').checked = state.showPower;
 document.getElementById('showPowerValues').checked = state.showPowerValues;
 document.getElementById('showPowerValues').disabled = !state.showPower;
+
+// Enable drag-and-drop of a saved .txt file onto the canvas.
+initFileDrop();
 
 // Start animation
 updateKirchhoffCheckboxes();
